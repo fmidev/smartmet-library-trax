@@ -7,12 +7,14 @@ namespace Trax
 Polygon::Polygon(Polyline exterior) : m_exterior(std::move(exterior))
 {
   if (m_exterior.size() < 4)
-    throw Fmi::Exception(BCP, "Polygon shells must have at least 4 points").addParameter("WKT", m_exterior.wkt());
+    throw Fmi::Exception(BCP, "Polygon shells must have at least 4 points")
+        .addParameter("WKT", m_exterior.wkt());
 }
 
-Polygon::Polygon(std::initializer_list<std::initializer_list<double>> init_list) : m_exterior(*init_list.begin())
+Polygon::Polygon(std::initializer_list<std::initializer_list<double>> init_list)
+    : m_exterior(*init_list.begin())
 {
-  auto iter = init_list.begin();
+  auto* iter = init_list.begin();
   for (++iter; iter != init_list.end(); ++iter)
     hole(Polyline(*iter));
 }
@@ -83,7 +85,8 @@ bool Polygon::operator<(const Polygon& other) const
   return m_exterior < other.m_exterior;
 }
 
-void Polygon::remove_ghosts(std::vector<Polygon>& new_polygons, std::vector<Polyline>& new_polylines)
+void Polygon::remove_ghosts(std::vector<Polygon>& new_polygons,
+                            std::vector<Polyline>& new_polylines)
 {
   if (!m_exterior.has_ghosts())
   {

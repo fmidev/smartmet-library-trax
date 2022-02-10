@@ -2,3 +2,5 @@ libsmartmet-trax.so
 obj/
 test/*Test
 tmp/
+compile_commands.json
+results

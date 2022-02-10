@@ -14,18 +14,13 @@
 
 namespace Trax
 {
-Builder::Builder(Builder&& other)
+Builder::Builder(Builder &&other) noexcept
 {
   m_geom = std::move(other.m_geom);
   m_merger = std::move(other.m_merger);
 }
 
-Builder::Builder(std::size_t width, std::size_t height)
-{
-  // we build joints per row and then merge them to enable
-  // easy parallelization over rows
-  // m_joints.resize(height);
-}
+Builder::Builder(std::size_t /* width */, std::size_t /* height */) {}
 
 void Builder::finish_isolines()
 {
@@ -41,18 +36,18 @@ void Builder::finish_geometry(bool isobands)
 
   assign_holes(polygons, holes);
 
-  for (auto&& poly : polygons)
-    m_geom.add(poly);
+  for (auto &&poly : polygons)
+    m_geom.add(std::move(poly));
 
   if (!isobands)
   {
-    for (auto&& line : lines)
+    for (auto &&line : lines)
       m_geom.add(std::move(line));
 
     // Process unassigned holes. They lose their meaning without exteriors
     // which have been cut into plain isolines and become new exteriors without
     // any holes in them.
-    for (auto& polyline : holes)
+    for (auto &polyline : holes)
     {
       polyline.reverse();
       m_geom.add(Polygon(std::move(polyline)));

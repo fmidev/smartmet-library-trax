@@ -16,7 +16,7 @@ Polyline::Polyline(std::initializer_list<double> init_list)
 {
   if (init_list.size() == 0 || init_list.size() % 2 != 0)
     throw Fmi::Exception(BCP, "Invalid initialization of Polyline from elements");
-  auto iter = init_list.begin();
+  auto* iter = init_list.begin();
   while (iter != init_list.end())
   {
     double x = *iter++;
@@ -221,7 +221,8 @@ Polyline& Polyline::normalize()
   {
     const auto n = size() - 1;
     // Lexicographically smallest end vertex first
-    if (m_points[0].x > m_points[n].x || (m_points[0].x == m_points[n].x && m_points[0].y > m_points[n].y))
+    if (m_points[0].x > m_points[n].x ||
+        (m_points[0].x == m_points[n].x && m_points[0].y > m_points[n].y))
       reverse();
     return *this;
   }
@@ -232,7 +233,8 @@ Polyline& Polyline::normalize()
   auto best = 0UL;
   for (auto i = 1UL; i < n; i++)
   {
-    if ((m_points[i].x < m_points[best].x) || (m_points[i].x == m_points[best].x && m_points[i].y < m_points[best].y))
+    if ((m_points[i].x < m_points[best].x) ||
+        (m_points[i].x == m_points[best].x && m_points[i].y < m_points[best].y))
       best = i;
   }
 
@@ -324,7 +326,8 @@ void Polyline::remove_ghosts(std::vector<Polyline>& new_polylines)
   }
 
   // Detect whether there is a wraparound
-  const bool wraparound = (ranges.size() > 1 && ranges.front().begin == 0 && ranges.back().end == n);
+  const bool wraparound =
+      (ranges.size() > 1 && ranges.front().begin == 0 && ranges.back().end == n);
 
   auto sz = ranges.size();
   if (wraparound)  // if there is wraparound, the last range is handled along with the first one

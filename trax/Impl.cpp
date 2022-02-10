@@ -118,12 +118,7 @@ bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
     ++m_max_index;
 
   // Final validity check which may fail at index 0 or n-1
-  if (m_isoband_limits[m_min_index].overlaps(minvalue, maxvalue))
-    return true;
-
-  // m_min_index = -1;
-  // m_max_index = -1;
-  return false;
+  return (m_isoband_limits[m_min_index].overlaps(minvalue, maxvalue));
 }
 
 void Contour::Impl::isoline(const Cell& c)
@@ -186,8 +181,11 @@ void Contour::Impl::isoband_midpoint(int index, const Cell& c)
   CellBuilder::isoband_midpoint(merger, c, range);
 }
 
-void fill_buffers(
-    const Grid& grid, std::size_t j, std::vector<double>& x, std::vector<double>& y, std::vector<double>& z)
+void fill_buffers(const Grid& grid,
+                  std::size_t j,
+                  std::vector<double>& x,
+                  std::vector<double>& y,
+                  std::vector<double>& z)
 {
   const auto nx = grid.width();
   for (auto i = 0UL; i < nx; i++)
@@ -207,7 +205,13 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 
   // Accessing data trhough grid is sometimes slow, so we buffer the values into vectors
   // and just swap them after each row to avoid unnecessary copying.
-  std::vector<double> x1(nx), x2(nx), y1(nx), y2(nx), z1(nx), z2(nx);
+  std::vector<double> x1(nx);
+  std::vector<double> x2(nx);
+  std::vector<double> y1(nx);
+  std::vector<double> y2(nx);
+  std::vector<double> z1(nx);
+  std::vector<double> z2(nx);
+
   fill_buffers(grid, 0, x1, y1, z1);
 
   for (std::size_t j = 0; j < ny - 1; j++)

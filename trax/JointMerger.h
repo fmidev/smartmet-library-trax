@@ -21,8 +21,8 @@ class JointMerger
 {
  public:
   JointMerger() = default;
-  JointMerger(JointMerger&& other);
-  JointMerger& operator=(JointMerger&& other);
+  JointMerger(JointMerger&& other) noexcept;
+  JointMerger& operator=(JointMerger&& other) noexcept;
 
   // Create a new joint from the pool
   Joint* create(const Vertex& vertex) { return m_pool.create(vertex); }
@@ -43,7 +43,8 @@ class JointMerger
 
  private:
   // Find match from the previous row [minpos...maxpos] and a search hint
-  // Joint* find_match(const Vertex& vertex, std::size_t minpos, std::size_t maxpos, std::size_t hint) const;
+  // Joint* find_match(const Vertex& vertex, std::size_t minpos, std::size_t maxpos, std::size_t
+  // hint) const;
 
   JointPool m_pool;                                     // joints from one or more merged rows
   JointPool::iterator m_row_start{m_pool.end()};        // start position of topmost finished row

@@ -59,7 +59,7 @@ JointPool::~JointPool()
     free(m_buffer[i]);
 }
 
-JointPool& JointPool::operator=(JointPool&& other)
+JointPool& JointPool::operator=(JointPool&& other) noexcept
 {
   if (this != &other)
   {
@@ -69,7 +69,7 @@ JointPool& JointPool::operator=(JointPool&& other)
     m_blocks = other.m_blocks;
     m_block = other.m_block;
     m_next = other.m_next;
-    m_buffer = std::move(other.m_buffer);
+    m_buffer = other.m_buffer;
   }
   return *this;
 }
