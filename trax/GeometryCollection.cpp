@@ -18,7 +18,7 @@ void GeometryCollection::add(Polyline &&polyline)
   m_polylines.emplace_back(polyline);
 }
 
-void GeometryCollection::add(Polygon &&upolygon)
+void GeometryCollection::add(Polygon &&polygon)
 {
   m_polygons.emplace_back(polygon);
 }
