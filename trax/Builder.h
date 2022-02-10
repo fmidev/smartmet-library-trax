@@ -15,7 +15,7 @@ class Range;
 class Builder
 {
  public:
-  Builder(Builder&& other);
+  Builder(Builder&& other) noexcept;
 
   Builder(std::size_t width, std::size_t height);
 
