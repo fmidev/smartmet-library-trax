@@ -1,0 +1,119 @@
+#include "Polygon.h"
+#include <smartmet/macgyver/Exception.h>
+#include <algorithm>
+
+namespace Trax
+{
+Polygon::Polygon(Polyline exterior) : m_exterior(std::move(exterior))
+{
+  if (m_exterior.size() < 4)
+    throw Fmi::Exception(BCP, "Polygon shells must have at least 4 points").addParameter("WKT", m_exterior.wkt());
+}
+
+Polygon::Polygon(std::initializer_list<std::initializer_list<double>> init_list) : m_exterior(*init_list.begin())
+{
+  auto iter = init_list.begin();
+  for (++iter; iter != init_list.end(); ++iter)
+    hole(Polyline(*iter));
+}
+
+const Polyline& Polygon::exterior() const
+{
+  return m_exterior;
+}
+
+const std::vector<Polyline>& Polygon::holes() const
+{
+  return m_holes;
+}
+
+void Polygon::hole(Polyline hole)
+{
+  m_holes.emplace_back(std::move(hole));
+}
+
+bool Polygon::bbox_contains(const Polyline& hole) const
+{
+  return m_exterior.bbox().contains(hole.bbox());
+}
+
+bool Polygon::contains(const Polyline& hole) const
+{
+  return m_exterior.contains(hole);
+}
+
+std::string Polygon::wkt() const
+{
+  return "POLYGON " + wkt_body();
+}
+
+std::string Polygon::wkt_body() const
+{
+  std::string ret = "(";
+  ret += m_exterior.wkt_body();
+
+  for (const auto& hole : m_holes)
+  {
+    ret += ',';
+    ret += hole.wkt_body();
+  }
+  ret += ')';
+  return ret;
+}
+
+// Normalize for testing purposes
+Polygon& Polygon::normalize()
+{
+  m_exterior.normalize();
+  for (auto& hole : m_holes)
+    hole.normalize();
+
+  std::sort(m_holes.begin(), m_holes.end());
+
+  return *this;
+}
+
+// For normalizing collections of polygons
+bool Polygon::operator<(const Polygon& other) const
+{
+  if (this == &other)
+    return false;
+
+  // The exterior cannot be the same in contouring
+  return m_exterior < other.m_exterior;
+}
+
+void Polygon::remove_ghosts(std::vector<Polygon>& new_polygons, std::vector<Polyline>& new_polylines)
+{
+  if (!m_exterior.has_ghosts())
+  {
+    std::vector<Polyline> new_holes;
+    for (auto&& hole : m_holes)
+    {
+      if (!hole.has_ghosts())
+        new_holes.emplace_back(hole);
+      else
+        hole.remove_ghosts(new_polylines);
+    }
+    m_holes = std::move(new_holes);
+    new_polygons.emplace_back(std::move(*this));
+  }
+
+  else
+  {
+    m_exterior.remove_ghosts(new_polylines);
+    for (auto&& hole : m_holes)
+    {
+      if (!hole.has_ghosts())
+      {
+        hole.reverse();
+        Polygon new_exterior(hole);
+        new_polygons.emplace_back(new_exterior);
+      }
+      else
+        hole.remove_ghosts(new_polylines);
+    }
+  }
+}
+
+}  // namespace Trax

@@ -1,0 +1,410 @@
+# Isobands tests for a single cell.
+interpolation linear
+
+# 0..10 viewbox to get nice values for intersection coordinates
+bbox 0 0 10 10
+
+grid 2 2
+0 0
+0 0
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+0 0
+0 5
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+0 0
+0 10
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 4,6 0,0 0))
+
+grid 2 2
+0 5
+0 0
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+0 5
+0 5
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+0 5
+0 10
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 8,6 0,0 0))
+
+grid 2 2
+0 10
+0 0
+isoband 0 6 POLYGON ((0 0,0 10,6 10,10 6,10 0,0 0))
+
+grid 2 2
+0 10
+0 5
+isoband 0 6 POLYGON ((0 0,0 10,6 10,10 2,10 0,0 0))
+
+grid 2 2
+0 10
+0 10
+isoband 0 6 POLYGON ((0 0,0 10,6 10,6 0,0 0))
+
+grid 2 2
+5 0
+0 0
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+5 0
+0 5
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+5 0
+0 10
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 4,6 0,0 0))
+
+grid 2 2
+5 5
+0 0
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+5 5
+0 5
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+5 5
+0 10
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 8,6 0,0 0))
+
+grid 2 2
+5 10
+0 0
+isoband 0 6 POLYGON ((0 0,0 10,2 10,10 6,10 0,0 0))
+
+grid 2 2
+5 10
+0 5
+isoband 0 6 POLYGON ((0 0,0 10,2 10,10 2,10 0,0 0))
+
+grid 2 2
+5 10
+0 10
+isoband 0 6 POLYGON ((0 0,0 10,2 10,6 0,0 0))
+
+grid 2 2
+10 0
+0 0
+isoband 0 6 POLYGON ((0 0,0 6,4 10,10 10,10 0,0 0))
+#  Saddle
+
+grid 2 2
+10 0
+0 5
+isoband 0 6 POLYGON ((0 0,0 6,4 10,10 10,10 0,0 0))
+
+grid 2 2
+10 0
+0 10
+isoband 0 6 POLYGON ((0 0,0 6,4 10,10 10,10 4,6 0,0 0))
+
+grid 2 2
+10 5
+0 0
+isoband 0 6 POLYGON ((0 0,0 6,8 10,10 10,10 0,0 0))
+
+grid 2 2
+10 5
+0 5
+isoband 0 6 POLYGON ((0 0,0 6,8 10,10 10,10 0,0 0))
+grid 2 2
+10 5
+0 10
+isoband 0 6 POLYGON ((0 0,0 6,8 10,10 10,10 8,6 0,0 0))
+
+grid 2 2
+10 10
+0 0
+isoband 0 6 POLYGON ((0 0,0 6,10 6,10 0,0 0))
+
+grid 2 2
+10 10
+0 5
+isoband 0 6 POLYGON ((0 0,0 6,10 2,10 0,0 0))
+
+grid 2 2
+10 10
+0 10
+isoband 0 6 POLYGON ((0 0,0 6,6 0,0 0))
+
+grid 2 2
+0 0
+5 0
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+0 0
+5 5
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+0 0
+5 10
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 4,2 0,0 0))
+
+grid 2 2
+0 5
+5 0
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+0 5
+5 5
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+0 5
+5 10
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 8,2 0,0 0))
+
+grid 2 2
+0 10
+5 0
+isoband 0 6 POLYGON ((0 0,0 10,6 10,10 6,10 0,0 0))
+
+grid 2 2
+0 10
+5 5
+isoband 0 6 POLYGON ((0 0,0 10,6 10,10 2,10 0,0 0))
+
+grid 2 2
+0 10
+5 10
+isoband 0 6 POLYGON ((0 0,0 10,6 10,2 0,0 0))
+
+grid 2 2
+5 0
+5 0
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+5 0
+5 5
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+5 0
+5 10
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 4,2 0,0 0))
+
+grid 2 2
+5 5
+5 0
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+5 5
+5 5
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+grid 2 2
+5 5
+5 10
+isoband 0 6 POLYGON ((0 0,0 10,10 10,10 8,2 0,0 0))
+
+grid 2 2
+5 10
+5 0
+isoband 0 6 POLYGON ((0 0,0 10,2 10,10 6,10 0,0 0))
+
+grid 2 2
+5 10
+5 5
+isoband 0 6 POLYGON ((0 0,0 10,2 10,10 2,10 0,0 0))
+
+grid 2 2
+5 10
+5 10
+isoband 0 6 POLYGON ((0 0,0 10,2 10,2 0,0 0))
+
+grid 2 2
+10 0
+5 0
+isoband 0 6 POLYGON ((0 0,0 2,4 10,10 10,10 0,0 0))
+
+grid 2 2
+10 0
+5 5
+isoband 0 6 POLYGON ((0 0,0 2,4 10,10 10,10 0,0 0))
+
+grid 2 2
+10 0
+5 10
+isoband 0 6 POLYGON ((0 0,0 2,4 10,10 10,10 4,2 0,0 0))
+
+grid 2 2
+10 5
+5 0
+isoband 0 6 POLYGON ((0 0,0 2,8 10,10 10,10 0,0 0))
+
+grid 2 2
+10 5
+5 5
+isoband 0 6 POLYGON ((0 0,0 2,8 10,10 10,10 0,0 0))
+
+grid 2 2
+10 5
+5 10
+isoband 0 6 POLYGON ((0 0,0 2,8 10,10 10,10 8,2 0,0 0))
+
+grid 2 2
+10 10
+5 0
+isoband 0 6 POLYGON ((0 0,0 2,10 6,10 0,0 0))
+
+grid 2 2
+10 10
+5 5
+isoband 0 6 POLYGON ((0 0,0 2,10 2,10 0,0 0))
+
+grid 2 2
+10 10
+5 10
+isoband 0 6 POLYGON ((0 0,0 2,2 0,0 0))
+
+grid 2 2
+0 0
+10 0
+isoband 0 6 POLYGON ((0 4,0 10,10 10,10 0,4 0,0 4))
+
+grid 2 2
+0 0
+10 5
+isoband 0 6 POLYGON ((0 4,0 10,10 10,10 0,8 0,0 4))
+
+grid 2 2
+0 0
+10 10
+isoband 0 6 POLYGON ((0 4,0 10,10 10,10 4,0 4))
+
+grid 2 2
+0 5
+10 0
+isoband 0 6 POLYGON ((0 4,0 10,10 10,10 0,4 0,0 4))
+
+grid 2 2
+0 5
+10 5
+isoband 0 6 POLYGON ((0 4,0 10,10 10,10 0,8 0,0 4))
+
+grid 2 2
+0 5
+10 10
+isoband 0 6 POLYGON ((0 4,0 10,10 10,10 8,0 4))
+
+grid 2 2
+0 10
+10 0
+isoband 0 6 MULTIPOLYGON (((0 4,0 10,6 10,0 4)),((4 0,10 6,10 0,4 0)))
+
+grid 2 2
+0 10
+10 5
+isoband 0 6 MULTIPOLYGON (((0 4,0 10,6 10,0 4)),((8 0,10 2,10 0,8 0)))
+
+grid 2 2
+0 10
+10 10
+isoband 0 6 POLYGON ((0 4,0 10,6 10,0 4))
+
+grid 2 2
+5 0
+10 0
+isoband 0 6 POLYGON ((0 8,0 10,10 10,10 0,4 0,0 8))
+
+grid 2 2
+5 0
+10 5
+isoband 0 6 POLYGON ((0 8,0 10,10 10,10 0,8 0,0 8))
+
+grid 2 2
+5 0
+10 10
+isoband 0 6 POLYGON ((0 8,0 10,10 10,10 4,0 8))
+
+grid 2 2
+5 5
+10 0
+isoband 0 6 POLYGON ((0 8,0 10,10 10,10 0,4 0,0 8))
+
+grid 2 2
+5 5
+10 5
+isoband 0 6 POLYGON ((0 8,0 10,10 10,10 0,8 0,0 8))
+
+grid 2 2
+5 5
+10 10
+isoband 0 6 POLYGON ((0 8,0 10,10 10,10 8,0 8))
+
+grid 2 2
+5 10
+10 0
+isoband 0 6 MULTIPOLYGON (((0 8,0 10,2 10,0 8)),((4 0,10 6,10 0,4 0)))
+
+grid 2 2
+5 10
+10 5
+isoband 0 6 MULTIPOLYGON (((0 8,0 10,2 10,0 8)),((8 0,10 2,10 0,8 0)))
+
+grid 2 2
+5 10
+10 10
+isoband 0 6 POLYGON ((0 8,0 10,2 10,0 8))
+
+grid 2 2
+10 0
+10 0
+isoband 0 6 POLYGON ((4 0,4 10,10 10,10 0,4 0))
+
+grid 2 2
+10 0
+10 5
+isoband 0 6 POLYGON ((4 10,10 10,10 0,8 0,4 10))
+
+grid 2 2
+10 0
+10 10
+isoband 0 6 POLYGON ((4 10,10 10,10 4,4 10))
+
+grid 2 2
+10 5
+10 0
+isoband 0 6 POLYGON ((4 0,8 10,10 10,10 0,4 0))
+
+grid 2 2
+10 5
+10 5
+isoband 0 6 POLYGON ((8 0,8 10,10 10,10 0,8 0))
+
+grid 2 2
+10 5
+10 10
+isoband 0 6 POLYGON ((8 10,10 10,10 8,8 10))
+
+grid 2 2
+10 10
+10 0
+isoband 0 6 POLYGON ((4 0,10 6,10 0,4 0))
+
+grid 2 2
+10 10
+10 5
+isoband 0 6 POLYGON ((8 0,10 2,10 0,8 0))
+
+grid 2 2
+10 10
+10 10
+isoband 0 6 GEOMETRYCOLLECTION EMPTY

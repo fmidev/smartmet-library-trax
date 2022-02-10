@@ -1,0 +1,4 @@
+libsmartmet-trax.so
+obj/
+test/*Test
+tmp/

@@ -1,0 +1,15 @@
+# Isobands tests for multiple cells
+interpolation linear
+
+# 0..30 viewbox to get nice values for intersection coordinates
+bbox 0 0 30 30
+
+grid 4 4
+0 0 0 0
+0 5 5 0
+0 5 5 0
+0 0 0 0
+isoband 0 6 POLYGON ((0 0,0 10,0 20,0 30,10 30,20 30,30 30,30 20,30 10,30 0,20 0,10 0,0 0))
+isoband 4 6 POLYGON ((8 10,8 20,10 22,20 22,22 20,22 10,20 8,10 8,8 10))
+isoband 4 10 POLYGON ((8 10,8 20,10 22,20 22,22 20,22 10,20 8,10 8,8 10))
+

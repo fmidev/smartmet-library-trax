@@ -1,0 +1,21 @@
+#pragma once
+
+namespace Trax
+{
+// Note: This order is designed to enable lexicographic sorting so that column+1 vertices
+// would be the last elements.
+enum class VertexType
+{
+  Corner,
+  Vertical_lo,
+  Vertical_hi,
+  Horizontal_lo,
+  Horizontal_hi
+};
+
+bool is_vertical(VertexType type);
+bool is_horizontal(VertexType type);
+
+const char* to_string(VertexType vtype);
+
+}  // namespace Trax

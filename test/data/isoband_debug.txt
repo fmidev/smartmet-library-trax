@@ -1,0 +1,38 @@
+# Isoband tests for problems which had to be debugged separately,
+# saved in order not to repeat the same bugs.
+
+interpolation linear
+
+######################################################################
+# This one caused an infinite loop in alternate paths. The loop range was incorrect.
+bbox 0 0 30 10
+grid 4 2
+10 5 10 0
+0 0 0 0
+isoband 5 6 MULTIPOLYGON (((0 5,0 6,8 10,10 10,0 5)),((10 10,12 10,20 6,24 10,25 10,20 5,10 10)))
+
+######################################################################
+# Encoutered with EC forecast, an unused joint. The -25 line separates
+# the ring in the bottom row from the ring in the top two rows. Hence
+# the first row join finds no matches at all, and the merge failed
+# to update indices properly. For some reason this was the minimal
+# test size that repeated the problem. Approximate shape of the rings:
+#
+#    /----
+#    \___|
+#    __
+#    | \
+#    +--+
+#
+# Below is a simplified version with scaled values and a bbox selected to produce
+# integer coordinates for easier log analysis. The bug was in incorrect handling
+# of the ranges to search when merging cells or rows.
+
+bbox 0 0 40 90
+grid 5 4
+-30	-30	-30	-30	-30
+-30	-10	-10	-10	-10
+-25	-25	-25	-25	-25
+-10	-10	-10	-20	-30
+isoband -20 0 MULTIPOLYGON (((0 0,0 20,10 20,20 20,30 0,20 0,10 0,0 0)),((5 60,10 75,20 75,30 75,40 75,40 60,40 40,30 40,20 40,10 40,5 60)))
+

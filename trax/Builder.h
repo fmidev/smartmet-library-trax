@@ -1,0 +1,43 @@
+#pragma once
+
+#include "CellBuilder.h"
+#include "GeometryCollection.h"
+#include "JointMerger.h"
+#include "Vertex.h"
+#include <list>
+#include <vector>
+
+namespace Trax
+{
+struct Cell;
+class Range;
+
+class Builder
+{
+ public:
+  Builder(Builder&& other);
+
+  Builder(std::size_t width, std::size_t height);
+
+  // Get the final result
+  GeometryCollection result();
+
+  // Add rings from a single cell
+  // void add(CellJoints& edges, std::size_t row);
+
+  // Finalize (partial) results
+  void finish_row();
+  void finish_isolines();
+  void finish_isobands();
+
+  JointMerger& merger() { return m_merger; }
+
+ private:
+  void finish_geometry(bool isobands);
+
+  GeometryCollection m_geom;  // final result
+
+  JointMerger m_merger;  // Joints for all grid rows
+};
+
+}  // namespace Trax

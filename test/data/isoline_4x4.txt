@@ -1,0 +1,33 @@
+# Isolines tests for a single cell.
+interpolation linear
+
+# 0..30 viewbox to get nice values for intersection coordinates
+bbox 0 0 30 30
+
+grid 4 4
+0 0 0 0
+0 1 1 0
+0 1 1 0
+0 0 0 0
+isoline 1 POLYGON ((10 10,10 20,20 20,20 10,10 10))
+
+grid 4 4
+0 0 0 0
+0 1 1 0
+0 1 0 0
+0 0 0 0
+isoline 1 POLYGON ((10 10,10 20,20 20,10 10))
+
+grid 4 4
+0 0 0 0
+0 1 1 0
+0 0 0 0
+0 0 0 0
+isoline 1 GEOMETRYCOLLECTION EMPTY
+
+grid 4 4
+0 0 0 0
+0 0 1 0
+0 1 0 0
+0 0 0 0
+isoline 1 GEOMETRYCOLLECTION EMPTY
