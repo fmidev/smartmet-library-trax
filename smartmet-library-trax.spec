@@ -30,7 +30,7 @@ Provides: %{LIBNAME}
 #TestRequires: boost169-devel
 #TestRequires: gcc-c++
 #TestRequires: make
-#TestRequires: fmt
+#TestRequires: fmt-devel
 #TestRequires: geos310-devel
 #TestRequires: gdal34-devel
 #TestRequires: smartmet-library-macgyver-devel >= 21.1.21
