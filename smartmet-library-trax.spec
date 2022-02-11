@@ -29,6 +29,8 @@ Requires: fmt
 Provides: %{LIBNAME}
 #TestRequires: boost169-devel
 #TestRequires: gcc-c++
+#TestRequires: make
+#TestRequires: smartmet-library-macgyver-devel >= 21.1.21
 
 %description
 Isoline/isoband calculation library.
