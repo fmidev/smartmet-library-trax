@@ -3,22 +3,22 @@
 
 namespace Trax
 {
-const std::vector<Polygon>& GeometryCollection::polygons() const
+const std::vector<Polygon> &GeometryCollection::polygons() const
 {
   return m_polygons;
 }
 
-const std::vector<Polyline>& GeometryCollection::polylines() const
+const std::vector<Polyline> &GeometryCollection::polylines() const
 {
   return m_polylines;
 }
 
-void GeometryCollection::add(Polyline polyline)
+void GeometryCollection::add(Polyline &&polyline)
 {
   m_polylines.emplace_back(polyline);
 }
 
-void GeometryCollection::add(Polygon polygon)
+void GeometryCollection::add(Polygon &&polygon)
 {
   m_polygons.emplace_back(polygon);
 }
@@ -78,9 +78,9 @@ std::string GeometryCollection::wkt() const
 }
 
 // Normalize to lexicographic order for testing purposes
-GeometryCollection& GeometryCollection::normalize()
+GeometryCollection &GeometryCollection::normalize()
 {
-  for (auto& poly : m_polygons)
+  for (auto &poly : m_polygons)
     poly.normalize();
 
   std::sort(m_polygons.begin(), m_polygons.end());
@@ -92,7 +92,7 @@ GeometryCollection& GeometryCollection::normalize()
 void GeometryCollection::remove_ghosts()
 {
   std::vector<Polygon> new_polygons;
-  for (auto& poly : m_polygons)
+  for (auto &poly : m_polygons)
     poly.remove_ghosts(new_polygons, m_polylines);
   m_polygons = std::move(new_polygons);
 }

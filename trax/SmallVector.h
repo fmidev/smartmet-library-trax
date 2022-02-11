@@ -34,7 +34,7 @@ class SmallVector
   const_iterator begin() const { return m_data.begin(); }
   const_iterator end() const
   {
-    auto pos = m_data.begin();
+    auto* pos = m_data.begin();
     std::advance(pos, m_size);
     return pos;
   }

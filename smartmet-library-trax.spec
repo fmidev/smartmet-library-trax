@@ -3,8 +3,8 @@
 %define SPECNAME smartmet-library-%{DIRNAME}
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 21.12.7
-Release: 3%{?dist}.fmi
+Version: 22.2.10
+Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
 URL: https://github.com/fmidev/smartmet-library-trax
@@ -12,12 +12,20 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: boost169-devel
 BuildRequires: gcc-c++
+BuildRequires: smartmet-library-macgyver-devel >= 22.1.21
 %if %{defined el7}
 BuildRequires: devtoolset-7-gcc-c++
 #TestRequires: devtoolset-7-gcc-c++
 %endif
 BuildRequires: make
 BuildRequires: rpm-build
+BuildRequires: gdal34-devel
+BuildRequires: geos310-devel
+BuildRequires: fmt-devel
+Requires: smartmet-library-macgyver >= 22.1.21
+Requires: gdal34
+Requires: geos310
+Requires: fmt
 Provides: %{LIBNAME}
 #TestRequires: boost169-devel
 #TestRequires: gcc-c++
@@ -64,5 +72,5 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
-* Tue Dec  7 2021 Mika Heiskanen <mika.heiskanen@fmi.fi> - 21.12.7-3.fmi
-- Initial brute force version
+* Thu Feb 10 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.2.10-1.fmi
+- First release candidate

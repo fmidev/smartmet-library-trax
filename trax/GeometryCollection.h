@@ -10,8 +10,8 @@ class GeometryCollection
 {
  public:
   bool empty() const { return m_polylines.empty() && m_polygons.empty(); }
-  void add(Polygon polygon);
-  void add(Polyline polyline);
+  void add(Polygon&& polygon);
+  void add(Polyline&& polyline);
   std::string wkt() const;
 
   const std::vector<Polygon>& polygons() const;

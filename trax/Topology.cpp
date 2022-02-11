@@ -149,7 +149,9 @@ JoinCandidate select_turn(const Polyline& polyline, JoinCandidates& candidates, 
   return best_candidate;
 }
 
-Joint* select_right_turn(const Vertex& vertex, const Polylines& polylines, const Duplicates& duplicates)
+Joint* select_right_turn(const Vertex& vertex,
+                         const Polylines& polylines,
+                         const Duplicates& duplicates)
 {
   // Select free joint with the rightmost turn
 
@@ -223,7 +225,8 @@ Polylines extract_right_turning_sequence(Joint* joint)
       {
         if (polyline.size() == 1)  // collapsed to a corner point, just discard it
           return polylines;
-        throw Fmi::Exception(BCP, fmt::format("Only joint already used at {},{}", vertex.x, vertex.y));
+        throw Fmi::Exception(BCP,
+                             fmt::format("Only joint already used at {},{}", vertex.x, vertex.y));
       }
       joint->used = true;
       joint = joint->next;
@@ -312,7 +315,8 @@ void extract_left_turning_sequence(Polylines& polylines, Polygons& polygons, Hol
       holes.emplace_back(std::move(hole));
   }
   else if (++new_exteriors.begin() != new_exteriors.end())
-    throw Fmi::Exception(BCP, fmt::format("Found {} exteriors, should find only one!", new_exteriors.size()));
+    throw Fmi::Exception(
+        BCP, fmt::format("Found {} exteriors, should find only one!", new_exteriors.size()));
   else
   {
     new_exteriors.front().update_bbox();  // no need to update hole bboxes, we know they belong here
@@ -354,7 +358,7 @@ std::list<Polygons::iterator> possible_rtree_shells(const bg_rtree& rtree, const
   return ret;
 }
 
-std::list<Polygons::iterator> possible_shells(Polygons& polygons, const bg_rtree& rtree, const Polyline& hole)
+std::list<Polygons::iterator> possible_shells(const bg_rtree& rtree, const Polyline& hole)
 {
   auto ret = possible_rtree_shells(rtree, hole);
 
@@ -391,7 +395,7 @@ Polygons::iterator innermost_polygon(const std::list<Polygons::iterator>& polygo
 
   auto ret = polygons.front();  // first candidate
 
-  for (auto& it : polygons)
+  for (const auto& it : polygons)
     if (ret != it && ret->exterior().bbox().contains(it->exterior().bbox()))
       ret = it;
 
@@ -505,7 +509,7 @@ void assign_holes(Polygons& polygons, Holes& holes)
   {
     auto& hole = *it;  // shorthand variable
 
-    auto candidates = possible_shells(polygons, rtree, hole);
+    auto candidates = possible_shells(rtree, hole);
 #if 0
     std::cout << fmt::format("\t{} candidates for {}\n", candidates.size(), hole.wkt());
 #endif

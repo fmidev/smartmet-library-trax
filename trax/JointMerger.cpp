@@ -186,7 +186,7 @@ void merge_joint(Joint* joint, Joint* match)
 
 }  // namespace
 
-JointMerger::JointMerger(JointMerger&& other)
+JointMerger::JointMerger(JointMerger&& other) noexcept
 {
   m_pool = std::move(other.m_pool);
   m_row_start = other.m_row_start;
@@ -194,7 +194,7 @@ JointMerger::JointMerger(JointMerger&& other)
   m_maxrow = other.m_maxrow;
 }
 
-JointMerger& JointMerger::operator=(JointMerger&& other)
+JointMerger& JointMerger::operator=(JointMerger&& other) noexcept
 {
   if (this != &other)
   {
