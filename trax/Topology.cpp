@@ -8,7 +8,7 @@
 #include <fmt/format.h>
 #include <smartmet/macgyver/Exception.h>
 
-#if 0
+#if 1
 #include <iostream>
 #endif
 
@@ -493,8 +493,18 @@ void build_rings(Polygons& polygons, Polylines& holes, JointPool& joints)
 void assign_holes(Polygons& polygons, Holes& holes)
 {
 #if 0
-  static int counter = 0;
-  std::cout << fmt::format("{} : Assigning {} holes to {} polygons\n", ++counter, holes.size(), polygons.size());
+  int counter = 0;
+  std::cout << fmt::format(
+      "{} : Assigning {} holes to {} polygons\n", ++counter, holes.size(), polygons.size());
+
+  auto i = 0UL;
+  for (const auto& poly : polygons)
+    std::cout << "Poly " << i++ << " " << poly.wkt()
+              << "\n\tbbox = " << poly.exterior().bbox().wkt() << "\n";
+  i = 0UL;
+  for (const auto& hole : holes)
+    std::cout << "Hole " << i++ << " " << hole.wkt() << "\n\tbbox = " << hole.bbox().wkt() << "\n";
+  counter = 0;
 #endif
   if (holes.empty())
     return;
@@ -511,10 +521,13 @@ void assign_holes(Polygons& polygons, Holes& holes)
 
     auto candidates = possible_shells(rtree, hole);
 #if 0
-    std::cout << fmt::format("\t{} candidates for {}\n", candidates.size(), hole.wkt());
+    std::cout << fmt::format("\t{} candidates for hole {}\n", candidates.size(), counter++);
 #endif
     if (candidates.empty())
-      ++it;
+    {
+      throw Fmi::Exception(BCP, "Unassigned hole!");
+      // ++it;
+    }
     else
     {
       auto polygon = innermost_polygon(candidates);

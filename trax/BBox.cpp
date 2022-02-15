@@ -1,5 +1,6 @@
 #include "BBox.h"
 #include <fmt/format.h>
+#include <macgyver/Exception.h>
 
 #if 0
 #include <iostream>
@@ -41,11 +42,23 @@ void BBox::init(const Points& points)
 // Another bbox is contained using <= and >= comparisons since a hole may touch the exterior shell
 bool BBox::contains(const BBox& other) const
 {
-  auto ret = (m_minx <= other.m_minx && m_maxx >= other.m_maxx && m_miny <= other.m_miny && m_maxy >= other.m_maxy);
+  if (!valid())
+    throw Fmi::Exception(BCP, "Polygon with invalid bbox, contains() cannot be called");
+  if (!other.valid())
+    throw Fmi::Exception(
+        BCP, "Polygon with invalid bbox cannot be used as argument for Polyline::contains()");
+
+  auto ret = (m_minx <= other.m_minx && m_maxx >= other.m_maxx && m_miny <= other.m_miny &&
+              m_maxy >= other.m_maxy);
 #if 0
   std::cout << fmt::format("{} contains {} result = {}\n", wkt(), other.wkt(), ret);
 #endif
   return ret;
+}
+
+bool BBox::valid() const
+{
+  return !std::isnan(m_minx) && !std::isnan(m_miny) && !std::isnan(m_maxx) && !std::isnan(m_maxy);
 }
 
 std::string BBox::wkt() const

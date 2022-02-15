@@ -19,6 +19,7 @@ class BBox
   double ymin() const { return m_miny; }
   double xmax() const { return m_maxx; }
   double ymax() const { return m_maxy; }
+  bool valid() const;
 
  private:
   double m_minx = std::numeric_limits<double>::quiet_NaN();

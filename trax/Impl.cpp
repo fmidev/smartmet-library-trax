@@ -138,7 +138,7 @@ bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
   // Final validity check which may fail at index 0 or n-1
   bool ok = (m_isoband_limits[m_min_index].overlaps(minvalue, maxvalue));
 
-#if 0  
+#if 0
   std::cout << "Range: " << minvalue << "..." << maxvalue << "\tlimits = " << m_min_index << ","
             << m_max_index << "\t= " << m_isoband_limits[m_min_index].lo() << "..."
             << m_isoband_limits[m_min_index].hi() << " to " << m_isoband_limits[m_max_index].lo()

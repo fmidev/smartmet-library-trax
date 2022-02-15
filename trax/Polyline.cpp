@@ -156,8 +156,9 @@ bool Polyline::contains(const Polyline& other) const
     auto y1 = m_points[i - 1].y;
     auto x2 = m_points[i].x;
     auto y2 = m_points[i].y;
-    if (x < (x1 - x2) * (y - y2) / (y1 - y2) + x2)
-      inside = !inside;
+    if ((y1 > y) != (y2 > y))
+      if (x < (x1 - x2) * (y - y2) / (y1 - y2) + x2)
+        inside = !inside;
   }
 
   return inside;
