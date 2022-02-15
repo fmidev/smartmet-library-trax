@@ -98,13 +98,22 @@ bool Contour::Impl::update_isolines_to_check(const MinMax& minmax)
 
   m_max_index = std::max(m_max_index, m_min_index);
 
-  while (m_max_index > 0 && maxvalue >= m_isoline_values[m_max_index - 1])
+  while (m_max_index > 0 && maxvalue < m_isoline_values[m_max_index])
     --m_max_index;
   while (m_max_index < n - 1 && maxvalue >= m_isoline_values[m_max_index + 1])
     ++m_max_index;
 
   // The range may now be from 0 to 0, we must check the limits to finally accept the interval
-  return (minvalue <= m_isoline_values[m_min_index] && maxvalue >= m_isoline_values[m_max_index]);
+  bool ok = (m_min_index <= m_max_index && minvalue <= m_isoline_values[m_min_index] &&
+             maxvalue >= m_isoline_values[m_max_index]);
+
+#if 0
+  std::cout << "Range: " << minvalue << "..." << maxvalue << "\tlimits = " << m_min_index << ","
+            << m_max_index << "\t= " << m_isoline_values[m_min_index] << "..."
+            << m_isoline_values[m_max_index] << "\t";
+  std::cout << (ok ? "ok" : "***") << "\n";
+#endif
+  return ok;
 }
 
 bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
@@ -128,7 +137,6 @@ bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
 
   // Final validity check which may fail at index 0 or n-1
   bool ok = (m_isoband_limits[m_min_index].overlaps(minvalue, maxvalue));
-  return ok;
 
 #if 0  
   std::cout << "Range: " << minvalue << "..." << maxvalue << "\tlimits = " << m_min_index << ","
@@ -137,6 +145,7 @@ bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
             << "..." << m_isoband_limits[m_max_index].hi() << "\t";
   std::cout << (ok ? "ok" : "***") << "\n";
 #endif
+  return ok;
 }
 
 void Contour::Impl::isoline(const Cell& c)
