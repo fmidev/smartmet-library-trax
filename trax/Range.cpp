@@ -21,7 +21,8 @@ Range::Range(double lo, double hi) : m_lo(lo), m_hi(hi)
   if (std::isnormal(lo) && std::isnormal(hi))
   {
     if (lo > hi)
-      throw Fmi::Exception(BCP, fmt::format("Finite isoband limits must be in ascending order: {} >= {}", lo, hi));
+      throw Fmi::Exception(
+          BCP, fmt::format("Finite isoband limits must be in ascending order: {} >= {}", lo, hi));
 
     // Adjust range 5..5 to 5..5+eps since we use condition lo<=value<hi while contouring
     // and the intent is clear
@@ -37,7 +38,8 @@ Range::Range(double lo, double hi) : m_lo(lo), m_hi(hi)
       throw Fmi::Exception(BCP, "Isoband limits must both be NaN, not just one");
   }
   else if (lo >= hi)
-    throw Fmi::Exception(BCP, fmt::format("Isoband limits must be in ascending order: {} >= {}", lo, hi));
+    throw Fmi::Exception(
+        BCP, fmt::format("Isoband limits must be in ascending order: {} >= {}", lo, hi));
 }
 
 // If the range is from lo..hi with finite hi, modify hi to hi+eps
@@ -74,6 +76,24 @@ bool Range::operator<(const Range& other) const
   if (m_lo != other.lo())
     return (m_lo < other.lo());
   return (m_hi < other.hi());
+}
+
+// Needed since NaN comparisons are always false
+namespace
+{
+bool same(double value1, double value2)
+{
+  if (std::isnan(value1))
+    return std::isnan(value2);
+  if (std::isnan(value2))
+    return false;
+  return value1 == value2;
+}
+}  // namespace
+
+bool Range::operator==(const Range& other) const
+{
+  return same(m_lo, other.m_lo) && same(m_hi, other.m_hi);
 }
 
 bool Range::overlaps(double lo, double hi) const

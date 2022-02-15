@@ -1,4 +1,5 @@
 #include "IsolineValues.h"
+#include <macgyver/Exception.h>
 #include <algorithm>
 
 namespace Trax
@@ -24,7 +25,24 @@ bool IsolineValues::valid() const
 
 void IsolineValues::sort()
 {
+  auto input_values = m_values;
   std::sort(m_values.begin(), m_values.end());
+
+  for (auto i = 0UL; i < m_values.size(); i++)
+  {
+    bool ok = false;
+    for (auto j = 0UL; j < input_values.size() && !ok; j++)
+    {
+      if (input_values[j] == m_values[i])
+      {
+        m_positions.push_back(j);
+        ok = true;
+      }
+    }
+
+    if (!ok)
+      throw Fmi::Exception(BCP, "Found no original position for isoline limit");
+  }
 }
 
 }  // namespace Trax

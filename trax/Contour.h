@@ -15,13 +15,15 @@ class Contour
 {
  public:
   ~Contour();
-  Contour(InterpolationType itype);
+  Contour();
 
-  Contour() = delete;
   Contour(const Contour&) = delete;
   Contour(Contour&&) = delete;
   Contour& operator=(const Contour&) = delete;
   Contour& operator=(Contour&&) = delete;
+
+  void interpolation(InterpolationType itype);
+  void closed_range(bool flag);
 
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
   GeometryCollections isolines(const Grid& grid, const IsolineValues& limits);

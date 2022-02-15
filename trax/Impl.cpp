@@ -1,4 +1,5 @@
 #include "Impl.h"
+#include <macgyver/Exception.h>
 #include <algorithm>  // std::minmax
 #include <cmath>      // std::min and std::max
 #include <utility>    // std::pair and std::make_pair
@@ -15,6 +16,10 @@ void Contour::Impl::init(const IsolineValues& values, std::size_t width, std::si
 {
   m_isoline_values = values;
   m_isoband_limits = IsobandLimits();
+  m_isoline_values.sort();
+
+  if (!m_isoline_values.valid())
+    throw Fmi::Exception(BCP, "Isoline values not valid");
 
   m_builders.clear();
   m_builders.reserve(m_isoline_values.size());
@@ -29,6 +34,10 @@ void Contour::Impl::init(const IsobandLimits& limits, std::size_t width, std::si
 {
   m_isoband_limits = limits;
   m_isoline_values = IsolineValues();
+  m_isoband_limits.sort(m_closed_range);
+
+  if (!m_isoband_limits.valid())
+    throw Fmi::Exception(BCP, "Isoband limits not valid");
 
   m_builders.clear();
   m_builders.reserve(m_isoband_limits.size());
@@ -62,9 +71,13 @@ void Contour::Impl::finish_isobands()
 GeometryCollections Contour::Impl::result()
 {
   GeometryCollections geoms;
-  geoms.reserve(m_builders.size());
-  for (auto& builder : m_builders)
-    geoms.emplace_back(builder.result());
+  geoms.resize(m_builders.size());
+  for (auto i = 0UL; i < m_builders.size(); i++)
+  {
+    auto pos = (!m_isoline_values.empty() ? m_isoline_values.original_position(i)
+                                          : m_isoband_limits.original_position(i));
+    geoms[pos] = std::move(m_builders[i].result());
+  }
   return geoms;
 }
 
@@ -73,29 +86,25 @@ bool Contour::Impl::update_isolines_to_check(const MinMax& minmax)
   double minvalue = minmax.first;
   double maxvalue = minmax.second;
 
-  int n = m_isoline_values.size() - 1;
+  int n = m_isoline_values.size();
 
   m_min_index = std::max(m_min_index, 0);
   m_max_index = std::max(m_max_index, 0);
 
-  while (m_min_index > 0 && minvalue < m_isoline_values[m_min_index - 1])
+  while (m_min_index > 0 && minvalue <= m_isoline_values[m_min_index - 1])
     --m_min_index;
-  while (m_min_index < n - 1 && minvalue > m_isoline_values[m_min_index + 1])
+  while (m_min_index < n - 1 && minvalue > m_isoline_values[m_min_index])
     ++m_min_index;
 
   m_max_index = std::max(m_max_index, m_min_index);
 
-  while (m_max_index > 0 && maxvalue < m_isoline_values[m_max_index - 1])
+  while (m_max_index > 0 && maxvalue >= m_isoline_values[m_max_index - 1])
     --m_max_index;
-  while (m_max_index < n - 1 && maxvalue > m_isoline_values[m_max_index + 1])
+  while (m_max_index < n - 1 && maxvalue >= m_isoline_values[m_max_index + 1])
     ++m_max_index;
 
-  if (minvalue <= m_isoline_values[m_min_index] && maxvalue >= m_isoline_values[m_max_index])
-    return true;
-
-  m_min_index = -1;
-  m_max_index = -1;
-  return false;
+  // The range may now be from 0 to 0, we must check the limits to finally accept the interval
+  return (minvalue <= m_isoline_values[m_min_index] && maxvalue >= m_isoline_values[m_max_index]);
 }
 
 bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
@@ -233,6 +242,7 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   }
 
   finish_isobands();
+
   return result();
 }  // namespace Trax
 

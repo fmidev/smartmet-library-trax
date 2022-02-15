@@ -26,11 +26,19 @@ struct point
 
 // Calculate intersection coordinates adjust to VertexType corner if necessary. di/dj are used only
 // when the intersection is at a corner
-point intersect(
-    double x1, double y1, double z1, double x2, double y2, double z2, int di, int dj, VertexType type, double value)
+point intersect(double x1,
+                double y1,
+                double z1,
+                double x2,
+                double y2,
+                double z2,
+                int di,
+                int dj,
+                VertexType type,
+                double value)
 {
-  // These equality tests are necessary for handling value==lolimit cases without any rounding errors!
-  // std::cout << fmt::format("{},{},{} - {},{},{} at {}\n", x1, y1, z1, x2, y2, z2, value);
+  // These equality tests are necessary for handling value==lolimit cases without any rounding
+  // errors! std::cout << fmt::format("{},{},{} - {},{},{} at {}\n", x1, y1, z1, x2, y2, z2, value);
 
   if (z1 == value)
     return {x1, y1, VertexType::Corner, 0, 0};
@@ -103,15 +111,16 @@ class JointBuilder
 // so that close() will not have to worry about such details.
 // An implementation detail is how consecutive horizontal/vertical and vertical/horizontal
 // coordinates merge. Since we're upgrading to a corner, atleast one of row/column must increase
-// and neither can decrease (both row&column are equal at the bottom left corner). Hence a simple std::max solution
-// is enough to merge the two vertices.
+// and neither can decrease (both row&column are equal at the bottom left corner). Hence a simple
+// std::max solution is enough to merge the two vertices.
 
 inline void JointBuilder::add(std::uint32_t column, std::uint32_t row, const point& p, double z)
 {
   add(column + p.di, row + p.dj, p.type, p.x, p.y, z);
 }
 
-void JointBuilder::add(std::uint32_t column, std::uint32_t row, VertexType vtype, double x, double y, double z)
+void JointBuilder::add(
+    std::uint32_t column, std::uint32_t row, VertexType vtype, double x, double y, double z)
 {
   bool ghost = z != m_range.lo();
   Vertex vertex(column, row, vtype, x, y, ghost);
@@ -1464,7 +1473,12 @@ void isoband_linear(JointMerger& joints, const Cell& c, const Range& range)
 
 void isoline_linear(JointMerger& joints, const Cell& c, double limit)
 {
-  Range range(limit, std::numeric_limits<double>::infinity());
+  // Geometry building will omit the lines at limit+eps as artificial boundaries (ghost lines)
+  auto eps = 0.01;
+  while (limit == limit + eps)
+    eps *= 2;
+
+  Range range(limit, limit + eps);
   JointBuilder b(joints, range);
   b.build_linear(c);
 }

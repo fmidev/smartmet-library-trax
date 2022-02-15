@@ -7,11 +7,6 @@
 #include <smartmet/macgyver/Exception.h>
 #include <stdexcept>
 
-#if 1
-#include "JointPool.h"
-#include <iostream>
-#endif
-
 namespace Trax
 {
 Builder::Builder(Builder &&other) noexcept
@@ -31,28 +26,12 @@ void Builder::finish_geometry(bool isobands)
 {
   Polygons polygons;
   Polylines holes;
-  Polylines lines;
   build_rings(polygons, holes, m_merger.pool());
 
   assign_holes(polygons, holes);
 
   for (auto &&poly : polygons)
     m_geom.add(std::move(poly));
-
-  if (!isobands)
-  {
-    for (auto &&line : lines)
-      m_geom.add(std::move(line));
-
-    // Process unassigned holes. They lose their meaning without exteriors
-    // which have been cut into plain isolines and become new exteriors without
-    // any holes in them.
-    for (auto &polyline : holes)
-    {
-      polyline.reverse();
-      m_geom.add(Polygon(std::move(polyline)));
-    }
-  }
 
   // Remove ghost vertices when calculating isolines
   if (!isobands)

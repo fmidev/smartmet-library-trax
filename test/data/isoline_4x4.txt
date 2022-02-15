@@ -31,3 +31,24 @@ grid 4 4
 0 1 0 0
 0 0 0 0
 isoline 1 GEOMETRYCOLLECTION EMPTY
+
+grid 4 4
+0 0 0 0
+1 1 1 1
+2 2 2 2
+2 2 2 2
+isoline 1 LINESTRING (0 20,10 20,20 20,30 20)
+
+grid 4 4
+0 0 0 0
+1 1 1 1
+2 1 2 2
+2 2 2 2
+isoline 1 LINESTRING (0 20,10 20,20 20,30 20)
+
+grid 4 4
+0 0 0 0
+1 1 1 1
+2 1 1 2
+2 2 2 2
+isoline 1 LINESTRING (0 20,10 20,20 20,30 20)

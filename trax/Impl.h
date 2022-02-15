@@ -9,7 +9,10 @@ namespace Trax
 class Contour::Impl
 {
  public:
-  Impl(InterpolationType itype) : m_itype(itype) {}
+  Impl() = default;
+
+  void interpolation(InterpolationType itype) { m_itype = itype; }
+  void closed_range(bool flag) { m_closed_range = flag; }
 
   // Calculate full set of contours
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -52,7 +55,10 @@ class Contour::Impl
 
   // ---- Member variables ----
 
-  const InterpolationType m_itype = InterpolationType::Linear;
+  InterpolationType m_itype = InterpolationType::Linear;
+
+  // Should the last range be closed [lo,hi] instead of half-open [lo,hi[
+  bool m_closed_range = false;
 
   // Requested isolines
   IsolineValues m_isoline_values;

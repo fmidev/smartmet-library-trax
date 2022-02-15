@@ -305,10 +305,11 @@ boost::optional<ValidRange> find_valid_range(const Points& points, std::size_t s
 // precondition: has_ghosts is true, closed is true
 void Polyline::remove_ghosts(std::vector<Polyline>& new_polylines)
 {
-#if 0  
+#if 0
   std::cout << "Removing ghosts from " << wkt() << "\n";
   for (auto i = 0UL; i < m_points.size(); i++)
-    std::cout << fmt::format("\t{} : {},{} {}\n", i, m_points[i].x, m_points[i].y, m_points[i].ghost ? "?" : "-");
+    std::cout << fmt::format(
+        "\t{} : {},{} {}\n", i, m_points[i].x, m_points[i].y, m_points[i].ghost ? "?" : "-");
 #endif
 
   // Extract valid ranges
@@ -340,9 +341,11 @@ void Polyline::remove_ghosts(std::vector<Polyline>& new_polylines)
     if (i == 0 && wraparound)
     {
       const auto& range2 = ranges.back();
+      // std::cout << "Keeping wraparound range " << range2.begin << "..." << range2.end << "\n";
       for (auto j = range2.begin; j < range2.end - 1; j++)
         line.m_points.push_back(m_points[j]);
     }
+    // std::cout << "Keeping  range " << range.begin << "..." << range.end << "\n";
     for (auto j = range.begin; j < range.end; j++)
       line.m_points.push_back(m_points[j]);
     new_polylines.emplace_back(std::move(line));

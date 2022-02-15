@@ -19,8 +19,11 @@ class IsolineValues
   double operator[](std::size_t i) const { return m_values[i]; }
   double at(std::size_t i) const { return m_values.at(i); }
 
+  std::size_t original_position(std::size_t i) const { return m_positions[i]; }
+
  private:
   std::vector<double> m_values;
+  std::vector<std::size_t> m_positions;  // original positions of the ranges
 
 };  // class IsolineValues
 

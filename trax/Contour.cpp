@@ -4,10 +4,22 @@
 namespace Trax
 {
 // The only available constructor
-Contour::Contour(InterpolationType itype) : impl(new Contour::Impl(itype)) {}
+Contour::Contour() : impl(new Contour::Impl()) {}
 
 // Destructor due to pimpl idiom
 Contour::~Contour() = default;
+
+// Set interpolation type
+void Contour::interpolation(InterpolationType itype)
+{
+  impl->interpolation(itype);
+}
+
+// Mark how to handle the last interval
+void Contour::closed_range(bool flag)
+{
+  impl->closed_range(flag);
+}
 
 // Contour full grid
 GeometryCollections Contour::isobands(const Grid& grid, const IsobandLimits& limits)

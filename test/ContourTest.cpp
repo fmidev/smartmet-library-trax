@@ -35,7 +35,8 @@ std::string validate(const Trax::GeometryCollection& geom)
 void run_file_tests(const std::string& filename)
 {
   // Default contouring settings
-  std::unique_ptr<Trax::Contour> contourer(new Trax::Contour(Trax::InterpolationType::Linear));
+  std::unique_ptr<Trax::Contour> contourer(new Trax::Contour());
+
   std::unique_ptr<Trax::TestGrid> grid;
   double x1 = 0;
   double y1 = 0;
@@ -61,7 +62,7 @@ void run_file_tests(const std::string& filename)
     else if (command == "interpolation")
     {
       in >> command;
-      contourer.reset(new Trax::Contour(Trax::to_interpolation_type(command)));
+      contourer->interpolation(Trax::to_interpolation_type(command));
       script += "interpolation " + command + "\n";
     }
     else if (command == "bbox")
@@ -75,7 +76,8 @@ void run_file_tests(const std::string& filename)
       int ny = 0;
       in >> nx >> ny;
       if (nx < 2 || ny < 2)
-        throw std::runtime_error("Invalid grid dimensions: " + std::to_string(nx) + ',' + std::to_string(ny));
+        throw std::runtime_error("Invalid grid dimensions: " + std::to_string(nx) + ',' +
+                                 std::to_string(ny));
 
       grid.reset(new Trax::TestGrid(nx, ny, x1, y1, x2, y2));
 
@@ -131,7 +133,8 @@ void run_file_tests(const std::string& filename)
 
       BOOST_TEST_INFO("Isoband: " << lo << "..." << hi);
       BOOST_TEST_INFO("BBOX: " << x1 << ',' << y1 << " ... " << x2 << ',' << y2);
-      BOOST_TEST_INFO("Grid of size " << grid->width() << 'x' << grid->height() << ":\n" + grid->dump("        "));
+      BOOST_TEST_INFO("Grid of size " << grid->width() << 'x' << grid->height()
+                                      << ":\n" + grid->dump("        "));
       auto result = contourer->isobands(*grid, limits);
       auto result_wkt = result[0].normalize().wkt();
       BOOST_CHECK_EQUAL(result_wkt, wkt);
@@ -143,7 +146,8 @@ void run_file_tests(const std::string& filename)
         BOOST_TEST_INFO("WKT: " << result_wkt);
         BOOST_TEST_INFO("Isoband: " << lo << "..." << hi);
         BOOST_TEST_INFO("BBOX: " << x1 << ',' << y1 << " ... " << x2 << ',' << y2);
-        BOOST_TEST_INFO("Grid of size " << grid->width() << 'x' << grid->height() << ":\n" + grid->dump("        "));
+        BOOST_TEST_INFO("Grid of size " << grid->width() << 'x' << grid->height()
+                                        << ":\n" + grid->dump("        "));
         BOOST_CHECK(msg.empty());
       }
 
@@ -162,7 +166,8 @@ void run_file_tests(const std::string& filename)
 
       BOOST_TEST_INFO("Isoline: " << value);
       BOOST_TEST_INFO("BBOX: " << x1 << ',' << y1 << " ... " << x2 << ',' << y2);
-      BOOST_TEST_INFO("Grid of size " << grid->width() << 'x' << grid->height() << ":\n" + grid->dump("        "));
+      BOOST_TEST_INFO("Grid of size " << grid->width() << 'x' << grid->height()
+                                      << ":\n" + grid->dump("        "));
       auto result = contourer->isolines(*grid, values);
       auto result_wkt = result[0].normalize().wkt();
       BOOST_CHECK_EQUAL(result_wkt, wkt);
@@ -174,7 +179,8 @@ void run_file_tests(const std::string& filename)
         BOOST_TEST_INFO("WKT: " << result_wkt);
         BOOST_TEST_INFO("Isoline: " << value);
         BOOST_TEST_INFO("BBOX: " << x1 << ',' << y1 << " ... " << x2 << ',' << y2);
-        BOOST_TEST_INFO("Grid of size " << grid->width() << 'x' << grid->height() << ":\n" + grid->dump("        "));
+        BOOST_TEST_INFO("Grid of size " << grid->width() << 'x' << grid->height()
+                                        << ":\n" + grid->dump("        "));
         BOOST_CHECK(msg.empty());
       }
 

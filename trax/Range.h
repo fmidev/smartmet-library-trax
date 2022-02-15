@@ -14,6 +14,7 @@ class Range
   double hi() const { return m_hi; }
   void adjust();
   bool operator<(const Range& other) const;
+  bool operator==(const Range& other) const;
   bool overlaps(double lo, double hi) const;
 
  private:

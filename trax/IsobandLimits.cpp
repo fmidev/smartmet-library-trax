@@ -1,4 +1,5 @@
 #include "IsobandLimits.h"
+#include <macgyver/Exception.h>
 #include <algorithm>
 #include <cmath>
 
@@ -36,10 +37,30 @@ bool IsobandLimits::valid() const
   return std::is_sorted(m_limits.begin(), m_limits.end());
 }
 
-void IsobandLimits::sort()
+// Sort the ranges into increasing order and record the original position of the range
+void IsobandLimits::sort(bool closed_range)
 {
+  auto input_limits = m_limits;
   std::sort(m_limits.begin(), m_limits.end());
-  adjust_last_finite_isoband(m_limits);
+
+  for (auto i = 0UL; i < m_limits.size(); i++)
+  {
+    bool ok = false;
+    for (auto j = 0UL; j < input_limits.size() && !ok; j++)
+    {
+      if (input_limits[j] == m_limits[i])
+      {
+        m_positions.push_back(j);
+        ok = true;
+      }
+    }
+
+    if (!ok)
+      throw Fmi::Exception(BCP, "Found no original position for isoband range");
+  }
+
+  if (closed_range)
+    adjust_last_finite_isoband(m_limits);
 }
 
 }  // namespace Trax
