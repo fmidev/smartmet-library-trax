@@ -4,10 +4,36 @@
 #include <cmath>      // std::min and std::max
 #include <utility>    // std::pair and std::make_pair
 
+#define TRAX_VALIDATE 1
+
+#if TRAX_VALIDATE
+#include "Geos.h"
+#include <geos/geom/GeometryFactory.h>
+#include <geos/operation/valid/IsValidOp.h>
+#endif
+
 #if 1
 #include <fmt/format.h>
 #include <iostream>
 #endif
+
+namespace
+{
+#if TRAX_VALIDATE
+std::string validate(const Trax::GeometryCollection& geom)
+{
+  const auto factory = geos::geom::GeometryFactory::create();
+
+  auto g = Trax::to_geos_geom(geom, factory);
+  geos::operation::valid::IsValidOp validator(g.get());
+  if (validator.isValid())
+    return {};
+
+  return validator.getValidationError()->toString();
+}
+#endif
+
+}  // namespace
 
 namespace Trax
 {
@@ -150,6 +176,9 @@ bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
 
 void Contour::Impl::isoline(const Cell& c)
 {
+  if (std::isnan(c.z1) || std::isnan(c.z2) || std::isnan(c.z3) || std::isnan(c.z4))
+    return;
+
   if (!update_isolines_to_check(minmax(c)))
     return;
 
@@ -166,6 +195,9 @@ void Contour::Impl::isoline(const Cell& c)
 
 void Contour::Impl::isoband(const Cell& c)
 {
+  if (std::isnan(c.z1) || std::isnan(c.z2) || std::isnan(c.z3) || std::isnan(c.z4))
+    return;
+
   if (!update_isobands_to_check(minmax(c)))
     return;
 
@@ -261,7 +293,18 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 
   finish_isobands();
 
+#if !TRAX_VALIDATE
   return result();
+#else
+  auto res = result();
+  for (const auto& tmp : res)
+  {
+    auto err = validate(tmp);
+    if (!err.empty())
+      std::cerr << "Error: " << err << "\n";
+  }
+  return res;
+#endif
 }  // namespace Trax
 
 // Contour full grid for isolines
@@ -295,7 +338,18 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   }
 
   finish_isolines();
+#if !TRAX_VALIDATE
   return result();
+#else
+  auto res = result();
+  for (const auto& tmp : res)
+  {
+    auto err = validate(tmp);
+    if (!err.empty())
+      std::cerr << "Error: " << err << "\n";
+  }
+  return res;
+#endif
 }
 
 }  // namespace Trax
