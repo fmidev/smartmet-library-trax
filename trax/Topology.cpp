@@ -8,7 +8,7 @@
 #include <fmt/format.h>
 #include <smartmet/macgyver/Exception.h>
 
-#if 1
+#if 0
 #include <iostream>
 #endif
 

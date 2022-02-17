@@ -1452,7 +1452,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // I--I
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);      // |  |
       add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // I--I
-      add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);      // I--I
+      add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);
       close();
       break;
     }
@@ -1473,12 +1473,7 @@ void isoband_linear(JointMerger& joints, const Cell& c, const Range& range)
 
 void isoline_linear(JointMerger& joints, const Cell& c, double limit)
 {
-  // Geometry building will omit the lines at limit+eps as artificial boundaries (ghost lines)
-  auto eps = 0.01;
-  while (limit == limit + eps)
-    eps *= 2;
-
-  Range range(limit, limit + eps);
+  Range range(limit, std::numeric_limits<double>::infinity());
   JointBuilder b(joints, range);
   b.build_linear(c);
 }
