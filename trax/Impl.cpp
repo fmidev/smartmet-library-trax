@@ -102,7 +102,7 @@ GeometryCollections Contour::Impl::result()
   {
     auto pos = (!m_isoline_values.empty() ? m_isoline_values.original_position(i)
                                           : m_isoband_limits.original_position(i));
-    geoms[pos] = std::move(m_builders[i].result());
+    geoms[pos] = m_builders[i].result();
   }
   return geoms;
 }
@@ -297,11 +297,15 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   return result();
 #else
   auto res = result();
-  for (const auto& tmp : res)
+  for (auto i = 0UL; i < res.size(); i++)
   {
+    const auto& tmp = res[i];
     auto err = validate(tmp);
     if (!err.empty())
-      std::cerr << "Error: " << err << "\n";
+      std::cerr << "Isoband error: " << err << "\n"
+                << "Limits: " << limits[i].lo() << "..." << limits[i].hi() << "\n"
+                << "WKT:\n"
+                << tmp.wkt() << "\n";
   }
   return res;
 #endif
@@ -342,11 +346,15 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   return result();
 #else
   auto res = result();
-  for (const auto& tmp : res)
+  for (auto i = 0UL; i < res.size(); i++)
   {
+    const auto& tmp = res[i];
     auto err = validate(tmp);
     if (!err.empty())
-      std::cerr << "Error: " << err << "\n";
+      std::cerr << "Isoline error: " << err << "\n"
+                << "Isovalue: " << limits[i] << "\n"
+                << "WKT:\n"
+                << tmp.wkt() << "\n";
   }
   return res;
 #endif
