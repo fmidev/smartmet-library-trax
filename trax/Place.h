@@ -30,8 +30,8 @@ Place place(double value, double limit);
 
 // TODO: Need to test whether constexpr would work on RHEL7
 #define TRAX_PLACE_HASH(c1, c2, c3, c4) \
-  static_cast<int>(c1) +                \
-      3 * (static_cast<int>(c2) + 3 * (static_cast<int>(c3) + 3 * static_cast<int>(c4)))
+  static_cast<int>((c1)) +              \
+      3 * (static_cast<int>((c2)) + 3 * (static_cast<int>((c3)) + 3 * static_cast<int>((c4))))
 
 inline int place_hash(Place c1, Place c2, Place c3, Place c4)
 {
