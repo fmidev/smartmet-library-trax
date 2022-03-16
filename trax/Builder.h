@@ -33,8 +33,6 @@ class Builder
   JointMerger& merger() { return m_merger; }
 
  private:
-  void finish_geometry(bool isobands);
-
   GeometryCollection m_geom;  // final result
 
   JointMerger m_merger;  // Joints for all grid rows

@@ -89,12 +89,4 @@ GeometryCollection &GeometryCollection::normalize()
   return *this;
 }
 
-void GeometryCollection::remove_ghosts()
-{
-  std::vector<Polygon> new_polygons;
-  for (auto &poly : m_polygons)
-    poly.remove_ghosts(new_polygons, m_polylines);
-  m_polygons = std::move(new_polygons);
-}
-
 }  // namespace Trax

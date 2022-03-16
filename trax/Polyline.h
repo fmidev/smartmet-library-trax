@@ -11,6 +11,10 @@ namespace Trax
 {
 struct Vertex;
 
+class Polyline;
+using Polylines = std::list<Polyline>;
+using Holes = std::list<Polyline>;
+
 class Polyline
 {
  public:
@@ -58,14 +62,11 @@ class Polyline
   void update_bbox();
 
   bool has_ghosts() const;
-  void remove_ghosts(std::vector<Polyline>& new_polylines);
+  void remove_ghosts(Polylines& new_polylines);
 
  private:
   Points m_points;
   BBox m_bbox;
 };
-
-using Polylines = std::list<Polyline>;
-using Holes = std::list<Polyline>;
 
 }  // namespace Trax

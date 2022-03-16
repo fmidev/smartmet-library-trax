@@ -7,7 +7,7 @@ namespace Trax
 {
 class JointPool;
 
-void build_rings(Polygons& polygons, Holes& holes, JointPool& joints);
-void assign_holes(Polygons& polygons, Holes& holes);
+void build_rings(Polylines& shells, Holes& holes, JointPool& joints);
+void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes);
 
 }  // namespace Trax

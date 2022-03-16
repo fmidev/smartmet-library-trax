@@ -279,8 +279,19 @@ Polyline extract_left_turning_polyline(SortedPolylines& polylines)
   return result;
 }
 
-void extract_left_turning_sequence(Polylines& polylines, Polygons& polygons, Holes& holes)
+void extract_left_turning_sequence(Polylines& polylines, Polylines& shells, Holes& holes)
 {
+  // Quick exit if there is only one polyline
+  if (polylines.size() == 1)
+  {
+    polylines.front().update_bbox();
+    if (polylines.front().clockwise())
+      shells.emplace_back(std::move(polylines.front()));
+    else
+      holes.emplace_back(std::move(polylines.front()));
+    return;
+  }
+
   // Create a search structure for finding the left turns quickly
   SortedPolylines sorted_polylines;
   for (auto&& polyline : polylines)
@@ -290,8 +301,8 @@ void extract_left_turning_sequence(Polylines& polylines, Polygons& polygons, Hol
   }
   polylines.clear();
 
-  Polylines new_exteriors;
-  Polylines new_holes;
+  Polylines new_shells;
+  Holes new_holes;
 
   while (!sorted_polylines.empty())
   {
@@ -303,27 +314,9 @@ void extract_left_turning_sequence(Polylines& polylines, Polygons& polygons, Hol
 
     polyline.update_bbox();
     if (polyline.clockwise())
-      new_exteriors.emplace_back(std::move(polyline));
+      shells.emplace_back(std::move(polyline));
     else
-      new_holes.emplace_back(std::move(polyline));
-  }
-
-  // Assign ownerships
-  if (new_exteriors.empty())
-  {
-    for (auto& hole : new_holes)
-      holes.emplace_back(std::move(hole));
-  }
-  else if (++new_exteriors.begin() != new_exteriors.end())
-    throw Fmi::Exception(
-        BCP, fmt::format("Found {} exteriors, should find only one!", new_exteriors.size()));
-  else
-  {
-    new_exteriors.front().update_bbox();  // no need to update hole bboxes, we know they belong here
-    Polygon poly(std::move(new_exteriors.front()));
-    for (auto& hole : new_holes)
-      poly.hole(std::move(hole));
-    polygons.emplace_back(std::move(poly));
+      holes.emplace_back(std::move(polyline));
   }
 }
 
@@ -416,7 +409,7 @@ Polygons::iterator innermost_polygon(const std::list<Polygons::iterator>& polygo
  * output is polygons and holes which were not in contact with any exterior.
  */
 
-void build_rings(Polygons& polygons, Polylines& holes, JointPool& joints)
+void build_rings(Polylines& shells, Holes& holes, JointPool& joints)
 {
 #if 0
   std::cout << "Joint map at start:\n" << Trax::to_string(joints);
@@ -454,26 +447,7 @@ void build_rings(Polygons& polygons, Polylines& holes, JointPool& joints)
 #endif
 
       // Now extract a left turning sequence to separate holes touching the exterior
-
-      if (polylines.size() == 1)  // std::list::size is slow, but here size() would rarely be large
-      {
-        // Simple case with no touching holes
-        polylines.front().update_bbox();
-
-        if (polylines.front().size() <= 3)
-        {
-          std::cout << "Warning: invalid polyline: " << polylines.front().wkt() << "\n";
-          // std::cout << "Connection map:\n" << Trax::to_string(joints) << "\n";
-        }
-        else if (polylines.front().clockwise())
-          polygons.emplace_back(std::move(polylines.front()));
-        else
-          holes.emplace_back(std::move(polylines.front()));
-      }
-      else
-      {
-        extract_left_turning_sequence(polylines, polygons, holes);
-      }
+      extract_left_turning_sequence(polylines, shells, holes);
     }
     else
     {
@@ -490,7 +464,7 @@ void build_rings(Polygons& polygons, Polylines& holes, JointPool& joints)
  * grid borders.
  */
 
-void assign_holes(Polygons& polygons, Holes& holes)
+void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
 {
 #if 0
   int counter = 0;
@@ -506,6 +480,10 @@ void assign_holes(Polygons& polygons, Holes& holes)
     std::cout << "Hole " << i++ << " " << hole.wkt() << "\n\tbbox = " << hole.bbox().wkt() << "\n";
   counter = 0;
 #endif
+
+  for (auto&& shell : shells)
+    polygons.emplace_back(shell);
+
   if (holes.empty())
     return;
 
@@ -525,8 +503,7 @@ void assign_holes(Polygons& polygons, Holes& holes)
 #endif
     if (candidates.empty())
     {
-      throw Fmi::Exception(BCP, "Unassigned hole!");
-      // ++it;
+      ++it;  // should be isolated hole when calculating isolines
     }
     else
     {
@@ -537,6 +514,14 @@ void assign_holes(Polygons& polygons, Holes& holes)
       polygon->hole(hole);
       it = holes.erase(it);
     }
+  }
+
+  // Convert any remaining holes to shells. This can happen when an exterior shell has
+  // been stripped of ghost lines when calculating isolines.
+  for (auto&& hole : holes)
+  {
+    hole.reverse();
+    polygons.emplace_back(std::move(hole));
   }
 }
 

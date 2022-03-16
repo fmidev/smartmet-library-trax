@@ -304,7 +304,7 @@ boost::optional<ValidRange> find_valid_range(const Points& points, std::size_t s
 }
 
 // precondition: has_ghosts is true, closed is true
-void Polyline::remove_ghosts(std::vector<Polyline>& new_polylines)
+void Polyline::remove_ghosts(Polylines& new_polylines)
 {
 #if 0
   std::cout << "Removing ghosts from " << wkt() << "\n";
