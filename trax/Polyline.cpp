@@ -276,10 +276,7 @@ void Polyline::update_bbox()
 
 bool Polyline::has_ghosts() const
 {
-  for (const auto& pt : m_points)
-    if (pt.ghost)
-      return true;
-  return false;
+  return std::any_of(m_points.begin(), m_points.end(), [](const Point& p) { return p.ghost; });
 }
 
 struct ValidRange
