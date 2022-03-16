@@ -415,10 +415,8 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints)
   std::cout << "Joint map at start:\n" << Trax::to_string(joints);
 #endif
 
-  for (auto it = joints.begin(), end = joints.end(); it != end; ++it)
+  for (auto* joint : joints)
   {
-    auto* joint = *it;
-
     // Skip fully used joints
     if (joint->used)
       continue;

@@ -43,12 +43,12 @@ void IsobandLimits::sort(bool closed_range)
   auto input_limits = m_limits;
   std::sort(m_limits.begin(), m_limits.end());
 
-  for (auto i = 0UL; i < m_limits.size(); i++)
+  for (const auto& limits : m_limits)
   {
     bool ok = false;
     for (auto j = 0UL; j < input_limits.size() && !ok; j++)
     {
-      if (input_limits[j] == m_limits[i])
+      if (input_limits[j] == limits)
       {
         m_positions.push_back(j);
         ok = true;

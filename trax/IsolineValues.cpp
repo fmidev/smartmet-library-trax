@@ -28,12 +28,12 @@ void IsolineValues::sort()
   auto input_values = m_values;
   std::sort(m_values.begin(), m_values.end());
 
-  for (auto i = 0UL; i < m_values.size(); i++)
+  for (auto value : m_values)
   {
     bool ok = false;
     for (auto j = 0UL; j < input_values.size() && !ok; j++)
     {
-      if (input_values[j] == m_values[i])
+      if (input_values[j] == value)
       {
         m_positions.push_back(j);
         ok = true;
