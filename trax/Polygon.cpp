@@ -14,7 +14,7 @@ Polygon::Polygon(Polyline exterior) : m_exterior(std::move(exterior))
 Polygon::Polygon(std::initializer_list<std::initializer_list<double>> init_list)
     : m_exterior(*init_list.begin())
 {
-  auto* iter = init_list.begin();
+  const auto* iter = init_list.begin();
   for (++iter; iter != init_list.end(); ++iter)
     hole(Polyline(*iter));
 }

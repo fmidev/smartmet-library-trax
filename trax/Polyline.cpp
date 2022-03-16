@@ -16,7 +16,7 @@ Polyline::Polyline(std::initializer_list<double> init_list)
 {
   if (init_list.size() == 0 || init_list.size() % 2 != 0)
     throw Fmi::Exception(BCP, "Invalid initialization of Polyline from elements");
-  auto* iter = init_list.begin();
+  const auto* iter = init_list.begin();
   while (iter != init_list.end())
   {
     double x = *iter++;
