@@ -42,18 +42,16 @@ point intersect(double x1,
 
   if (z1 == value)
     return {x1, y1, VertexType::Corner, 0, 0};
-  else if (z2 == value)
+  if (z2 == value)
     return {x2, y2, VertexType::Corner, di, dj};
-  else if (x1 < x2 || (x1 == x2 && y1 < y2))  // lexicographic sorting to guarantee the same
-  {                                           // result even if input x1,y1 and x2,y2 are swapped
+  if (x1 < x2 || (x1 == x2 && y1 < y2))  // lexicographic sorting to guarantee the same
+  {                                      // result even if input x1,y1 and x2,y2 are swapped
     double s = (value - z2) / (z1 - z2);
     return {x2 + s * (x1 - x2), y2 + s * (y1 - y2), type, 0, 0};
   }
-  else
-  {
-    double s = (value - z1) / (z2 - z1);
-    return {x1 + s * (x2 - x1), y1 + s * (y2 - y1), type, 0, 0};
-  }
+
+  double s = (value - z1) / (z2 - z1);
+  return {x1 + s * (x2 - x1), y1 + s * (y2 - y1), type, 0, 0};
 }
 
 // Utilities to avoid highly likely typos in repetetive code. As luck would have it,
