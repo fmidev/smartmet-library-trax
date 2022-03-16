@@ -29,8 +29,6 @@ class Polygon
   Polygon& normalize();
   bool operator<(const Polygon& other) const;
 
-  void remove_ghosts(std::vector<Polygon>& new_polygons, std::vector<Polyline>& new_polylines);
-
   std::string wkt() const;
   std::string wkt_body() const;
 

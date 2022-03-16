@@ -85,38 +85,4 @@ bool Polygon::operator<(const Polygon& other) const
   return m_exterior < other.m_exterior;
 }
 
-void Polygon::remove_ghosts(std::vector<Polygon>& new_polygons,
-                            std::vector<Polyline>& new_polylines)
-{
-  if (!m_exterior.has_ghosts())
-  {
-    std::vector<Polyline> new_holes;
-    for (auto&& hole : m_holes)
-    {
-      if (!hole.has_ghosts())
-        new_holes.emplace_back(hole);
-      else
-        hole.remove_ghosts(new_polylines);
-    }
-    m_holes = std::move(new_holes);
-    new_polygons.emplace_back(std::move(*this));
-  }
-
-  else
-  {
-    m_exterior.remove_ghosts(new_polylines);
-    for (auto&& hole : m_holes)
-    {
-      if (!hole.has_ghosts())
-      {
-        hole.reverse();
-        Polygon new_exterior(hole);
-        new_polygons.emplace_back(new_exterior);
-      }
-      else
-        hole.remove_ghosts(new_polylines);
-    }
-  }
-}
-
 }  // namespace Trax

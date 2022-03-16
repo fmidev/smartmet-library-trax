@@ -9,7 +9,24 @@
 
 namespace Trax
 {
-Builder::Builder(Builder &&other) noexcept
+namespace
+{
+void remove_ghosts(Polylines& rings, Polylines& lines)
+{
+  for (auto it = rings.begin(), end = rings.end(); it != end;)
+  {
+    if (!it->has_ghosts())
+      ++it;
+    else
+    {
+      it->remove_ghosts(lines);
+      it = rings.erase(it);
+    }
+  }
+}
+}  // namespace
+
+Builder::Builder(Builder&& other) noexcept
 {
   m_geom = std::move(other.m_geom);
   m_merger = std::move(other.m_merger);
@@ -19,28 +36,37 @@ Builder::Builder(std::size_t /* width */, std::size_t /* height */) {}
 
 void Builder::finish_isolines()
 {
-  finish_geometry(false);
-}
+  Polylines shells;
+  Holes holes;
+  build_rings(shells, holes, m_merger.pool());
 
-void Builder::finish_geometry(bool isobands)
-{
-  Polygons polygons;
-  Polylines holes;
-  build_rings(polygons, holes, m_merger.pool());
+  // We do not build multipolygons out of the shells and holes since
+  // the algorithm does not guarantee there will not be nested shells
+  // which in turn could break geometry algorithms.
 
-  assign_holes(polygons, holes);
+  Polylines lines;
+  remove_ghosts(shells, lines);
+  remove_ghosts(holes, lines);
 
-  for (auto &&poly : polygons)
-    m_geom.add(std::move(poly));
-
-  // Remove ghost vertices when calculating isolines
-  if (!isobands)
-    m_geom.remove_ghosts();
+  for (auto&& shell : shells)
+    m_geom.add(std::move(shell));
+  for (auto&& hole : holes)
+    m_geom.add(std::move(hole));
+  for (auto&& line : lines)
+    m_geom.add(std::move(line));
 }
 
 void Builder::finish_isobands()
 {
-  finish_geometry(true);
+  Polylines shells;
+  Holes holes;
+  build_rings(shells, holes, m_merger.pool());
+
+  Polygons polygons;
+  build_polygons(polygons, shells, holes);
+
+  for (auto&& poly : polygons)
+    m_geom.add(std::move(poly));
 }
 
 void Builder::finish_row()

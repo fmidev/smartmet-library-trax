@@ -18,7 +18,6 @@ class GeometryCollection
   const std::vector<Polyline>& polylines() const;
 
   GeometryCollection& normalize();
-  void remove_ghosts();
 
  private:
   std::vector<Polygon> m_polygons;

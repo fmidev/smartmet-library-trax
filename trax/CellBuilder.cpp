@@ -82,6 +82,12 @@ point intersect_bottom(const Cell& c, VertexType type, const Range& range)
   return intersect(c.x1, c.y1, c.z1, c.x4, c.y4, c.z4, 1, 0, type, limit);
 }
 
+Place center_place(const Cell& c, const Range& range)
+{
+  const auto z = (c.z1 + c.z2 + c.z3 + c.z4) / 4;
+  return place(z, range);
+}
+
 /*
  * Private small builder class to connect the vertices properly in a single grid cell.
  */
@@ -1018,47 +1024,41 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-      // Note: We wish to avoid situations where it would be possible to generate
-      // two triangles from the same grid cell sharing a common tip.
-      // Consider this case:
-      //
-      //    I----A       I----A
-      //    |*/  |       |***\|
-      //    |/  /|       |****|
-      //    |  /*|       |\***|
-      //    A----I       A----I
-      //
-      // If either value marked as A is actually at the range high limit, the two triangles
-      // would share a corner. The choise on the right has no such problems. Without this
-      // choise Joints would have to allocate room for eight possible connections instead
-      // or just two.
+      // Saddle point cases need to be resolved by the value at the center of the
+      // grid cell.
 
     case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Above, Place::Inside):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      add(c.i, c.j, p1, m_range.hi());                          // I----A
-      add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|
-      add(c.i, c.j + 1, p2, m_range.hi());                      // |****|
-      add(c.i + 1, c.j, p3, m_range.hi());                      // |\***|
-      add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);  // A----I
+      add(c.i, c.j, p1, m_range.hi());                          // I----A   I----A
+      add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|   |*/  |
+      add(c.i, c.j + 1, p2, m_range.hi());                      // |**I*|   |/ A/|
+      if (cc != Place::Inside)                                  // |\***|   |  /*|
+        close();                                                // A----I   A----I
+      add(c.i + 1, c.j, p3, m_range.hi());
+      add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);
       add(c.i, c.j, p4, m_range.hi());
       close();
       break;
     }
     case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Below, Place::Inside):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      add(c.i, c.j, p1, m_range.lo());                          // I----B
-      add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|
-      add(c.i, c.j + 1, p2, m_range.lo());                      // |****|
-      add(c.i + 1, c.j, p3, m_range.lo());                      // |\***|
-      add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);  // B----I
+      add(c.i, c.j, p1, m_range.lo());                          // I----B   I----B
+      add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|   |*/  |
+      add(c.i, c.j + 1, p2, m_range.lo());                      // |**I*|   |/ B/|
+      if (cc != Place::Inside)                                  // |\***|   |  /*|
+        close();                                                // B----I   B----I
+      add(c.i + 1, c.j, p3, m_range.lo());
+      add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);
       add(c.i, c.j, p4, m_range.lo());
       close();
       break;
@@ -1066,48 +1066,81 @@ void JointBuilder::build_linear(const Cell& c)
 
     case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Inside, Place::Above):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // A----I
-      add(c.i, c.j, p1, m_range.hi());                              // |/***|
-      add(c.i, c.j + 1, p2, m_range.hi());                          // |****|
-      add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // |***/|
-      add(c.i + 1, c.j, p3, m_range.hi());                          // I----A
-      add(c.i, c.j, p4, m_range.hi());
-      close();
+      if (cc == Place::Inside)
+      {
+        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // A----I
+        add(c.i, c.j, p1, m_range.hi());                              // |/***|
+        add(c.i, c.j + 1, p2, m_range.hi());                          // |**I*|
+        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // |***/|
+        add(c.i + 1, c.j, p3, m_range.hi());                          // I----A
+        add(c.i, c.j, p4, m_range.hi());
+        close();
+      }
+      else
+      {
+        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // A----I
+        add(c.i, c.j, p1, m_range.hi());                              // |  \*|
+        add(c.i, c.j, p4, m_range.hi());                              // |\ A\|
+        close();                                                      // |*\  |
+        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // I----A
+        add(c.i + 1, c.j, p3, m_range.hi());
+        add(c.i, c.j + 1, p2, m_range.hi());
+        close();
+      }
       break;
     }
     case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Inside, Place::Below):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // B----I
-      add(c.i, c.j, p1, m_range.lo());                              // | /**|
-      add(c.i, c.j + 1, p2, m_range.lo());                          // |/**/|
-      add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // |**/ |
-      add(c.i + 1, c.j, p3, m_range.lo());                          // I----B
-      add(c.i, c.j, p4, m_range.lo());
-      close();
+      if (cc == Place::Inside)
+      {
+        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // B----I
+        add(c.i, c.j, p1, m_range.lo());                              // | /**|
+        add(c.i, c.j + 1, p2, m_range.lo());                          // |/*I/|
+        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // |**/ |
+        add(c.i + 1, c.j, p3, m_range.lo());                          // I----B
+        add(c.i, c.j, p4, m_range.lo());
+        close();
+      }
+      else
+      {
+        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // B----I
+        add(c.i, c.j, p1, m_range.lo());                              // |  \*|
+        add(c.i, c.j, p4, m_range.lo());                              // |\ B\|
+        close();                                                      // |*\  |
+        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // I----B
+        add(c.i + 1, c.j, p3, m_range.lo());
+        add(c.i, c.j + 1, p2, m_range.lo());
+        close();
+      }
       break;
     }
 
     case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Below, Place::Above):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      add(c.i, c.j, p1, m_range.lo());                          // I----B
-      add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|
-      add(c.i, c.j + 1, p2, m_range.lo());                      // |\***|
-      add(c.i + 1, c.j, p3, m_range.lo());                      // | \*/|
-      add(c.i + 1, c.j, p4, m_range.hi());                      // B----A
+      add(c.i, c.j, p1, m_range.lo());                          // I----B    I----B
+      add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|    |*/  |
+      add(c.i, c.j + 1, p2, m_range.lo());                      // |\*I*|    |/ X/|  X = A or B
+      if (cc != Place::Below)                                   // | \*/|    |  //|
+        close();                                                // B----A    B----A
+      add(c.i + 1, c.j, p3, m_range.lo());
+      add(c.i + 1, c.j, p4, m_range.hi());
       add(c.i, c.j, p5, m_range.hi());
       add(c.i, c.j, p6, m_range.lo());
       close();
@@ -1115,17 +1148,20 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Above, Place::Below):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      add(c.i, c.j, p1, m_range.hi());                          // I----A
-      add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|
-      add(c.i, c.j + 1, p2, m_range.hi());                      // |****|
-      add(c.i + 1, c.j, p3, m_range.hi());                      // |\**/|
-      add(c.i + 1, c.j, p4, m_range.lo());                      // A----B
+      add(c.i, c.j, p1, m_range.hi());                          // I----A   I----A
+      add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|   |*/  |
+      add(c.i, c.j + 1, p2, m_range.hi());                      // |**I*|   |/ X/| X = A or B
+      if (cc != Place::Inside)                                  // |\**/|   |  //|
+        close();                                                // A----B   A----B
+      add(c.i + 1, c.j, p3, m_range.hi());
+      add(c.i + 1, c.j, p4, m_range.lo());
       add(c.i, c.j, p5, m_range.lo());
       add(c.i, c.j, p6, m_range.hi());
       close();
@@ -1133,17 +1169,20 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Below, Place::Inside):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p4 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p5 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      add(c.i, c.j, p1, m_range.lo());      // A----B
-      add(c.i, c.j, p2, m_range.hi());      // |/**\|
-      add(c.i, c.j + 1, p3, m_range.hi());  // |****|
-      add(c.i, c.j + 1, p4, m_range.lo());  // |\***|
-      add(c.i + 1, c.j, p5, m_range.lo());  // B----I
+      add(c.i, c.j, p1, m_range.lo());      // A----B    A----B
+      add(c.i, c.j, p2, m_range.hi());      // |/**\|    |//  |
+      add(c.i, c.j + 1, p3, m_range.hi());  // |**I*|    |/ X/| X = A or B
+      add(c.i, c.j + 1, p4, m_range.lo());  // |\***|    |  /*|
+      if (cc != Place::Inside)              // B----I    B----I
+        close();
+      add(c.i + 1, c.j, p5, m_range.lo());
       add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);
       add(c.i, c.j, p6, m_range.lo());
       close();
@@ -1151,17 +1190,20 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Above, Place::Inside):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p4 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p5 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      add(c.i, c.j, p1, m_range.hi());      // B----A
-      add(c.i, c.j, p2, m_range.lo());      // |/**\|
-      add(c.i, c.j + 1, p3, m_range.lo());  // |****|
-      add(c.i, c.j + 1, p4, m_range.hi());  // |\***|
-      add(c.i + 1, c.j, p5, m_range.hi());  // A----I
+      add(c.i, c.j, p1, m_range.hi());      // B----A    B----A
+      add(c.i, c.j, p2, m_range.lo());      // |/**\|    |//  |
+      add(c.i, c.j + 1, p3, m_range.lo());  // |**I*|    |/ X/| X = A or B
+      add(c.i, c.j + 1, p4, m_range.hi());  // |\***|    |  /*|
+      if (cc != Place::Inside)              // A----I    A----I
+        close();
+      add(c.i + 1, c.j, p5, m_range.hi());
       add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);
       add(c.i, c.j, p6, m_range.hi());
       close();
@@ -1169,129 +1211,235 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Above, Place::Below):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p5 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);  // B----A
-      add(c.i, c.j, p1, m_range.lo());                      // |/*\ |
-      add(c.i, c.j + 1, p2, m_range.lo());                  // |***\|
-      add(c.i, c.j + 1, p3, m_range.hi());                  // |***/|
-      add(c.i + 1, c.j, p4, m_range.hi());                  // I----B
-      add(c.i + 1, c.j, p5, m_range.lo());
-      add(c.i, c.j, p6, m_range.lo());
-      close();
+      if (cc == Place::Inside)
+      {
+        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);  // B----A
+        add(c.i, c.j, p1, m_range.lo());                      // |/*\ |
+        add(c.i, c.j + 1, p2, m_range.lo());                  // |**I\|
+        add(c.i, c.j + 1, p3, m_range.hi());                  // |***/|
+        add(c.i + 1, c.j, p4, m_range.hi());                  // I----B
+        add(c.i + 1, c.j, p5, m_range.lo());
+        add(c.i, c.j, p6, m_range.lo());
+        close();
+      }
+      else
+      {
+        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);  // B----A
+        add(c.i, c.j, p1, m_range.lo());                      // |  \\|
+        add(c.i, c.j, p6, m_range.lo());                      // |\ X\| X = A or B
+        close();                                              // |*\  |
+        add(c.i, c.j + 1, p2, m_range.lo());                  // I----B
+        add(c.i, c.j + 1, p3, m_range.hi());
+        add(c.i + 1, c.j, p4, m_range.hi());
+        add(c.i + 1, c.j, p5, m_range.lo());
+        close();
+      }
       break;
     }
     case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Below, Place::Above):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p5 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);  // A----B
-      add(c.i, c.j, p1, m_range.hi());                      // |/**\|
-      add(c.i, c.j + 1, p2, m_range.hi());                  // |****|
-      add(c.i, c.j + 1, p3, m_range.lo());                  // |***/|
-      add(c.i + 1, c.j, p4, m_range.lo());                  // I----A
-      add(c.i + 1, c.j, p5, m_range.hi());
-      add(c.i, c.j, p6, m_range.hi());
-      close();
+      if (cc == Place::Inside)
+      {
+        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);  // A----B
+        add(c.i, c.j, p1, m_range.hi());                      // |/**\|
+        add(c.i, c.j + 1, p2, m_range.hi());                  // |**I*|
+        add(c.i, c.j + 1, p3, m_range.lo());                  // |***/|
+        add(c.i + 1, c.j, p4, m_range.lo());                  // I----A
+        add(c.i + 1, c.j, p5, m_range.hi());
+        add(c.i, c.j, p6, m_range.hi());
+        close();
+      }
+      else
+      {
+        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);  // A----B
+        add(c.i, c.j, p1, m_range.hi());                      // |  \\|
+        add(c.i, c.j, p6, m_range.hi());                      // |\ X\| X = A or B
+        close();                                              // |*\  |
+        add(c.i, c.j + 1, p2, m_range.hi());                  // I----A
+        add(c.i, c.j + 1, p3, m_range.lo());
+        add(c.i + 1, c.j, p4, m_range.lo());
+        add(c.i + 1, c.j, p5, m_range.hi());
+        close();
+      }
       break;
     }
     case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Inside, Place::Below):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      add(c.i, c.j, p1, m_range.hi());                              // B----I
-      add(c.i, c.j, p2, m_range.lo());                              // |/***|
-      add(c.i, c.j + 1, p3, m_range.lo());                          // |****|
-      add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // |\**/|
-      add(c.i + 1, c.j, p4, m_range.lo());                          // A----B
-      add(c.i, c.j, p5, m_range.lo());
-      add(c.i, c.j, p6, m_range.hi());
-      close();
+      if (cc == Place::Inside)
+      {
+        add(c.i, c.j, p1, m_range.hi());                              // B----I
+        add(c.i, c.j, p2, m_range.lo());                              // |/***|
+        add(c.i, c.j + 1, p3, m_range.lo());                          // |**I*|
+        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // |\**/|
+        add(c.i + 1, c.j, p4, m_range.lo());                          // A----B
+        add(c.i, c.j, p5, m_range.lo());
+        add(c.i, c.j, p6, m_range.hi());
+        close();
+      }
+      else
+      {
+        add(c.i, c.j, p1, m_range.hi());  // B----I
+        add(c.i, c.j, p2, m_range.lo());  // |  \*|
+        add(c.i, c.j, p5, m_range.lo());  // |\ X\| X = A or B
+        add(c.i, c.j, p6, m_range.hi());  // |\\  |
+        close();                          // A----B
+        add(c.i, c.j + 1, p3, m_range.lo());
+        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);
+        add(c.i + 1, c.j, p4, m_range.lo());
+        close();
+      }
       break;
     }
     case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Inside, Place::Above):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      add(c.i, c.j, p1, m_range.lo());                              // A----I
-      add(c.i, c.j, p2, m_range.hi());                              // |/***|
-      add(c.i, c.j + 1, p3, m_range.hi());                          // |****|
-      add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // |\**/|
-      add(c.i + 1, c.j, p4, m_range.hi());                          // B----A
-      add(c.i, c.j, p5, m_range.hi());
-      add(c.i, c.j, p6, m_range.lo());
-      close();
+      if (cc == Place::Inside)
+      {
+        add(c.i, c.j, p1, m_range.lo());                              // A----I
+        add(c.i, c.j, p2, m_range.hi());                              // |/***|
+        add(c.i, c.j + 1, p3, m_range.hi());                          // |**I*|
+        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // |\**/|
+        add(c.i + 1, c.j, p4, m_range.hi());                          // B----A
+        add(c.i, c.j, p5, m_range.hi());
+        add(c.i, c.j, p6, m_range.lo());
+        close();
+      }
+      else
+      {
+        add(c.i, c.j, p1, m_range.lo());  // A----I
+        add(c.i, c.j, p2, m_range.hi());  // |  \*|
+        add(c.i, c.j, p5, m_range.hi());  // |\ X\| X = A or B
+        add(c.i, c.j, p6, m_range.lo());  // |\\  |
+        close();                          // B----A
+        add(c.i, c.j + 1, p3, m_range.hi());
+        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);
+        add(c.i + 1, c.j, p4, m_range.hi());
+        close();
+      }
       break;
     }
-
-      // Note that as opposed to the earlier saddle point cases here we choose
-      // A to be corner where the triangle is. Otherwise if A==m_range.hi() we'd
-      // get a sharp corner at A which causes problems when calculating connections.
 
     case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Below, Place::Above):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p5 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p6 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p7 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p8 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      add(c.i, c.j, p1, m_range.lo());      // A----B
-      add(c.i, c.j, p2, m_range.hi());      // |//  |
-      add(c.i, c.j + 1, p3, m_range.hi());  // |/  /|
-      add(c.i, c.j + 1, p4, m_range.lo());  // |  //|
-      close();                              // B----A
-      add(c.i + 1, c.j, p5, m_range.lo());
-      add(c.i + 1, c.j, p6, m_range.hi());
-      add(c.i, c.j, p7, m_range.hi());
-      add(c.i, c.j, p8, m_range.lo());
-      close();
+      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p5 = intersect_top(c, VertexType::Horizontal_hi, m_range);
+      const auto p6 = intersect_top(c, VertexType::Horizontal_lo, m_range);
+      const auto p7 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p8 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      if (c.z2 == m_range.hi() && c.z4 == m_range.hi())
+      {
+        add(c.i, c.j, p1, m_range.lo());      // H----B
+        add(c.i, c.j, p2, m_range.hi());      // |***\|
+        add(c.i, c.j + 1, p5, m_range.hi());  // |\**\|   X = A or I
+        add(c.i, c.j + 1, p6, m_range.lo());  // | \**|
+        add(c.i + 1, c.j, p7, m_range.hi());  // B----H
+        add(c.i + 1, c.j, p8, m_range.lo());
+        add(c.i, c.j, p3, m_range.lo());
+        add(c.i, c.j, p4, m_range.hi());
+        close();
+      }
+      else if (cc == Place::Below)
+      {
+        add(c.i, c.j, p1, m_range.lo());      // A----B
+        add(c.i, c.j, p2, m_range.hi());      // |//  |
+        add(c.i, c.j + 1, p5, m_range.hi());  // |/ B/|
+        add(c.i, c.j + 1, p6, m_range.lo());  // |  //|
+        close();                              // B----A
+        add(c.i + 1, c.j, p7, m_range.lo());
+        add(c.i + 1, c.j, p8, m_range.hi());
+        add(c.i, c.j, p3, m_range.hi());
+        add(c.i, c.j, p4, m_range.lo());
+        close();
+      }
+      else
+      {
+        add(c.i, c.j, p1, m_range.lo());  // A----B
+        add(c.i, c.j, p2, m_range.hi());  // |  \\|
+        add(c.i, c.j, p3, m_range.hi());  // |\ X\|   X = A or I
+        add(c.i, c.j, p4, m_range.lo());  // |\\  |
+        close();                          // B----A
+        add(c.i, c.j + 1, p5, m_range.hi());
+        add(c.i, c.j + 1, p6, m_range.lo());
+        add(c.i + 1, c.j, p7, m_range.lo());
+        add(c.i + 1, c.j, p8, m_range.hi());
+        close();
+      }
       break;
     }
 
-    // Ditto.
     case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Above, Place::Below):
     {
+      const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p5 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p6 = intersect_top(c, VertexType::Horizontal_hi, m_range);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
+      const auto p4 = intersect_top(c, VertexType::Horizontal_hi, m_range);
+      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p7 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p8 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      add(c.i, c.j, p1, m_range.hi());  // B----A
-      add(c.i, c.j, p2, m_range.lo());  // |  \\|
-      add(c.i, c.j, p3, m_range.lo());  // |\  \|
-      add(c.i, c.j, p4, m_range.hi());  // |\\  |
-      close();                          // A----B
-      add(c.i, c.j + 1, p5, m_range.lo());
-      add(c.i, c.j + 1, p6, m_range.hi());
-      add(c.i + 1, c.j, p7, m_range.hi());
-      add(c.i + 1, c.j, p8, m_range.lo());
-      close();
+      if (cc == Place::Below)
+      {
+        add(c.i, c.j, p1, m_range.hi());  // B----A
+        add(c.i, c.j, p2, m_range.lo());  // |  \\|
+        add(c.i, c.j, p5, m_range.lo());  // |\ B\|
+        add(c.i, c.j, p6, m_range.hi());  // |\\  |
+        close();                          // A----B
+        add(c.i, c.j + 1, p3, m_range.lo());
+        add(c.i, c.j + 1, p4, m_range.hi());
+        add(c.i + 1, c.j, p7, m_range.hi());
+        add(c.i + 1, c.j, p8, m_range.lo());
+        close();
+      }
+      else
+      {
+        add(c.i, c.j, p1, m_range.hi());                   // B----A
+        add(c.i, c.j, p2, m_range.lo());                   // |//  |
+        add(c.i, c.j + 1, p3, m_range.lo());               // |/ X/|  X = A or I
+        add(c.i, c.j + 1, p4, m_range.hi());               // |  //|
+        if (c.z1 != m_range.hi() || c.z3 != m_range.hi())  // A----B
+          close();
+        add(c.i + 1, c.j, p7, m_range.hi());
+        add(c.i + 1, c.j, p8, m_range.lo());
+        add(c.i, c.j, p5, m_range.lo());
+        add(c.i, c.j, p6, m_range.hi());
+        close();
+      }
       break;
     }
   }
-}
+}  // namespace
 
 void JointBuilder::build_midpoint(const Cell& c)
 {
