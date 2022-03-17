@@ -3,7 +3,7 @@
 #include "Joint.h"
 #include <stdexcept>
 
-#if 0
+#if 1
 #include <fmt/format.h>
 #include <iostream>
 #endif
@@ -288,6 +288,49 @@ void JointMerger::merge_cell(const Vertices& vertices)
   }
 }
 
+// Merge end of row to start of row for global grids
+// Last cell:  m_last_cell_end .. m_last_cell_end
+// First cell:  m_row_start ... ?
+// By build rules only the first two vertices in the first cell can match
+// with the last cell
+void JointMerger::wraparound()
+{
+  // Do not wrap cell into itself
+  if (m_row_start == m_last_cell_start)
+    return;
+
+  // Find matches for the first two vertices
+  Joint* j1 = nullptr;
+  Joint* j2 = nullptr;
+
+  auto pos1 = m_row_start;
+  auto pos2 = m_row_start;
+  ++pos2;
+  auto* start1 = *pos1;  // First two joints on the row
+  auto* start2 = *pos2;
+
+  for (auto it = m_last_cell_start, end = m_last_cell_end; it != end; ++it)
+  {
+    auto* j = *it;
+    if (match(j->vertex, start1->vertex))
+      j1 = j;
+    else if (match(j->vertex, start2->vertex))
+      j2 = j;
+  }
+
+  // Cancel common edge if there was a match
+  if (j1 != nullptr && j2 != nullptr)
+  {
+    std::cout << "wraparound\n";
+    j1->used = true;
+    j2->used = true;
+    j2->prev->next = start2;
+    j1->next->prev = start1;
+    start2->prev = j2->prev;
+    start1->next = j1->next;
+  }
+}
+
 // Merge elements to earlier ones on the same row. New vertices may only
 // merge with the adjacent cell earlier on the same row.
 void JointMerger::merge_cell()
@@ -318,7 +361,8 @@ void JointMerger::merge_cell()
       {
         merge_joint(joint, match);
 #if 0
-        std::cout << "      after joint " << vertex.x << "," << vertex.y << ":\n" << to_string(m_pool) << "\n";
+        std::cout << "      after joint " << vertex.x << "," << vertex.y << ":\n"
+                  << to_string(m_pool) << "\n";
 #endif
       }
     }
@@ -347,8 +391,9 @@ void JointMerger::merge_row()
 {
 #if 0
   std::cout << "Joints before row merge:\n" << to_string(m_pool) << "\n";
-  std::cout << fmt::format(
-      "\trange {}..{}\n", reinterpret_cast<void*>(*m_row_start), reinterpret_cast<void*>(*m_row_end));
+  std::cout << fmt::format("\trange {}..{}\n",
+                           reinterpret_cast<void*>(*m_row_start),
+                           reinterpret_cast<void*>(*m_row_end));
 #endif
 
   // Only vertices with row == m_maxrow (current value!) have a chance of being merged
@@ -392,10 +437,14 @@ void JointMerger::merge_row()
     else if (joint->used)
       std::cout << "\tSkipping used joint\n";
     else if (vertex.row != m_maxrow)
-      std::cout << fmt::format(
-          "\tSkipping {},{} since vertex row {} != m_maxrow {}\n", vertex.x, vertex.y, vertex.row, m_maxrow);
+      std::cout << fmt::format("\tSkipping {},{} since vertex row {} != m_maxrow {}\n",
+                               vertex.x,
+                               vertex.y,
+                               vertex.row,
+                               m_maxrow);
     else if (is_vertical(vertex.type))
-      std::cout << fmt::format("\tSkipping {},{} since vertex type is vertical\n", vertex.x, vertex.y);
+      std::cout << fmt::format(
+          "\tSkipping {},{} since vertex type is vertical\n", vertex.x, vertex.y);
 #endif
   }
 

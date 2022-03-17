@@ -38,6 +38,9 @@ class JointMerger
   // Merge a closed ring from a grid cell
   void merge_cell(const Vertices& vertices);
 
+  // Handle grid wraparound (f.ex. global weather forecasts need this)
+  void wraparound();
+
   // Merge new row of elements to the previous one
   void merge_row();
 

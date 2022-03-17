@@ -32,6 +32,19 @@ std::string validate(const Trax::GeometryCollection& geom)
   return validator.getValidationError()->toString();
 }
 
+double parse_value(const std::string& str)
+try
+{
+  if (str == "-")
+    return std::numeric_limits<double>::quiet_NaN();
+  return std::stod(str);
+}
+catch (std::exception& e)
+{
+  std::cerr << "Invalid number: " << str << "\n";
+  throw;
+}
+
 void run_file_tests(const std::string& filename)
 {
   // Default contouring settings
@@ -85,14 +98,9 @@ void run_file_tests(const std::string& filename)
       int col = 0;
       int n = nx * ny;
       std::string svalue;
-      double value = 0;
       while (n-- > 0 && in >> svalue)
       {
-        if (svalue == "-")
-          value = std::numeric_limits<double>::quiet_NaN();
-        else
-          value = std::stod(svalue);
-
+        auto value = parse_value(svalue);
         grid->set(col++, row, value);
         if (col >= nx)
         {
@@ -114,6 +122,27 @@ void run_file_tests(const std::string& filename)
           script += fmt::format("{}", (*grid)(i, j - 1));
         }
         script += '\n';
+      }
+    }
+    else if (command == "coords")
+    {
+      std::string sx, sy;
+      double x, y;
+      int nx = grid->width();
+      int ny = grid->height();
+      int n = nx * ny;
+      int row = ny - 1;
+      int col = 0;
+      while (n-- > 0 && in >> sx >> sy)
+      {
+        x = parse_value(sx);
+        y = parse_value(sy);
+        grid->set(col++, row, x, y);
+        if (col >= nx)
+        {
+          col = 0;
+          --row;
+        }
       }
     }
     else if (command == "isoband")
@@ -260,6 +289,12 @@ BOOST_AUTO_TEST_CASE(isoline_4x4)
 {
   BOOST_TEST_MESSAGE("+ [Trax::Builder::isoline 4x4]");
   run_file_tests("data/isoline_4x4.txt");
+}
+
+BOOST_AUTO_TEST_CASE(isoband_wraparound)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband wraparound cases");
+  run_file_tests("data/isoband_wraparound.txt");
 }
 
 BOOST_AUTO_TEST_CASE(isoband_debug)

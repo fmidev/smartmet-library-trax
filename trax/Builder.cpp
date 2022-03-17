@@ -71,6 +71,7 @@ void Builder::finish_isobands()
 
 void Builder::finish_row()
 {
+  m_merger.wraparound();
   m_merger.merge_row();
 }
 

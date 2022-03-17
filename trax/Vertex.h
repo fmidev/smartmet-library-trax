@@ -35,4 +35,10 @@ inline bool operator!=(const Vertex& v1, const Vertex& v2)
   return v1.column != v2.column || v1.row != v2.row || v1.type != v2.type;
 }
 
+// For matching coordinates only for wraparound
+inline bool match(const Vertex& v1, const Vertex& v2)
+{
+  return v1.x == v2.x && v1.y == v2.y && v1.type == v2.type;
+}
+
 }  // namespace Trax
