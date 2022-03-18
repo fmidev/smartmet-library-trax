@@ -38,6 +38,8 @@ class JointMerger
   // Merge a closed ring from a grid cell
   void merge_cell(const Vertices& vertices);
 
+  void finish_cell();
+
   // Handle grid wraparound (f.ex. global weather forecasts need this)
   void wraparound();
 
@@ -53,7 +55,8 @@ class JointMerger
   JointPool::iterator m_row_start{m_pool.end()};        // start position of topmost finished row
   JointPool::iterator m_row_end{m_pool.end()};          // end position of topmost finished row
   JointPool::iterator m_last_cell_start{m_pool.end()};  // range of last cell
-  JointPool::iterator m_last_cell_end{m_pool.end()};
+  JointPool::iterator m_last_cell_end{m_pool.end()};    // merge may include last cell plus one ring
+  JointPool::iterator m_cell_merge_end{m_pool.end()};  // from current cell, this iterator tracks it
   std::uint32_t m_maxrow = 0;  // maximum row number in the data so far in the topmost finished row
 };
 

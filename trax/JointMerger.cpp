@@ -3,7 +3,7 @@
 #include "Joint.h"
 #include <stdexcept>
 
-#if 1
+#if 0
 #include <fmt/format.h>
 #include <iostream>
 #endif
@@ -191,6 +191,7 @@ JointMerger::JointMerger(JointMerger&& other) noexcept
   m_pool = std::move(other.m_pool);
   m_row_start = other.m_row_start;
   m_row_end = other.m_row_end;
+  m_cell_merge_end = other.m_cell_merge_end;
   m_maxrow = other.m_maxrow;
 }
 
@@ -201,6 +202,7 @@ JointMerger& JointMerger::operator=(JointMerger&& other) noexcept
     m_pool = std::move(other.m_pool);
     m_row_start = other.m_row_start;
     m_row_end = other.m_row_end;
+    m_cell_merge_end = other.m_cell_merge_end;
     m_maxrow = other.m_maxrow;
   }
   return *this;
@@ -249,6 +251,7 @@ void JointMerger::merge_cell(const Vertices& vertices)
 #endif
 
     // Merge directly by cancelling the common edge between j1 and j2
+
     Joint* prev_joint = j2;
     for (auto i = 2UL; i < vertices.size(); i++)
     {
@@ -260,9 +263,7 @@ void JointMerger::merge_cell(const Vertices& vertices)
     prev_joint->next = j1;
     j1->prev = prev_joint;
 
-    // Update range for last cell on this row
-    m_last_cell_start = m_last_cell_end;
-    m_last_cell_end = m_pool.end();
+    m_cell_merge_end = m_pool.end();
   }
   else
   {
@@ -321,7 +322,7 @@ void JointMerger::wraparound()
   // Cancel common edge if there was a match
   if (j1 != nullptr && j2 != nullptr)
   {
-    std::cout << "wraparound\n";
+    // std::cout << "wraparound\n";
     j1->used = true;
     j2->used = true;
     j2->prev->next = start2;
@@ -335,49 +336,54 @@ void JointMerger::wraparound()
 // merge with the adjacent cell earlier on the same row.
 void JointMerger::merge_cell()
 {
-  const bool first_cell_on_row = (m_last_cell_start == m_last_cell_end);
+  bool empty_merge = (m_last_cell_start == m_cell_merge_end);
 #if 0
-  if (!first_cell_on_row)
-    std::cout << fmt::format("Joints before cell merge:\n {}\n", to_string(m_pool));
+  std::cout << fmt::format("Joints before cell merge:\n {}\n", to_string(m_pool));
 #endif
 
-  for (auto it = m_last_cell_end, end = m_pool.end(); it != end; ++it)
+  if (!empty_merge)
   {
-    auto* joint = *it;
-    auto& vertex = joint->vertex;
-
-    // Only corners and verticals at the left edge can merge
-    if (!first_cell_on_row && !joint->used && !is_horizontal(vertex.type))
+    for (auto it = m_cell_merge_end, end = m_pool.end(); it != end; ++it)
     {
-#if 0
-      std::cout << fmt::format("\tSearching for {},{} from range {}..{}\n",
-                               vertex.x,
-                               vertex.y,
-                               reinterpret_cast<void*>(*m_last_cell_start),
-                               reinterpret_cast<void*>(*m_last_cell_end));
-#endif
-      auto* match = find_match(vertex, m_last_cell_start, m_last_cell_end);
-      if (match != nullptr)
+      auto* joint = *it;
+      auto& vertex = joint->vertex;
+
+      // Only corners and verticals at the left edge can merge
+      if (!joint->used && !is_horizontal(vertex.type))
       {
-        merge_joint(joint, match);
 #if 0
-        std::cout << "      after joint " << vertex.x << "," << vertex.y << ":\n"
-                  << to_string(m_pool) << "\n";
+        std::cout << fmt::format("\tSearching for {},{} from range {}..{}\n",
+                                 vertex.x,
+                                 vertex.y,
+                                 reinterpret_cast<void*>(*m_last_cell_start),
+                                 reinterpret_cast<void*>(*m_cell_merge_end));
 #endif
+        auto* match = find_match(vertex, m_last_cell_start, m_cell_merge_end);
+        if (match != nullptr)
+        {
+          merge_joint(joint, match);
+#if 0
+          std::cout << "      after joint " << vertex.x << "," << vertex.y << ":\n"
+                    << to_string(m_pool) << "\n";
+#endif
+        }
       }
     }
   }
 
+  m_cell_merge_end = m_pool.end();
+
+#if 0
+  std::cout << "Joints now:\n" << to_string(m_pool) << "\n";
+#endif
+}
+
+void JointMerger::finish_cell()
+{
   // Update range for last cell on this row
   m_last_cell_start = m_last_cell_end;
   m_last_cell_end = m_pool.end();
-
-#if 0
-  if (first_cell_on_row)
-    std::cout << "Joints after first cell on row:\n" << to_string(m_pool) << "\n";
-  else
-    std::cout << "Joints after cell merge:\n" << to_string(m_pool) << "\n";
-#endif
+  m_cell_merge_end = m_last_cell_end;
 }
 
 // Merge new row of elements to the previous one. The assumption is that only

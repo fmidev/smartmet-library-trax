@@ -100,6 +100,7 @@ class JointBuilder
   void add(std::uint32_t column, std::uint32_t row, const point& p, double z);
   void add(std::uint32_t column, std::uint32_t row, VertexType vtype, double x, double y, double z);
   void close();
+  void finish_cell();
 
  private:
   Range m_range;
@@ -145,6 +146,11 @@ void JointBuilder::close()
     m_joints.merge_cell(m_vertices);
 
   m_vertices.clear();
+}
+
+void JointBuilder::finish_cell()
+{
+  m_joints.finish_cell();
 }
 
 void JointBuilder::build_linear(const Cell& c)
@@ -453,15 +459,15 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Above, Place::Below):
     {
-      const auto p1 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      add(c.i + 1, c.j, p1, m_range.lo());  // A----A
-      add(c.i, c.j, p2, m_range.lo());      // |    |
-      add(c.i, c.j, p3, m_range.hi());      // |   /|
-      add(c.i + 1, c.j, p4, m_range.hi());  // |  //|
-      close();                              // A----B
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      add(c.i, c.j, p1, m_range.hi());      // A----A
+      add(c.i + 1, c.j, p2, m_range.hi());  // |    |
+      add(c.i + 1, c.j, p3, m_range.lo());  // |   /|
+      add(c.i, c.j, p4, m_range.lo());      // |  //|
+      close();                              // A----B  A may be H!
       break;
     }
     case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Above, Place::Below):
@@ -1034,7 +1040,7 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       add(c.i, c.j, p1, m_range.hi());                          // I----A   I----A
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|   |*/  |
-      add(c.i, c.j + 1, p2, m_range.hi());                      // |**I*|   |/ A/|
+      add(c.i, c.j + 1, p2, m_range.hi());                      // |**I*|   |/ X/|
       if (cc != Place::Inside)                                  // |\***|   |  /*|
         close();                                                // A----I   A----I
       add(c.i + 1, c.j, p3, m_range.hi());
@@ -1081,13 +1087,14 @@ void JointBuilder::build_linear(const Cell& c)
       }
       else
       {
-        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // A----I
-        add(c.i, c.j, p1, m_range.hi());                              // |  \*|
-        add(c.i, c.j, p4, m_range.hi());                              // |\ A\|
-        close();                                                      // |*\  |
-        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);  // I----A
-        add(c.i + 1, c.j, p3, m_range.hi());
+        add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);  // A----I  top A could be H!
+        add(c.i, c.j, p1, m_range.hi());                      // |  \*|
+        add(c.i, c.j, p4, m_range.hi());                      // |\ A\|
+        close();                                              // |*\  |
+        // must be this order, possible corner touch!         // I----A
         add(c.i, c.j + 1, p2, m_range.hi());
+        add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);
+        add(c.i + 1, c.j, p3, m_range.hi());
         close();
       }
       break;
@@ -1437,6 +1444,7 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
   }
+  finish_cell();
 }  // namespace
 
 void JointBuilder::build_midpoint(const Cell& c)
@@ -1603,6 +1611,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       break;
     }
   }
+  finish_cell();
 }
 
 }  // namespace

@@ -262,7 +262,20 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   const auto ny = grid.height();
   init(limits, nx, ny);
 
-  // Accessing data trhough grid is sometimes slow, so we buffer the values into vectors
+#if 0
+  for (std::size_t j = 0; j < ny; j++)
+  {
+    for (std::size_t i = 0; i < nx; i++)
+    {
+      if (i > 0)
+        std::cout << "\t";
+      std::cout << grid(i, ny - j - 1);
+    }
+    std::cout << "\n";
+  }
+#endif
+
+  // Accessing data through grid is sometimes slow, so we buffer the values into vectors
   // and just swap them after each row to avoid unnecessary copying.
   std::vector<double> x1(nx);
   std::vector<double> x2(nx);
@@ -282,6 +295,7 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
       // clang-format off
       if (grid.valid(i, j))
         isoband(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], i, j));
+      // isoband(Cell(i, j, z1[i], i, j+1, z2[i], i+1, j+1, z2[i+1], i+1, j, z1[i+1], i, j));
       // clang-format on
     }
     finish_row();
