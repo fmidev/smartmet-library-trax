@@ -1,7 +1,6 @@
-# Isolines tests for a single cell.
+#  Isolines tests for a single cell.
 interpolation linear
-
-# 0..10 viewbox to get nice values for intersection coordinates
+#  0..10 viewbox to get nice values for intersection coordinates
 bbox 0 0 10 10
 
 grid 2 2
@@ -67,13 +66,13 @@ isoline 6 GEOMETRYCOLLECTION EMPTY
 grid 2 2
 5 0
 0 5
-isoline 4 MULTILINESTRING ((2 10,10 2),(8 0,0 8))
+isoline 4 MULTILINESTRING ((2 10,0 8),(8 0,10 2))
 isoline 6 GEOMETRYCOLLECTION EMPTY
 
 grid 2 2
 5 0
 0 10
-isoline 4 MULTILINESTRING ((2 10,10 6),(4 0,0 8))
+isoline 4 MULTILINESTRING ((2 10,0 8),(4 0,10 6))
 isoline 6 LINESTRING (6 0,10 4)
 
 grid 2 2
@@ -121,14 +120,14 @@ isoline 6 LINESTRING (4 10,0 6)
 grid 2 2
 10 0
 0 5
-isoline 4 MULTILINESTRING ((6 10,10 2),(8 0,0 4))
+isoline 4 MULTILINESTRING ((6 10,0 4),(8 0,10 2))
 isoline 6 LINESTRING (4 10,0 6)
 
 grid 2 2
 10 0
 0 10
 isoline 4 MULTILINESTRING ((4 0,0 4),(6 10,10 6))
-isoline 6 MULTILINESTRING ((4 10,10 4),(6 0,0 6))
+isoline 6 MULTILINESTRING ((4 10,0 6),(6 0,10 4))
 
 grid 2 2
 10 5
@@ -187,7 +186,7 @@ isoline 6 LINESTRING (2 0,10 4)
 grid 2 2
 0 5
 5 0
-isoline 4 MULTILINESTRING ((0 2,8 10),(10 8,2 0))
+isoline 4 MULTILINESTRING ((0 2,2 0),(10 8,8 10))
 isoline 6 GEOMETRYCOLLECTION EMPTY
 
 grid 2 2
@@ -205,7 +204,7 @@ isoline 6 LINESTRING (2 0,10 8)
 grid 2 2
 0 10
 5 0
-isoline 4 MULTILINESTRING ((0 2,4 10),(10 4,2 0))
+isoline 4 MULTILINESTRING ((0 2,2 0),(10 4,4 10))
 isoline 6 LINESTRING (10 6,6 10)
 
 grid 2 2
@@ -349,7 +348,7 @@ isoline 6 LINESTRING (0 4,10 4)
 grid 2 2
 0 5
 10 0
-isoline 4 MULTILINESTRING ((0 6,8 10),(10 8,6 0))
+isoline 4 MULTILINESTRING ((0 6,6 0),(10 8,8 10))
 isoline 6 LINESTRING (0 4,4 0)
 
 grid 2 2
@@ -368,7 +367,7 @@ grid 2 2
 0 10
 10 0
 isoline 4 MULTILINESTRING ((0 6,4 10),(10 4,6 0))
-isoline 6 MULTILINESTRING ((0 4,6 10),(10 6,4 0))
+isoline 6 MULTILINESTRING ((0 4,4 0),(10 6,6 10))
 
 grid 2 2
 0 10
