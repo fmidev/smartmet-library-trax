@@ -1362,13 +1362,13 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p6 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p7 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p8 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      if (c.z2 == m_range.hi() && c.z4 == m_range.hi())
+      if (cc == Place::Inside || (c.z2 == m_range.hi() && c.z4 == m_range.hi()))
       {
-        add(c.i, c.j, p1, m_range.lo());      // H----B
+        add(c.i, c.j, p1, m_range.lo());      // A----B
         add(c.i, c.j, p2, m_range.hi());      // |***\|
-        add(c.i, c.j + 1, p5, m_range.hi());  // |\**\|   X = A or I
+        add(c.i, c.j + 1, p5, m_range.hi());  // |\*I\| or A=H
         add(c.i, c.j + 1, p6, m_range.lo());  // | \**|
-        add(c.i + 1, c.j, p7, m_range.hi());  // B----H
+        add(c.i + 1, c.j, p7, m_range.hi());  // B----A
         add(c.i + 1, c.j, p8, m_range.lo());
         add(c.i, c.j, p3, m_range.lo());
         add(c.i, c.j, p4, m_range.hi());
@@ -1391,7 +1391,7 @@ void JointBuilder::build_linear(const Cell& c)
       {
         add(c.i, c.j, p1, m_range.lo());  // A----B
         add(c.i, c.j, p2, m_range.hi());  // |  \\|
-        add(c.i, c.j, p3, m_range.hi());  // |\ X\|   X = A or I
+        add(c.i, c.j, p3, m_range.hi());  // |\ A\|
         add(c.i, c.j, p4, m_range.lo());  // |\\  |
         close();                          // B----A
         add(c.i, c.j + 1, p5, m_range.hi());
@@ -1414,7 +1414,19 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p7 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p8 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      if (cc == Place::Below)
+      if (cc == Place::Inside)
+      {
+        add(c.i, c.j, p1, m_range.hi());      // B----A
+        add(c.i, c.j, p2, m_range.lo());      // |***\|
+        add(c.i, c.j + 1, p3, m_range.lo());  // |\*I\|
+        add(c.i, c.j + 1, p4, m_range.hi());  // | \**|
+        add(c.i + 1, c.j, p7, m_range.hi());  // A----B
+        add(c.i + 1, c.j, p8, m_range.lo());
+        add(c.i, c.j, p5, m_range.lo());
+        add(c.i, c.j, p6, m_range.hi());
+        close();
+      }
+      else if (cc == Place::Below)
       {
         add(c.i, c.j, p1, m_range.hi());  // B----A
         add(c.i, c.j, p2, m_range.lo());  // |  \\|
@@ -1431,7 +1443,7 @@ void JointBuilder::build_linear(const Cell& c)
       {
         add(c.i, c.j, p1, m_range.hi());                   // B----A
         add(c.i, c.j, p2, m_range.lo());                   // |//  |
-        add(c.i, c.j + 1, p3, m_range.lo());               // |/ X/|  X = A or I
+        add(c.i, c.j + 1, p3, m_range.lo());               // |/ A/|
         add(c.i, c.j + 1, p4, m_range.hi());               // |  //|
         if (c.z1 != m_range.hi() || c.z3 != m_range.hi())  // A----B
           close();

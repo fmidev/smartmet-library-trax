@@ -303,6 +303,7 @@ BOOST_AUTO_TEST_CASE(isoband_debug)
   run_file_tests("data/isoband_debug.txt");
 }
 
+// #define RUN_REALLY_BIG_TESTS 1
 #ifdef RUN_REALLY_BIG_TESTS
 BOOST_AUTO_TEST_CASE(isoband_4x3)
 {

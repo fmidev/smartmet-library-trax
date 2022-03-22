@@ -273,6 +273,16 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
     }
     std::cout << "\n";
   }
+
+  for (std::size_t i = 0; i < nx; i++)
+  {
+    if (i > 0)
+      std::cout << " ";
+    std::cout << grid.x(i, 0);
+    if (!grid.valid(i, 0))
+      std::cout << "?";
+  }
+  std::cout << "\n";
 #endif
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors

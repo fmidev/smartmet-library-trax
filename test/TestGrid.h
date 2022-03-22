@@ -23,7 +23,11 @@ class TestGrid : public Grid
   {
     for (auto j = 0; j < m_ny; j++)
       for (auto i = 0; i < m_nx; i++)
-        set(i, j, m_x1 + i * (m_x2 - m_x1) / (m_nx - 1), m_y1 + j * (m_y2 - m_y1) / (m_ny - 1));
+      {
+        auto xx = m_x1 + i * (m_x2 - m_x1) / (m_nx - 1);
+        auto yy = m_y1 + j * (m_y2 - m_y1) / (m_ny - 1);
+        set(i, j, xx, yy);
+      }
   }
 
   std::size_t width() const override { return m_nx; }
