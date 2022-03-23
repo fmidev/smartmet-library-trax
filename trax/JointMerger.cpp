@@ -297,18 +297,30 @@ void JointMerger::merge_cell(const Vertices& vertices)
 void JointMerger::wraparound()
 {
   // Do not wrap cell into itself
-  if (m_row_start == m_last_cell_start)
+  if (m_row_end == m_last_cell_start)
+  {
+#if 0
+    std::cout << "No wraparound since row_start " << *m_row_start << " == last_cell_start "
+              << *m_last_cell_start << "\n";
+#endif
     return;
+  }
 
   // Find matches for the first two vertices
   Joint* j1 = nullptr;
   Joint* j2 = nullptr;
 
-  auto pos1 = m_row_start;
-  auto pos2 = m_row_start;
+  auto pos1 = m_row_end;
+  auto pos2 = m_row_end;
   ++pos2;
   auto* start1 = *pos1;  // First two joints on the row
   auto* start2 = *pos2;
+
+#if 0  
+  std::cout << "Looking for matches for " << start1 << " and " << start2 << " from range "
+            << *m_last_cell_start << " ... " << *m_last_cell_end << "\n";
+  std::cout << "Range 2 = " << *m_row_start << " ... " << *m_last_cell_start << "\n";
+#endif
 
   for (auto it = m_last_cell_start, end = m_last_cell_end; it != end; ++it)
   {
@@ -322,13 +334,21 @@ void JointMerger::wraparound()
   // Cancel common edge if there was a match
   if (j1 != nullptr && j2 != nullptr)
   {
-    // std::cout << "wraparound\n";
+#if 0
+    std::cout << "wraparound found!\n";
+#endif
     j1->used = true;
     j2->used = true;
     j2->prev->next = start2;
     j1->next->prev = start1;
     start2->prev = j2->prev;
     start1->next = j1->next;
+  }
+  else
+  {
+#if 0
+    std::cout << "No wraparound found\n";
+#endif
   }
 }
 
@@ -384,6 +404,11 @@ void JointMerger::finish_cell()
   m_last_cell_start = m_last_cell_end;
   m_last_cell_end = m_pool.end();
   m_cell_merge_end = m_last_cell_end;
+#if 0
+  std::cout << "Cell finished:\n"
+            << "\tlast_cell_start = " << *m_last_cell_start << "\n"
+            << "\tlast_cell_end = " << *m_last_cell_end << "\n\n";
+#endif
 }
 
 // Merge new row of elements to the previous one. The assumption is that only
@@ -395,11 +420,17 @@ void JointMerger::finish_cell()
 
 void JointMerger::merge_row()
 {
+  // no need to search for matches if the previous row was empty
+  const bool prev_row_empty = (m_row_start == m_row_end);
+
 #if 0
-  std::cout << "Joints before row merge:\n" << to_string(m_pool) << "\n";
-  std::cout << fmt::format("\trange {}..{}\n",
-                           reinterpret_cast<void*>(*m_row_start),
-                           reinterpret_cast<void*>(*m_row_end));
+  if (!prev_row_empty)
+  {
+    std::cout << "\n\n\n\nJoints before row merge:\n" << to_string(m_pool) << "\n";
+    std::cout << fmt::format("\trange {}..{}\n",
+                             reinterpret_cast<void*>(*m_row_start),
+                             reinterpret_cast<void*>(*m_row_end));
+  }
 #endif
 
   // Only vertices with row == m_maxrow (current value!) have a chance of being merged
@@ -408,9 +439,6 @@ void JointMerger::merge_row()
   auto new_maxrow = m_maxrow;  // calculate new maxrow from the merge (usually just +1)
 
   auto hint = m_row_start;  // we expect matches to begin at the start of the rows
-
-  // no need to search for matches if the previous row was empty
-  const bool prev_row_empty = (m_row_start == m_row_end);
 
   // The row to merge starts right after the previous row ending at m_row_end
   for (auto it = m_row_end, end = m_pool.end(); it != end; ++it)
@@ -463,9 +491,12 @@ void JointMerger::merge_row()
   // No cell yet on the next row to be processed
   m_last_cell_start = m_pool.end();
   m_last_cell_end = m_pool.end();
+  m_cell_merge_end = m_pool.end();
 
 #if 0
   std::cout << "Joints after row merge:\n" << to_string(m_pool) << "\n";
+  std::cout << "Finished row = " << *m_row_start << " ... " << *m_row_end << "\n";
+  std::cout << "--------------------------------------------------------------\n";
 #endif
 }
 

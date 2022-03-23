@@ -179,6 +179,8 @@ std::string to_string(JointPool& pool)
     }
     ++i;
   }
+  out += fmt::format("   end\t{}\n", reinterpret_cast<void*>(*pool.end()));
+
   return out;
 }
 

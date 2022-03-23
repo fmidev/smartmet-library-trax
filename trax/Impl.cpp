@@ -1,3 +1,4 @@
+
 #include "Impl.h"
 #include <macgyver/Exception.h>
 #include <algorithm>  // std::minmax
@@ -274,15 +275,18 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
     std::cout << "\n";
   }
 
-  for (std::size_t i = 0; i < nx; i++)
+  for (std::size_t j = 0; j < ny; j++)
   {
-    if (i > 0)
-      std::cout << " ";
-    std::cout << grid.x(i, 0);
-    if (!grid.valid(i, 0))
-      std::cout << "?";
+    for (std::size_t i = 0; i < nx; i++)
+    {
+      if (i > 0)
+        std::cout << " ";
+      if (!grid.valid(i, 0))
+        std::cout << "?";
+      std::cout << fmt::format("{} {}\t", grid.x(i, ny - j - 1), grid.y(i, ny - j - 1));
+    }
+    std::cout << "\n";
   }
-  std::cout << "\n";
 #endif
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors

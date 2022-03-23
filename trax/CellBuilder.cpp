@@ -127,9 +127,20 @@ inline void JointBuilder::add(std::uint32_t column, std::uint32_t row, const poi
 void JointBuilder::add(
     std::uint32_t column, std::uint32_t row, VertexType vtype, double x, double y, double z)
 {
-  bool ghost = z != m_range.lo();
+  const auto n = m_vertices.size();
+  const bool ghost = z != m_range.lo();
   Vertex vertex(column, row, vtype, x, y, ghost);
-  if (m_vertices.empty() || m_vertices.back() != vertex)
+  if (n == 0)
+    m_vertices.push_back(vertex);
+  else if (m_vertices.back() == vertex)  // avoid consecutive duplicates
+  {
+  }
+  else if (n >= 2 && m_vertices[n - 2] == vertex)  // return back to same vertex?
+  {
+    m_vertices.pop_back();  // cancel the protruding line possibly caused
+    m_vertices.pop_back();  // by rounding errors
+  }
+  else
     m_vertices.push_back(vertex);
 }
 
@@ -171,9 +182,27 @@ void JointBuilder::build_linear(const Cell& c)
   // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   // Always produce the vertices at the left vertical edge first for fastest
   // possible detection of edge cancellation in JointMerger::merge_cell.
-  // Note that this includes A-A edges on the left in case the value is
+  // Note that this includes A-A edges on the left in case either value is
   // equal to range.hi()
   // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#if 0
+  std::cout << fmt::format("{},{}\t{} {}\t\t{} {}\t{} {}\n\t{} {}\t\t{} {}\t{} {}\n",
+                           c.i,
+                           c.j,
+                           c.z2,
+                           c.z3,
+                           c.x2,
+                           c.y2,
+                           c.x3,
+                           c.y3,
+                           c.z1,
+                           c.z4,
+                           c.x1,
+                           c.y1,
+                           c.x4,
+                           c.y4);
+#endif
 
   switch (place_hash(c1, c2, c3, c4))
   {

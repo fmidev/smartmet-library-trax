@@ -1,12 +1,31 @@
 # Isobands tests with wraparound
 interpolation linear
 
+# One row wraparound
 grid 5 2
 5 5 5 5 5
 0 0 0 0 0
 coords
 10 10  20 10  - - 0 10  10 10
 10 0   20 0   - - 0 0   10 0
-
 isoband 4 6 POLYGON ((0 8,0 10,10 10,20 10,20 8,10 8,0 8))
 
+# One row wraparound, all inside
+grid 5 2
+5 5 5 5 5
+5 5 5 5 5
+coords
+10 10  20 10  - - 0 10  10 10
+10 0   20 0   - - 0 0   10 0
+isoband 4 6 POLYGON ((0 0,0 10,10 10,20 10,20 0,10 0,0 0))
+
+# Two row wraparound, all inside
+grid 5 3
+5 5 5 5 5
+5 5 5 5 5
+5 5 5 5 5
+coords
+10 20  20 20  - - 0 20  10 20
+10 10  20 10  - - 0 10  10 10
+10 0   20 0   - - 0 0   10 0
+isoband 4 6 POLYGON ((0 0,0 10,0 20,10 20,20 20,20 10,20 0,10 0,0 0))
