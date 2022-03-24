@@ -13,6 +13,7 @@ class Range
   double lo() const { return m_lo; }
   double hi() const { return m_hi; }
   void adjust();
+  bool adjusted() const { return m_adjusted; }
   bool operator<(const Range& other) const;
   bool operator==(const Range& other) const;
   bool overlaps(double lo, double hi) const;
