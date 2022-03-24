@@ -179,9 +179,19 @@ void merge_joint(Joint* joint, Joint* match)
 
   Joint* j = find_cancellation(joint, match);
   if (j == nullptr)
+  {
+#if 0
+    std::cout << "Adding ALT\n";
+#endif
     add_alt(match, joint);
+  }
   else
+  {
+#if 0
+    std::cout << "Cancelling edge\n";
+#endif
     cancel_edge(joint, j);
+  }
 }
 
 }  // namespace
@@ -218,7 +228,7 @@ JointMerger& JointMerger::operator=(JointMerger&& other) noexcept
 
 void JointMerger::merge_cell(const Vertices& vertices)
 {
-  if (vertices.size() < 2)  // safety check
+  if (vertices.size() <= 2)  // safety check
     return;
 
   // Find matches for the first two vertices
@@ -316,7 +326,7 @@ void JointMerger::wraparound()
   auto* start1 = *pos1;  // First two joints on the row
   auto* start2 = *pos2;
 
-#if 0  
+#if 0
   std::cout << "Looking for matches for " << start1 << " and " << start2 << " from range "
             << *m_last_cell_start << " ... " << *m_last_cell_end << "\n";
   std::cout << "Range 2 = " << *m_row_start << " ... " << *m_last_cell_start << "\n";
@@ -336,6 +346,9 @@ void JointMerger::wraparound()
   {
 #if 0
     std::cout << "wraparound found!\n";
+    std::cout << "start1 = " << start1 << "   start2 = " << start2 << "\nj1 = " << j1
+              << " j2 = " << j2 << "\n";
+    std::cout << "Joints before merge:\n" << to_string(m_pool) << "\n";
 #endif
     j1->used = true;
     j2->used = true;
@@ -343,12 +356,26 @@ void JointMerger::wraparound()
     j1->next->prev = start1;
     start2->prev = j2->prev;
     start1->next = j1->next;
+#if 0
+    std::cout << "Joints after merge:\n" << to_string(m_pool) << "\n";
+#endif
   }
   else
   {
 #if 0
     std::cout << "No wraparound found\n";
+    std::cout << "start1 = " << start1 << "   start2 = " << start2 << "\nj1 = " << j1
+              << " j2 = " << j2 << "\n";
+    std::cout << "Joints:\n" << to_string(m_pool) << "\n";
 #endif
+
+    // If a single vertex matches, we perform a manual wrap for the column
+    // for the benefit of row merges. This is not done above since
+    // j1 and j2 are marked as used.
+    if (j1 != nullptr)
+      j1->vertex.column = start1->vertex.column;
+    if (j2 != nullptr)
+      j2->vertex.column = start2->vertex.column;
   }
 }
 
