@@ -5,8 +5,9 @@
 #include "Place.h"
 #include "Range.h"
 #include "Vertex.h"
+#include <limits>
 
-#if 1
+#if 0
 #include <fmt/format.h>
 #include <iostream>
 #endif
@@ -24,6 +25,10 @@ struct point
   int dj;
 };
 
+#if 0
+bool print_it = false;
+#endif
+
 // Calculate intersection coordinates adjust to VertexType corner if necessary. di/dj are used only
 // when the intersection is at a corner
 point intersect(double x1,
@@ -37,21 +42,34 @@ point intersect(double x1,
                 VertexType type,
                 double value)
 {
+#if 0  
   // These equality tests are necessary for handling value==lolimit cases without any rounding
   // errors! std::cout << fmt::format("{},{},{} - {},{},{} at {}\n", x1, y1, z1, x2, y2, z2, value);
-
   if (z1 == value)
     return {x1, y1, VertexType::Corner, 0, 0};
   if (z2 == value)
     return {x2, y2, VertexType::Corner, di, dj};
+#endif
   if (x1 < x2 || (x1 == x2 && y1 < y2))  // lexicographic sorting to guarantee the same
   {                                      // result even if input x1,y1 and x2,y2 are swapped
-    double s = (value - z2) / (z1 - z2);
-    return {x2 + s * (x1 - x2), y2 + s * (y1 - y2), type, 0, 0};
+    auto s = (value - z2) / (z1 - z2);
+    auto x = x2 + s * (x1 - x2);
+    auto y = y2 + s * (y1 - y2);
+    if (x == x1 && y == y1)
+      return {x, y, VertexType::Corner, 0, 0};
+    if (x == x2 && y == y2)
+      return {x, y, VertexType::Corner, di, dj};
+    return {x, y, type, 0, 0};
   }
 
-  double s = (value - z1) / (z2 - z1);
-  return {x1 + s * (x2 - x1), y1 + s * (y2 - y1), type, 0, 0};
+  auto s = (value - z1) / (z2 - z1);
+  auto x = x1 + s * (x2 - x1);
+  auto y = y1 + s * (y2 - y1);
+  if (x == x1 && y == y1)
+    return {x, y, VertexType::Corner, 0, 0};
+  if (x == x2 && y == y2)
+    return {x, y, VertexType::Corner, di, dj};
+  return {x, y, type, 0, 0};
 }
 
 // Utilities to avoid highly likely typos in repetetive code. As luck would have it,
@@ -135,11 +153,18 @@ void JointBuilder::add(
   else if (m_vertices.back() == vertex)  // avoid consecutive duplicates
   {
   }
+#if 0  
+  else if (match(m_vertices.back(), vertex))  // same coordinates but different type?
+  {
+    if (m_vertices.back().type != VertexType::Corner)  // prefer corners over edges
+      m_vertices.back() = vertex;
+  }
   else if (n >= 2 && m_vertices[n - 2] == vertex)  // return back to same vertex?
   {
     m_vertices.pop_back();  // cancel the protruding line possibly caused
     m_vertices.pop_back();  // by rounding errors
   }
+#endif
   else
     m_vertices.push_back(vertex);
 }
@@ -147,6 +172,19 @@ void JointBuilder::add(
 // Close the ring.
 void JointBuilder::close()
 {
+#if 0
+  if (print_it)
+  {
+    std::cout << "Vertices closed:\n";
+    for (auto i = 0UL; i < m_vertices.size(); i++)
+    {
+      const auto& v = m_vertices[i];
+      std::cout << fmt::format(
+          "\t{}:\t{},{}\t{},{}\t{}\n", i, v.x, v.y, v.column, v.row, to_string(v.type));
+    }
+  }
+#endif
+
   // Special case where the isoband covers only one edge needs removal:
 
   if (m_vertices[0] == m_vertices.back())
@@ -187,21 +225,30 @@ void JointBuilder::build_linear(const Cell& c)
   // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #if 0
-  std::cout << fmt::format("{},{}\t{} {}\t\t{} {}\t{} {}\n\t{} {}\t\t{} {}\t{} {}\n",
-                           c.i,
-                           c.j,
-                           c.z2,
-                           c.z3,
-                           c.x2,
-                           c.y2,
-                           c.x3,
-                           c.y3,
-                           c.z1,
-                           c.z4,
-                           c.x1,
-                           c.y1,
-                           c.x4,
-                           c.y4);
+  print_it = true;
+  if (print_it)
+  {
+    std::cout << fmt::format(
+        "{},{}\t{} {}\t\t{} {}\t{} {}\t{} {}\n\t{} {}\t\t{} {}\t{} {}\t{} {}\n",
+        c.i,
+        c.j,
+        c.z2,
+        c.z3,
+        c.x2,
+        c.y2,
+        c.x3,
+        c.y3,
+        c2,
+        c3,
+        c.z1,
+        c.z4,
+        c.x1,
+        c.y1,
+        c.x4,
+        c.y4,
+        c1,
+        c4);
+  }
 #endif
 
   switch (place_hash(c1, c2, c3, c4))
