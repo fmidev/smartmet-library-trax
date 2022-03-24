@@ -5,7 +5,7 @@
 #include <cmath>      // std::min and std::max
 #include <utility>    // std::pair and std::make_pair
 
-#define TRAX_VALIDATE 1
+#define TRAX_VALIDATE 0
 
 #if TRAX_VALIDATE
 #include "Geos.h"
