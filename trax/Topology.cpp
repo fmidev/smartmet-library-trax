@@ -480,7 +480,10 @@ void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
 #endif
 
   for (auto&& shell : shells)
-    polygons.emplace_back(shell);
+  {
+    if (shell.size() >= 4)  // discard too small shells
+      polygons.emplace_back(shell);
+  }
 
   if (holes.empty())
     return;
@@ -494,6 +497,9 @@ void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
   for (auto it = holes.begin(); it != holes.end();)
   {
     auto& hole = *it;  // shorthand variable
+
+    if (hole.size() < 4)  // discard too small holes
+      continue;
 
     auto candidates = possible_shells(rtree, hole);
 #if 0
