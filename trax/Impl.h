@@ -13,6 +13,7 @@ class Contour::Impl
 
   void interpolation(InterpolationType itype) { m_itype = itype; }
   void closed_range(bool flag) { m_closed_range = flag; }
+  void strict(bool flag) { m_strict = flag; }
 
   // Calculate full set of contours
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -59,6 +60,11 @@ class Contour::Impl
 
   // Should the last range be closed [lo,hi] instead of half-open [lo,hi[
   bool m_closed_range = false;
+
+  // Do not allow any internal errors in strict mode. Some projections
+  // may cause problems for example near the poles due to rounding errors
+  // in projection calculations, hence our default is false.
+  bool m_strict = false;
 
   // Requested isolines
   IsolineValues m_isoline_values;

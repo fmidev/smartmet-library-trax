@@ -21,6 +21,12 @@ void Contour::closed_range(bool flag)
   impl->closed_range(flag);
 }
 
+// Enable/disable stri t mode
+void Contour::strict(bool flag)
+{
+  impl->strict(flag);
+}
+
 // Contour full grid
 GeometryCollections Contour::isobands(const Grid& grid, const IsobandLimits& limits)
 {

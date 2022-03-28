@@ -84,14 +84,14 @@ void Contour::Impl::finish_row()
 void Contour::Impl::finish_isolines()
 {
   for (auto& builder : m_builders)
-    builder.finish_isolines();
+    builder.finish_isolines(m_strict);
 }
 
 // Finalize results
 void Contour::Impl::finish_isobands()
 {
   for (auto& builder : m_builders)
-    builder.finish_isobands();
+    builder.finish_isobands(m_strict);
 }
 
 // Move the result for the caller
@@ -283,7 +283,8 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
         std::cout << " ";
       if (!grid.valid(i, 0))
         std::cout << "?";
-      std::cout << fmt::format("{} {}\t", grid.x(i, ny - j - 1), grid.y(i, ny - j - 1));
+      std::cout << fmt::format(
+          "{},{}:{},{}\t", i, ny - j - 1, grid.x(i, ny - j - 1), grid.y(i, ny - j - 1));
     }
     std::cout << "\n";
   }

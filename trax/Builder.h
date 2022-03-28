@@ -27,8 +27,8 @@ class Builder
 
   // Finalize (partial) results
   void finish_row();
-  void finish_isolines();
-  void finish_isobands();
+  void finish_isolines(bool strict);
+  void finish_isobands(bool strict);
 
   JointMerger& merger() { return m_merger; }
 

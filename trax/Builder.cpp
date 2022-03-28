@@ -34,11 +34,11 @@ Builder::Builder(Builder&& other) noexcept
 
 Builder::Builder(std::size_t /* width */, std::size_t /* height */) {}
 
-void Builder::finish_isolines()
+void Builder::finish_isolines(bool strict)
 {
   Polylines shells;
   Holes holes;
-  build_rings(shells, holes, m_merger.pool());
+  build_rings(shells, holes, m_merger.pool(), strict);
 
   // We do not build multipolygons out of the shells and holes since
   // the algorithm does not guarantee there will not be nested shells
@@ -56,11 +56,11 @@ void Builder::finish_isolines()
     m_geom.add(std::move(line));
 }
 
-void Builder::finish_isobands()
+void Builder::finish_isobands(bool strict)
 {
   Polylines shells;
   Holes holes;
-  build_rings(shells, holes, m_merger.pool());
+  build_rings(shells, holes, m_merger.pool(), strict);
 
   Polygons polygons;
   build_polygons(polygons, shells, holes);

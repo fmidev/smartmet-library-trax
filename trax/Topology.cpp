@@ -182,7 +182,7 @@ Joint* select_right_turn(const Vertex& vertex,
   return best;
 }
 
-Polylines extract_right_turning_sequence(Joint* joint)
+Polylines extract_right_turning_sequence(Joint* joint, bool strict)
 {
   Polylines polylines;  // polylines extracted by taking right turns split at double joints
   Polyline polyline;    // grow a polyline until a double joint is encountered
@@ -225,8 +225,19 @@ Polylines extract_right_turning_sequence(Joint* joint)
       {
         if (polyline.size() == 1)  // collapsed to a corner point, just discard it
           return polylines;
+        if (!strict)
+        {
+          // Ignore the built polyline and try to continue. This problem can happen
+          // near the poles when projected coordinates may be inaccurate.
+          polylines.clear();
+          return polylines;
+        }
+
         throw Fmi::Exception(BCP,
-                             fmt::format("Only joint already used at {},{}", vertex.x, vertex.y));
+                             fmt::format("Only joint already used at {},{}", vertex.x, vertex.y))
+            .addParameter("Column", fmt::format("{}", vertex.column))
+            .addParameter("Row", fmt::format("{}", vertex.row))
+            .addParameter("Type", to_string(vertex.type));
       }
       joint->used = true;
       joint = joint->next;
@@ -409,7 +420,7 @@ Polygons::iterator innermost_polygon(const std::list<Polygons::iterator>& polygo
  * output is polygons and holes which were not in contact with any exterior.
  */
 
-void build_rings(Polylines& shells, Holes& holes, JointPool& joints)
+void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict)
 {
 #if 0
   std::cout << "Joint map at start:\n" << Trax::to_string(joints);
@@ -434,8 +445,10 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints)
     // Skip unused multijoints as start points since then we cannot calculate the polyline end angle
     if (!has_duplicates(joint))
     {
-      auto polylines = extract_right_turning_sequence(joint);
+      auto polylines = extract_right_turning_sequence(joint, strict);
 
+      if (!polylines.empty())  // the sequence may have been discarded due to a problem
+      {
 #if 0
       std::cout << "Extracted right turning sequence:\n";
       for (const auto& polyline : polylines)
@@ -444,8 +457,9 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints)
       std::cout << "Joint map now:\n" << Trax::to_string(joints);
 #endif
 
-      // Now extract a left turning sequence to separate holes touching the exterior
-      extract_left_turning_sequence(polylines, shells, holes);
+        // Now extract a left turning sequence to separate holes touching the exterior
+        extract_left_turning_sequence(polylines, shells, holes);
+      }
     }
     else
     {
