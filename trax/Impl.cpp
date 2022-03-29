@@ -1,17 +1,12 @@
 
 #include "Impl.h"
+#include "Geos.h"
+#include <geos/geom/GeometryFactory.h>
+#include <geos/operation/valid/IsValidOp.h>
 #include <macgyver/Exception.h>
 #include <algorithm>  // std::minmax
 #include <cmath>      // std::min and std::max
 #include <utility>    // std::pair and std::make_pair
-
-#define TRAX_VALIDATE 0
-
-#if TRAX_VALIDATE
-#include "Geos.h"
-#include <geos/geom/GeometryFactory.h>
-#include <geos/operation/valid/IsValidOp.h>
-#endif
 
 #if 1
 #include <fmt/format.h>
@@ -20,8 +15,7 @@
 
 namespace
 {
-#if TRAX_VALIDATE
-std::string validate(const Trax::GeometryCollection& geom)
+std::string validate_geom(const Trax::GeometryCollection& geom)
 {
   const auto factory = geos::geom::GeometryFactory::create();
 
@@ -32,7 +26,6 @@ std::string validate(const Trax::GeometryCollection& geom)
 
   return validator.getValidationError()->toString();
 }
-#endif
 
 }  // namespace
 
@@ -322,14 +315,14 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 
   finish_isobands();
 
-#if !TRAX_VALIDATE
-  return result();
-#else
+  if (!m_validate)
+    return result();
+
   auto res = result();
   for (auto i = 0UL; i < res.size(); i++)
   {
     const auto& tmp = res[i];
-    auto err = validate(tmp);
+    auto err = validate_geom(tmp);
     if (!err.empty())
       std::cerr << "Isoband error: " << err << "\n"
                 << "Limits: " << limits[i].lo() << "..." << limits[i].hi() << "\n"
@@ -337,7 +330,7 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
                 << tmp.wkt() << "\n";
   }
   return res;
-#endif
+
 }  // namespace Trax
 
 // Contour full grid for isolines
@@ -371,14 +364,15 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   }
 
   finish_isolines();
-#if !TRAX_VALIDATE
-  return result();
-#else
+
+  if (!m_validate)
+    return result();
+
   auto res = result();
   for (auto i = 0UL; i < res.size(); i++)
   {
     const auto& tmp = res[i];
-    auto err = validate(tmp);
+    auto err = validate_geom(tmp);
     if (!err.empty())
       std::cerr << "Isoline error: " << err << "\n"
                 << "Isovalue: " << limits[i] << "\n"
@@ -386,7 +380,6 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
                 << tmp.wkt() << "\n";
   }
   return res;
-#endif
 }
 
 }  // namespace Trax

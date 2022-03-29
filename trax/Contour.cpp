@@ -21,10 +21,16 @@ void Contour::closed_range(bool flag)
   impl->closed_range(flag);
 }
 
-// Enable/disable stri t mode
+// Enable/disable strict mode
 void Contour::strict(bool flag)
 {
   impl->strict(flag);
+}
+
+// Enable/disable geometry validation
+void Contour::validate(bool flag)
+{
+  impl->validate(flag);
 }
 
 // Contour full grid

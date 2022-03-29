@@ -25,6 +25,7 @@ class Contour
   void interpolation(InterpolationType itype);
   void closed_range(bool flag);
   void strict(bool flag);
+  void validate(bool flag);
 
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
   GeometryCollections isolines(const Grid& grid, const IsolineValues& limits);

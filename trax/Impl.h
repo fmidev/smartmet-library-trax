@@ -14,6 +14,7 @@ class Contour::Impl
   void interpolation(InterpolationType itype) { m_itype = itype; }
   void closed_range(bool flag) { m_closed_range = flag; }
   void strict(bool flag) { m_strict = flag; }
+  void validate(bool flag) { m_validate = flag; }
 
   // Calculate full set of contours
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -65,6 +66,9 @@ class Contour::Impl
   // may cause problems for example near the poles due to rounding errors
   // in projection calculations, hence our default is false.
   bool m_strict = false;
+
+  // Perform geometry validation with GEOS. This can be very slow.
+  bool m_validate = false;
 
   // Requested isolines
   IsolineValues m_isoline_values;
