@@ -40,9 +40,6 @@ class JointMerger
 
   void finish_cell();
 
-  // Handle grid wraparound (f.ex. global weather forecasts need this)
-  void wraparound();
-
   // Merge new row of elements to the previous one
   void merge_row();
 

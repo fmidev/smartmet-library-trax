@@ -291,12 +291,6 @@ BOOST_AUTO_TEST_CASE(isoline_4x4)
   run_file_tests("data/isoline_4x4.txt");
 }
 
-BOOST_AUTO_TEST_CASE(isoband_wraparound)
-{
-  BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband wraparound cases");
-  run_file_tests("data/isoband_wraparound.txt");
-}
-
 BOOST_AUTO_TEST_CASE(isoband_debug)
 {
   BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband debug cases");
