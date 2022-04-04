@@ -32,26 +32,37 @@ void smooth(Grid& input, std::size_t length, std::size_t degree)
   if (factor == 0)
     return;
 
-  // Smoothen back to input from a copy of the original
-
-  auto grid = input;
-  MirrorMatrix<Grid> mirror(grid);
+  // Reflect data at the borders for better results
+  MirrorMatrix<Grid> mirror(input);
 
   int n = 2 * length + 1;
+  const auto nx = input.width();
+  const auto ny = input.height();
+
+  // Holder for temporary results
+  std::vector<double> sums;
+  sums.reserve(nx * ny);
 
   int denom = SavitzkyGolay2DCoefficients::denoms[length - 1][degree - 1];
 
-  for (std::size_t jj = 0; jj < grid.height(); ++jj)
-    for (std::size_t ii = 0; ii < grid.width(); ++ii)
+  // Calculate the smoothened values
+  for (std::size_t jj = 0; jj < ny; ++jj)
+    for (std::size_t ii = 0; ii < nx; ++ii)
     {
       double sum = 0;
       int k = 0;
       for (int j = 0; j < n; j++)
         for (int i = 0; i < n; i++)
           sum += (factor[k++] * mirror(ii + i - length, jj + j - length));
-      if (!std::isnan(sum))
-        input.set(ii, jj, sum / denom);
+      sums.push_back(sum);
     }
+
+  // Replace old values with new ones
+  std::size_t pos = 0;
+  for (std::size_t jj = 0; jj < ny; ++jj)
+    for (std::size_t ii = 0; ii < nx; ++ii, ++pos)
+      if (!std::isnan(sums[pos]))
+        input.set(ii, jj, sums[pos] / denom);
 }
 }  // namespace SavitzkyGolay2D
 }  // namespace Trax
