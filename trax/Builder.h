@@ -29,7 +29,7 @@ class Builder
   // Finalize (partial) results
   void finish_row();
   void finish_isolines(bool strict);
-  void finish_isobands(bool strict, bool missing);
+  void finish_isobands(bool strict, bool missing, double mincoord, double maxcoord);
 
   JointMerger& merger() { return m_merger; }
 

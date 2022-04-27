@@ -23,6 +23,7 @@ Polyline::Polyline(std::initializer_list<double> init_list)
     double y = *iter++;
     m_points.emplace_back(x, y, false);
   }
+  update_bbox();
 }
 
 // A polyline is closed if it contains at least 3 points and the end points are equal

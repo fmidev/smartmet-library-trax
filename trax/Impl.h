@@ -3,6 +3,7 @@
 #include "Contour.h"
 #include "IsobandLimits.h"
 #include "IsolineValues.h"
+#include <limits>
 
 namespace Trax
 {
@@ -15,6 +16,11 @@ class Contour::Impl
   void closed_range(bool flag) { m_closed_range = flag; }
   void strict(bool flag) { m_strict = flag; }
   void validate(bool flag) { m_validate = flag; }
+  void bbox(double mincoord, double maxcoord)
+  {
+    m_mincoord = mincoord;
+    m_maxcoord = maxcoord;
+  }
 
   // Calculate full set of contours
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -47,10 +53,6 @@ class Contour::Impl
   // Update a specific isoband from a single cell
   void isoband(int index, const Cell& c);
 
-  void isoband_linear(int index, const Cell& c);
-
-  void isoband_midpoint(int index, const Cell& c);
-
   // Based on min/max values update contour indexes to be checked
   bool update_isolines_to_check(const MinMax& minmax);
   bool update_isobands_to_check(const MinMax& minmax);
@@ -70,11 +72,16 @@ class Contour::Impl
   // Perform geometry validation with GEOS. This can be very slow.
   bool m_validate = false;
 
+  // Rectangle limits when inverting isobands for missing values
+  double m_mincoord = std::numeric_limits<double>::lowest();
+  double m_maxcoord = std::numeric_limits<double>::max();
+
   // Requested isolines
   IsolineValues m_isoline_values;
 
   // Requested isobands
   IsobandLimits m_isoband_limits;
+  bool m_contour_missing = false;
 
   // Unfinished geometries, one for each contour
   using Builders = std::vector<Builder>;

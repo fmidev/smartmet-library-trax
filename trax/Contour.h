@@ -26,6 +26,7 @@ class Contour
   void closed_range(bool flag);
   void strict(bool flag);
   void validate(bool flag);
+  void bbox(double mincoord, double maxcoord);
 
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
   GeometryCollections isolines(const Grid& grid, const IsolineValues& limits);

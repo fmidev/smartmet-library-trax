@@ -59,6 +59,11 @@ void Contour::Impl::init(const IsobandLimits& limits, std::size_t width, std::si
   if (!m_isoband_limits.valid())
     throw Fmi::Exception(BCP, "Isoband limits not valid");
 
+  // Flag whether we should contour all valid values for later inversion to missing values
+  // Range sorting forces this case to be the first one in the list of isobands.
+  if (!m_isoband_limits.empty())
+    m_contour_missing = m_isoband_limits[0].missing();
+
   m_builders.clear();
   m_builders.reserve(m_isoband_limits.size());
   for (auto i = 0UL; i < m_isoband_limits.size(); i++)
@@ -84,7 +89,7 @@ void Contour::Impl::finish_isolines()
 void Contour::Impl::finish_isobands()
 {
   for (auto i = 0UL; i < m_builders.size(); i++)
-    m_builders[i].finish_isobands(m_strict, m_isoband_limits[i].missing());
+    m_builders[i].finish_isobands(m_strict, m_isoband_limits[i].missing(), m_mincoord, m_maxcoord);
 }
 
 // Move the result for the caller
@@ -192,46 +197,40 @@ void Contour::Impl::isoband(const Cell& c)
   if (std::isnan(c.z1) || std::isnan(c.z2) || std::isnan(c.z3) || std::isnan(c.z4))
     return;
 
-  if (!update_isobands_to_check(minmax(c)))
-    return;
+  if (update_isobands_to_check(minmax(c)))
+  {
+    // Process isobands min_index...max_index
+    for (int index = m_min_index; index <= m_max_index; ++index)
+      isoband(index, c);
+  }
 
-  // Process isolines/isobands min_index...max_index
-
-  for (int index = m_min_index; index <= m_max_index; ++index)
-    isoband(index, c);
+  // Contour valid values if not handled above for later inversion to missing values
+  if (m_contour_missing)
+    isoband(0, c);
 }
 
 void Contour::Impl::isoband(int index, const Cell& c)
 {
+  auto& builder = m_builders[index];
+  auto& merger = builder.merger();
+  auto range = m_isoband_limits[index];
+
+  // Contour NaN...NaN as -inf...inf for later inversion from valid values to missing values
+  if (range.missing())
+  {
+    auto inf = std::numeric_limits<double>::infinity();
+    range = Range(-inf, inf);
+  }
+
   switch (m_itype)
   {
     case InterpolationType::Linear:
-      isoband_linear(index, c);
+      CellBuilder::isoband_linear(merger, c, range);
       break;
     case InterpolationType::Midpoint:
-      isoband_midpoint(index, c);
+      CellBuilder::isoband_midpoint(merger, c, range);
       break;
   }
-}
-
-// Calculate rectangle isobands using linear interpolation
-void Contour::Impl::isoband_linear(int index, const Cell& c)
-{
-  const auto& range = m_isoband_limits[index];
-  auto& builder = m_builders[index];
-  auto& merger = builder.merger();
-
-  CellBuilder::isoband_linear(merger, c, range);
-}
-
-// Calculate rectangle isobands using midpoint interpolation
-void Contour::Impl::isoband_midpoint(int index, const Cell& c)
-{
-  const auto& range = m_isoband_limits[index];
-  auto& builder = m_builders[index];
-  auto& merger = builder.merger();
-
-  CellBuilder::isoband_midpoint(merger, c, range);
 }
 
 void fill_buffers(const Grid& grid,
@@ -255,33 +254,6 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   const auto nx = grid.width();
   const auto ny = grid.height();
   init(limits, nx, ny);
-
-#if 0
-  for (std::size_t j = 0; j < ny; j++)
-  {
-    for (std::size_t i = 0; i < nx; i++)
-    {
-      if (i > 0)
-        std::cout << "\t";
-      std::cout << grid(i, ny - j - 1);
-    }
-    std::cout << "\n";
-  }
-
-  for (std::size_t j = 0; j < ny; j++)
-  {
-    for (std::size_t i = 0; i < nx; i++)
-    {
-      if (i > 0)
-        std::cout << " ";
-      if (!grid.valid(i, 0))
-        std::cout << "?";
-      std::cout << fmt::format(
-          "{},{}:{},{}\t", i, ny - j - 1, grid.x(i, ny - j - 1), grid.y(i, ny - j - 1));
-    }
-    std::cout << "\n";
-  }
-#endif
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
   // and just swap them after each row to avoid unnecessary copying.

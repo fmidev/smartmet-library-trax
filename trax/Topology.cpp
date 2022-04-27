@@ -481,12 +481,12 @@ void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
 #if 0
   int counter = 0;
   std::cout << fmt::format(
-      "{} : Assigning {} holes to {} polygons\n", ++counter, holes.size(), polygons.size());
+      "{} : Assigning {} holes to {} polygons\n", ++counter, holes.size(), shells.size());
 
   auto i = 0UL;
-  for (const auto& poly : polygons)
-    std::cout << "Poly " << i++ << " " << poly.wkt()
-              << "\n\tbbox = " << poly.exterior().bbox().wkt() << "\n";
+  for (const auto& shell : shells)
+    std::cout << "Shell " << i++ << " " << shell.wkt() << "\n\tbbox = " << shell.bbox().wkt()
+              << "\n";
   i = 0UL;
   for (const auto& hole : holes)
     std::cout << "Hole " << i++ << " " << hole.wkt() << "\n\tbbox = " << hole.bbox().wkt() << "\n";
