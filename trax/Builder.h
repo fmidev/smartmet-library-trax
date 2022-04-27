@@ -4,6 +4,7 @@
 #include "GeometryCollection.h"
 #include "JointMerger.h"
 #include "Vertex.h"
+#include <gis/Box.h>
 #include <list>
 #include <vector>
 
@@ -28,7 +29,7 @@ class Builder
   // Finalize (partial) results
   void finish_row();
   void finish_isolines(bool strict);
-  void finish_isobands(bool strict);
+  void finish_isobands(bool strict, bool missing);
 
   JointMerger& merger() { return m_merger; }
 

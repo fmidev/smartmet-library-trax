@@ -17,6 +17,7 @@ class Range
   bool operator<(const Range& other) const;
   bool operator==(const Range& other) const;
   bool overlaps(double lo, double hi) const;
+  bool missing() const;
 
  private:
   double m_lo;

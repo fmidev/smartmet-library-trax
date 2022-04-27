@@ -83,8 +83,8 @@ void Contour::Impl::finish_isolines()
 // Finalize results
 void Contour::Impl::finish_isobands()
 {
-  for (auto& builder : m_builders)
-    builder.finish_isobands(m_strict);
+  for (auto i = 0UL; i < m_builders.size(); i++)
+    m_builders[i].finish_isobands(m_strict, m_isoband_limits[i].missing());
 }
 
 // Move the result for the caller

@@ -78,6 +78,11 @@ bool Range::operator<(const Range& other) const
   return (m_hi < other.hi());
 }
 
+bool Range::missing() const
+{
+  return std::isnan(m_lo) && std::isnan(m_hi);
+}
+
 // Needed since NaN comparisons are always false
 namespace
 {
