@@ -12,7 +12,7 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: boost169-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 22.1.21
+BuildRequires: smartmet-library-macgyver-devel >= 22.3.28
 %if %{defined el7}
 BuildRequires: devtoolset-7-gcc-c++
 #TestRequires: devtoolset-7-gcc-c++
@@ -22,7 +22,7 @@ BuildRequires: rpm-build
 BuildRequires: gdal34-devel
 BuildRequires: geos310-devel
 BuildRequires: fmt-devel
-Requires: smartmet-library-macgyver >= 22.1.21
+Requires: smartmet-library-macgyver >= 22.3.28
 Requires: gdal34
 Requires: geos310
 Requires: fmt
@@ -79,6 +79,9 @@ Trax isoline/isoband calculation library development files
 %changelog
 * Wed Apr 27 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.4.27-1.fmi
 - Added inversion of missing value isobands
+
+* Tue Apr 26 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.4.26-1.fmi
+- Second release candidate
 
 * Fri Feb 11 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.2.11-1.fmi
 - Added automatic sort of given isoline/isoband limits

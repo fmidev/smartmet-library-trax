@@ -67,8 +67,10 @@ profile: all
 $(LIBFILE): $(OBJS)
 	$(CXX) $(CFLAGS) -shared -rdynamic -o $(LIBFILE) $(OBJS) $(LIBS)
 	@echo Checking $(LIBFILE) for unresolved references
-	@if ldd -r $(LIBFILE) 2>&1 | c++filt | grep ^undefined\ symbol; \
-		then echo rm -v $(LIBFILE); \
+	@if ldd -r $(LIBFILE) 2>&1 | c++filt | grep ^undefined\ symbol |\
+			grep -Pv ':\ __(?:(?:a|t|ub)san_|sanitizer_)'; \
+	then \
+		rm -v $(LIBFILE); \
 		exit 1; \
 	fi
 
