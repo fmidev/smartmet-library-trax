@@ -1,4 +1,3 @@
-
 #include "Impl.h"
 #include "Geos.h"
 #include <geos/geom/GeometryFactory.h>
@@ -111,10 +110,10 @@ bool Contour::Impl::update_isolines_to_check(const MinMax& minmax)
   double minvalue = minmax.first;
   double maxvalue = minmax.second;
 
-  int n = m_isoline_values.size();
+  auto n = m_isoline_values.size();
 
-  m_min_index = std::max(m_min_index, 0);
-  m_max_index = std::max(m_max_index, 0);
+  m_min_index = std::max(m_min_index, 0UL);
+  m_max_index = std::max(m_max_index, 0UL);
 
   while (m_min_index > 0 && minvalue <= m_isoline_values[m_min_index - 1])
     --m_min_index;
@@ -143,25 +142,36 @@ bool Contour::Impl::update_isolines_to_check(const MinMax& minmax)
 
 bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
 {
+  // Only contouring missing values? Exit now to make later logic easier
+  if (m_contour_missing && m_isoband_limits.size() == 1)
+    return false;
+
   double minvalue = minmax.first;
   double maxvalue = minmax.second;
 
-  int n = m_isoband_limits.size();
+  auto n = m_isoband_limits.size();
 
-  while (m_min_index > 0 && minvalue < m_isoband_limits[m_min_index - 1].hi())
+  // Ignore possible NaN...NaN range in the search, it will be isobanded separately if necessary
+  auto n0 = (m_contour_missing ? 1UL : 0UL);
+  m_min_index = std::max(m_min_index, n0);
+  m_max_index = std::max(m_max_index, n0);
+
+  while (m_min_index > n0 && minvalue < m_isoband_limits[m_min_index - 1].hi())
     --m_min_index;
-  while (m_min_index < n - 1 && minvalue >= m_isoband_limits[m_min_index].hi())
+  while (m_min_index + 1 < n && minvalue >= m_isoband_limits[m_min_index].hi())
     ++m_min_index;
 
   m_max_index = std::max(m_max_index, m_min_index);
 
-  while (m_max_index > 0 && maxvalue < m_isoband_limits[m_max_index].lo())
+  while (m_max_index > n0 && maxvalue < m_isoband_limits[m_max_index].lo())
     --m_max_index;
-  while (m_max_index < n - 1 && maxvalue >= m_isoband_limits[m_max_index + 1].lo())
+  while (m_max_index + 1 < n && maxvalue >= m_isoband_limits[m_max_index + 1].lo())
     ++m_max_index;
 
-  // Final validity check which may fail at index 0 or n-1
-  bool ok = (m_isoband_limits[m_min_index].overlaps(minvalue, maxvalue));
+  // Final validity check which may fail at index n0 or n-1
+
+  bool ok = (m_min_index < m_isoband_limits.size() &&
+             m_isoband_limits[m_min_index].overlaps(minvalue, maxvalue));
 
 #if 0
   std::cout << "Range: " << minvalue << "..." << maxvalue << "\tlimits = " << m_min_index << ","
@@ -178,17 +188,17 @@ void Contour::Impl::isoline(const Cell& c)
   if (std::isnan(c.z1) || std::isnan(c.z2) || std::isnan(c.z3) || std::isnan(c.z4))
     return;
 
-  if (!update_isolines_to_check(minmax(c)))
-    return;
-
-  // Process isolines/isobands min_index...max_index
-
-  for (int index = m_min_index; index <= m_max_index; ++index)
+  if (update_isolines_to_check(minmax(c)))
   {
-    double limit = m_isoline_values[index];
-    auto& builder = m_builders[index];
-    auto& merger = builder.merger();
-    CellBuilder::isoline_linear(merger, c, limit);
+    // Process isolines/isobands min_index...max_index
+
+    for (auto index = m_min_index; index <= m_max_index; ++index)
+    {
+      double limit = m_isoline_values[index];
+      auto& builder = m_builders[index];
+      auto& merger = builder.merger();
+      CellBuilder::isoline_linear(merger, c, limit);
+    }
   }
 }
 
@@ -200,7 +210,7 @@ void Contour::Impl::isoband(const Cell& c)
   if (update_isobands_to_check(minmax(c)))
   {
     // Process isobands min_index...max_index
-    for (int index = m_min_index; index <= m_max_index; ++index)
+    for (auto index = m_min_index; index <= m_max_index; ++index)
       isoband(index, c);
   }
 
@@ -233,26 +243,72 @@ void Contour::Impl::isoband(int index, const Cell& c)
   }
 }
 
+// Minimal bbox in grid which contains valid values
+struct ValidArea
+{
+  bool ok = false;
+  std::size_t imin = 0;
+  std::size_t imax = 0;
+  std::size_t jmin = 0;
+  std::size_t jmax = 0;
+};
+
+// Establish valid area in the grid
+ValidArea valid_area(const Grid& grid)
+{
+  ValidArea area;
+
+  const auto nx = grid.width();
+  const auto ny = grid.height();
+
+  for (auto j = 0UL; j < ny - 1; j++)
+    for (auto i = 0UL; i < nx - 1; i++)
+    {
+      if (grid.valid(i, j))
+      {
+        if (area.ok)
+        {
+          area.imin = std::min(area.imin, i);
+          area.imax = std::max(area.imax, i);
+          area.jmin = std::min(area.jmin, j);
+          area.jmax = std::max(area.jmax, j);
+        }
+        else
+        {
+          area.ok = true;
+          area.imin = i;
+          area.imax = i;
+          area.jmin = j;
+          area.jmax = j;
+        }
+      }
+    }
+  return area;
+}
+
+// Extract data from grid valid area
 void fill_buffers(const Grid& grid,
+                  const ValidArea& area,
                   std::size_t j,
                   std::vector<double>& x,
                   std::vector<double>& y,
                   std::vector<double>& z)
 {
-  const auto nx = grid.width();
-  for (auto i = 0UL; i < nx; i++)
+  for (auto i = 0UL; i < x.size(); i++)
   {
-    x[i] = grid.x(i, j);
-    y[i] = grid.y(i, j);
-    z[i] = grid(i, j);
+    auto ii = i + area.imin;
+    x[i] = grid.x(ii, j);
+    y[i] = grid.y(ii, j);
+    z[i] = grid(ii, j);
   }
 }
 
 // Contour full grid
 GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimits& limits)
 {
-  const auto nx = grid.width();
-  const auto ny = grid.height();
+  auto area = valid_area(grid);
+  auto nx = area.imax - area.imin + 2;
+  auto ny = area.jmax - area.jmin + 2;
   init(limits, nx, ny);
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
@@ -264,18 +320,18 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   std::vector<double> z1(nx);
   std::vector<double> z2(nx);
 
-  fill_buffers(grid, 0, x1, y1, z1);
+  fill_buffers(grid, area, area.jmin, x1, y1, z1);
 
-  for (std::size_t j = 0; j < ny - 1; j++)
+  for (std::size_t j = area.jmin; j <= area.jmax; j++)
   {
-    fill_buffers(grid, j + 1, x2, y2, z2);  // update the 2nd row
+    fill_buffers(grid, area, j + 1, x2, y2, z2);  // update the 2nd row
 
     for (std::size_t i = 0; i < nx - 1; i++)
     {
       // clang-format off
-      if (grid.valid(i, j))
-        isoband(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], i, j));
-      // isoband(Cell(i, j, z1[i], i, j+1, z2[i], i+1, j+1, z2[i+1], i+1, j, z1[i+1], i, j));
+      if (grid.valid(area.imin + i, j))
+        isoband(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], area.imin + i, j));
+      // isoband(Cell(i, j, z1[i], i, j+1, z2[i], i+1, j+1, z2[i+1], i+1, j, z1[i+1], i, j)); // for easier debugging
       // clang-format on
     }
     finish_row();
@@ -308,24 +364,31 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 // Contour full grid for isolines
 GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValues& limits)
 {
-  const auto nx = grid.width();
-  const auto ny = grid.height();
+  auto area = valid_area(grid);
+  auto nx = area.imax - area.imin + 2;
+  auto ny = area.jmax - area.jmin + 2;
   init(limits, nx, ny);
 
-  // Accessing data trhough grid is sometimes slow, so we buffer the values into vectors
+  // Accessing data through grid is sometimes slow, so we buffer the values into vectors
   // and just swap them after each row to avoid unnecessary copying.
-  std::vector<double> x1(nx), x2(nx), y1(nx), y2(nx), z1(nx), z2(nx);
-  fill_buffers(grid, 0, x1, y1, z1);
+  std::vector<double> x1(nx);
+  std::vector<double> x2(nx);
+  std::vector<double> y1(nx);
+  std::vector<double> y2(nx);
+  std::vector<double> z1(nx);
+  std::vector<double> z2(nx);
 
-  for (std::size_t j = 0; j < ny - 1; j++)
+  fill_buffers(grid, area, area.jmin, x1, y1, z1);
+
+  for (std::size_t j = area.jmin; j <= area.jmax; j++)
   {
-    fill_buffers(grid, j + 1, x2, y2, z2);  // update the 2nd row
+    fill_buffers(grid, area, j + 1, x2, y2, z2);  // update the 2nd row
 
     for (std::size_t i = 0; i < nx - 1; i++)
     {
       // clang-format off
-      if (grid.valid(i, j))
-        isoline(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], i, j));
+      if (grid.valid(area.imin + i, j))
+        isoline(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], area.imin + i, j));
       // clang-format on
     }
     finish_row();

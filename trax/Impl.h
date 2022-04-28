@@ -73,8 +73,15 @@ class Contour::Impl
   bool m_validate = false;
 
   // Rectangle limits when inverting isobands for missing values
-  double m_mincoord = std::numeric_limits<double>::lowest();
-  double m_maxcoord = std::numeric_limits<double>::max();
+
+  // These values seem to break clipping:
+  // double m_mincoord = std::numeric_limits<double>::lowest();
+  // double m_maxcoord = std::numeric_limits<double>::max();
+  // double m_mincoord = -std::numeric_limits<double>::infinity();
+  // double m_maxcoord = +std::numeric_limits<double>::infinity();
+
+  double m_mincoord = -1e100;
+  double m_maxcoord = +1e100;
 
   // Requested isolines
   IsolineValues m_isoline_values;
@@ -92,8 +99,8 @@ class Contour::Impl
   // Moving to the next cell to the right adjusts the values based on the assumption that the
   // contours are almost always almost the same.
 
-  int m_min_index = 0;
-  int m_max_index = 0;
+  std::size_t m_min_index = 0;
+  std::size_t m_max_index = 0;
 };
 
 }  // namespace Trax
