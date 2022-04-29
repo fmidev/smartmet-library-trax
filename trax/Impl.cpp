@@ -253,50 +253,18 @@ struct ValidArea
   std::size_t jmax = 0;
 };
 
-// Establish valid area in the grid
-ValidArea valid_area(const Grid& grid)
-{
-  ValidArea area;
-
-  const auto nx = grid.width();
-  const auto ny = grid.height();
-
-  for (auto j = 0UL; j < ny - 1; j++)
-    for (auto i = 0UL; i < nx - 1; i++)
-    {
-      if (grid.valid(i, j))
-      {
-        if (area.ok)
-        {
-          area.imin = std::min(area.imin, i);
-          area.imax = std::max(area.imax, i);
-          area.jmin = std::min(area.jmin, j);
-          area.jmax = std::max(area.jmax, j);
-        }
-        else
-        {
-          area.ok = true;
-          area.imin = i;
-          area.imax = i;
-          area.jmin = j;
-          area.jmax = j;
-        }
-      }
-    }
-  return area;
-}
-
 // Extract data from grid valid area
 void fill_buffers(const Grid& grid,
-                  const ValidArea& area,
+                  const std::array<std::size_t, 4>& area,
                   std::size_t j,
                   std::vector<double>& x,
                   std::vector<double>& y,
                   std::vector<double>& z)
 {
+  auto imin = area[0];
   for (auto i = 0UL; i < x.size(); i++)
   {
-    auto ii = i + area.imin;
+    auto ii = i + imin;
     x[i] = grid.x(ii, j);
     y[i] = grid.y(ii, j);
     z[i] = grid(ii, j);
@@ -306,9 +274,14 @@ void fill_buffers(const Grid& grid,
 // Contour full grid
 GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimits& limits)
 {
-  auto area = valid_area(grid);
-  auto nx = area.imax - area.imin + 2;
-  auto ny = area.jmax - area.jmin + 2;
+  auto bbox = grid.bbox();
+  auto imin = bbox[0];
+  auto jmin = bbox[1];
+  auto imax = bbox[2];
+  auto jmax = bbox[3];
+
+  auto nx = imax - imin + 2;
+  auto ny = jmax - jmin + 2;
   init(limits, nx, ny);
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
@@ -320,17 +293,17 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   std::vector<double> z1(nx);
   std::vector<double> z2(nx);
 
-  fill_buffers(grid, area, area.jmin, x1, y1, z1);
+  fill_buffers(grid, bbox, jmin, x1, y1, z1);
 
-  for (std::size_t j = area.jmin; j <= area.jmax; j++)
+  for (std::size_t j = jmin; j <= jmax; j++)
   {
-    fill_buffers(grid, area, j + 1, x2, y2, z2);  // update the 2nd row
+    fill_buffers(grid, bbox, j + 1, x2, y2, z2);  // update the 2nd row
 
     for (std::size_t i = 0; i < nx - 1; i++)
     {
       // clang-format off
-      if (grid.valid(area.imin + i, j))
-        isoband(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], area.imin + i, j));
+      if (grid.valid(imin + i, j))
+        isoband(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], imin + i, j));
       // isoband(Cell(i, j, z1[i], i, j+1, z2[i], i+1, j+1, z2[i+1], i+1, j, z1[i+1], i, j)); // for easier debugging
       // clang-format on
     }
@@ -364,9 +337,14 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 // Contour full grid for isolines
 GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValues& limits)
 {
-  auto area = valid_area(grid);
-  auto nx = area.imax - area.imin + 2;
-  auto ny = area.jmax - area.jmin + 2;
+  auto bbox = grid.bbox();
+  auto imin = bbox[0];
+  auto jmin = bbox[1];
+  auto imax = bbox[2];
+  auto jmax = bbox[3];
+
+  auto nx = imax - imin + 2;
+  auto ny = jmax - jmin + 2;
   init(limits, nx, ny);
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
@@ -378,17 +356,17 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   std::vector<double> z1(nx);
   std::vector<double> z2(nx);
 
-  fill_buffers(grid, area, area.jmin, x1, y1, z1);
+  fill_buffers(grid, bbox, jmin, x1, y1, z1);
 
-  for (std::size_t j = area.jmin; j <= area.jmax; j++)
+  for (std::size_t j = jmin; j <= jmax; j++)
   {
-    fill_buffers(grid, area, j + 1, x2, y2, z2);  // update the 2nd row
+    fill_buffers(grid, bbox, j + 1, x2, y2, z2);  // update the 2nd row
 
     for (std::size_t i = 0; i < nx - 1; i++)
     {
       // clang-format off
-      if (grid.valid(area.imin + i, j))
-        isoline(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], area.imin + i, j));
+      if (grid.valid(imin + i, j))
+        isoline(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], imin + i, j));
       // clang-format on
     }
     finish_row();
