@@ -7,7 +7,7 @@
 #include <cmath>      // std::min and std::max
 #include <utility>    // std::pair and std::make_pair
 
-#if 1
+#if 0
 #include <fmt/format.h>
 #include <iostream>
 #endif
@@ -280,8 +280,8 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   auto imax = bbox[2];
   auto jmax = bbox[3];
 
-  auto nx = imax - imin + 2;
-  auto ny = jmax - jmin + 2;
+  auto nx = imax - imin + 1;
+  auto ny = jmax - jmin + 1;
   init(limits, nx, ny);
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
@@ -295,7 +295,7 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 
   fill_buffers(grid, bbox, jmin, x1, y1, z1);
 
-  for (std::size_t j = jmin; j <= jmax; j++)
+  for (std::size_t j = jmin; j < jmax; j++)
   {
     fill_buffers(grid, bbox, j + 1, x2, y2, z2);  // update the 2nd row
 
@@ -343,8 +343,8 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   auto imax = bbox[2];
   auto jmax = bbox[3];
 
-  auto nx = imax - imin + 2;
-  auto ny = jmax - jmin + 2;
+  auto nx = imax - imin + 1;
+  auto ny = jmax - jmin + 1;
   init(limits, nx, ny);
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
@@ -358,7 +358,7 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
 
   fill_buffers(grid, bbox, jmin, x1, y1, z1);
 
-  for (std::size_t j = jmin; j <= jmax; j++)
+  for (std::size_t j = jmin; j < jmax; j++)
   {
     fill_buffers(grid, bbox, j + 1, x2, y2, z2);  // update the 2nd row
 
