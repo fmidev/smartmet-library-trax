@@ -270,6 +270,12 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   auto imax = bbox[2];
   auto jmax = bbox[3];
 
+  if (imax < imin || jmax < jmin)
+  {
+    init(limits, 0, 0);
+    return result();
+  }
+
   auto nx = imax - imin + 2;
   auto ny = jmax - jmin + 2;
   init(limits, nx, ny);
@@ -291,11 +297,21 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 
     for (std::size_t i = 0; i < nx - 1; i++)
     {
-      // clang-format off
       if (grid.valid(imin + i, j))
-        isoband(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], imin + i, j));
-      // isoband(Cell(i, j, z1[i], i, j+1, z2[i], i+1, j+1, z2[i+1], i+1, j, z1[i+1], i, j)); // for easier debugging
-      // clang-format on
+        isoband(Cell(x1[i],
+                     y1[i],
+                     z1[i],
+                     x2[i],
+                     y2[i],
+                     z2[i],
+                     x2[i + 1],
+                     y2[i + 1],
+                     z2[i + 1],
+                     x1[i + 1],
+                     y1[i + 1],
+                     z1[i + 1],
+                     imin + i,
+                     j));
     }
     finish_row();
 
@@ -332,6 +348,12 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   auto jmin = bbox[1];
   auto imax = bbox[2];
   auto jmax = bbox[3];
+
+  if (imax < imin || jmax < jmin)
+  {
+    init(limits, 0, 0);
+    return result();
+  }
 
   auto nx = imax - imin + 2;
   auto ny = jmax - jmin + 2;
