@@ -243,16 +243,6 @@ void Contour::Impl::isoband(int index, const Cell& c)
   }
 }
 
-// Minimal bbox in grid which contains valid values
-struct ValidArea
-{
-  bool ok = false;
-  std::size_t imin = 0;
-  std::size_t imax = 0;
-  std::size_t jmin = 0;
-  std::size_t jmax = 0;
-};
-
 // Extract data from grid valid area
 void fill_buffers(const Grid& grid,
                   const std::array<std::size_t, 4>& area,
@@ -280,8 +270,8 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   auto imax = bbox[2];
   auto jmax = bbox[3];
 
-  auto nx = imax - imin + 1;
-  auto ny = jmax - jmin + 1;
+  auto nx = imax - imin + 2;
+  auto ny = jmax - jmin + 2;
   init(limits, nx, ny);
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
@@ -295,7 +285,7 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 
   fill_buffers(grid, bbox, jmin, x1, y1, z1);
 
-  for (std::size_t j = jmin; j < jmax; j++)
+  for (std::size_t j = jmin; j <= jmax; j++)
   {
     fill_buffers(grid, bbox, j + 1, x2, y2, z2);  // update the 2nd row
 
@@ -343,8 +333,8 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   auto imax = bbox[2];
   auto jmax = bbox[3];
 
-  auto nx = imax - imin + 1;
-  auto ny = jmax - jmin + 1;
+  auto nx = imax - imin + 2;
+  auto ny = jmax - jmin + 2;
   init(limits, nx, ny);
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
@@ -358,7 +348,7 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
 
   fill_buffers(grid, bbox, jmin, x1, y1, z1);
 
-  for (std::size_t j = jmin; j < jmax; j++)
+  for (std::size_t j = jmin; j <= jmax; j++)
   {
     fill_buffers(grid, bbox, j + 1, x2, y2, z2);  // update the 2nd row
 
