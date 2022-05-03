@@ -18,8 +18,8 @@ namespace
 {
 struct point
 {
-  double x;
-  double y;
+  float x;
+  float y;
   VertexType type;
   int di;
   int dj;
@@ -31,18 +31,18 @@ bool print_it = false;
 
 // Calculate intersection coordinates adjust to VertexType corner if necessary. di/dj are used only
 // when the intersection is at a corner
-point intersect(double x1,
-                double y1,
-                double z1,
-                double x2,
-                double y2,
-                double z2,
+point intersect(float x1,
+                float y1,
+                float z1,
+                float x2,
+                float y2,
+                float z2,
                 int di,
                 int dj,
                 VertexType type,
-                double value)
+                float value)
 {
-#if 0  
+#ifdef HANDLE_ROUNDING_ERRORS
   // These equality tests are necessary for handling value==lolimit cases without any rounding
   // errors! std::cout << fmt::format("{},{},{} - {},{},{} at {}\n", x1, y1, z1, x2, y2, z2, value);
   if (z1 == value)
@@ -115,8 +115,8 @@ class JointBuilder
 
   void build_linear(const Cell& c);
   void build_midpoint(const Cell& c);
-  void add(std::uint32_t column, std::uint32_t row, const point& p, double z);
-  void add(std::uint32_t column, std::uint32_t row, VertexType vtype, double x, double y, double z);
+  void add(std::uint32_t column, std::uint32_t row, const point& p, float z);
+  void add(std::uint32_t column, std::uint32_t row, VertexType vtype, float x, float y, float z);
   void close();
   void finish_cell();
 
@@ -137,23 +137,24 @@ class JointBuilder
 // and neither can decrease (both row&column are equal at the bottom left corner). Hence a simple
 // std::max solution is enough to merge the two vertices.
 
-inline void JointBuilder::add(std::uint32_t column, std::uint32_t row, const point& p, double z)
+inline void JointBuilder::add(std::uint32_t column, std::uint32_t row, const point& p, float z)
 {
   add(column + p.di, row + p.dj, p.type, p.x, p.y, z);
 }
 
 void JointBuilder::add(
-    std::uint32_t column, std::uint32_t row, VertexType vtype, double x, double y, double z)
+    std::uint32_t column, std::uint32_t row, VertexType vtype, float x, float y, float z)
 {
   const auto n = m_vertices.size();
   const bool ghost = z != m_range.lo();
   Vertex vertex(column, row, vtype, x, y, ghost);
+
   if (n == 0)
     m_vertices.push_back(vertex);
   else if (m_vertices.back() == vertex)  // avoid consecutive duplicates
   {
   }
-#if 0  
+#if 0
   else if (match(m_vertices.back(), vertex))  // same coordinates but different type?
   {
     if (m_vertices.back().type != VertexType::Corner)  // prefer corners over edges

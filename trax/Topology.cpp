@@ -450,11 +450,11 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
       if (!polylines.empty())  // the sequence may have been discarded due to a problem
       {
 #if 0
-      std::cout << "Extracted right turning sequence:\n";
-      for (const auto& polyline : polylines)
-        std::cout << fmt::format("\t{}\n", polyline.wkt());
+        std::cout << "Extracted right turning sequence:\n";
+        for (const auto& polyline : polylines)
+          std::cout << fmt::format("\t{}\n", polyline.wkt());
 
-      std::cout << "Joint map now:\n" << Trax::to_string(joints);
+        std::cout << "Joint map now:\n" << Trax::to_string(joints);
 #endif
 
         // Now extract a left turning sequence to separate holes touching the exterior

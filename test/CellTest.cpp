@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(is_saddle)
 {
   BOOST_TEST_MESSAGE("+ [Trax::is_saddle(Cell)]");
 
-  const double x0 = 0, y0 = 0, x1 = 0, y1 = 1, x2 = 1, y2 = 1, x3 = 1, y3 = 0;
+  const float x0 = 0, y0 = 0, x1 = 0, y1 = 1, x2 = 1, y2 = 1, x3 = 1, y3 = 0;
   const int i = 0, j = 0;
 
   Trax::Cell cell1(x0, y0, 0, x1, y1, 1, x2, y2, 2, x3, y3, 3, i, j);
@@ -42,21 +42,21 @@ BOOST_AUTO_TEST_CASE(minmax)
 {
   BOOST_TEST_MESSAGE("+ [Trax::minmax(Cell)]");
 
-  const double x0 = 0, y0 = 0, x1 = 0, y1 = 1, x2 = 1, y2 = 1, x3 = 1, y3 = 0;
+  const float x0 = 0, y0 = 0, x1 = 0, y1 = 1, x2 = 1, y2 = 1, x3 = 1, y3 = 0;
   const int i = 0, j = 0;
 
   Trax::Cell cell1(x0, y0, 0, x1, y1, 1, x2, y2, 2, x3, y3, 3, i, j);
-  BOOST_CHECK(Trax::minmax(cell1) == std::make_pair(0.0, 3.0));
+  BOOST_CHECK(Trax::minmax(cell1) == std::make_pair(0.0F, 3.0F));
 
   Trax::Cell cell2(x0, y0, 0, x1, y1, 1, x2, y2, 0, x3, y3, 1, i, j);
-  BOOST_CHECK(Trax::minmax(cell2) == std::make_pair(0.0, 1.0));
+  BOOST_CHECK(Trax::minmax(cell2) == std::make_pair(0.0F, 1.0F));
 
   Trax::Cell cell3(x0, y0, 0, x1, y1, 0, x2, y2, 0, x3, y3, 0, i, j);
-  BOOST_CHECK(Trax::minmax(cell3) == std::make_pair(0.0, 0.0));
+  BOOST_CHECK(Trax::minmax(cell3) == std::make_pair(0.0F, 0.0F));
 
   Trax::Cell cell4(x0, y0, 0, x1, y1, 1, x2, y2, 0, x3, y3, 2, i, j);
-  BOOST_CHECK(Trax::minmax(cell4) == std::make_pair(0.0, 2.0));
+  BOOST_CHECK(Trax::minmax(cell4) == std::make_pair(0.0F, 2.0F));
 
   Trax::Cell cell5(x0, y0, 0, x1, y1, 1, x2, y2, 0, x3, y3, -1, i, j);
-  BOOST_CHECK(Trax::minmax(cell5) == std::make_pair(-1.0, 1.0));
+  BOOST_CHECK(Trax::minmax(cell5) == std::make_pair(-1.0F, 1.0F));
 }

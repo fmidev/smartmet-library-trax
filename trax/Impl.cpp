@@ -7,7 +7,7 @@
 #include <cmath>      // std::min and std::max
 #include <utility>    // std::pair and std::make_pair
 
-#if 0
+#if 1
 #include <fmt/format.h>
 #include <iostream>
 #endif

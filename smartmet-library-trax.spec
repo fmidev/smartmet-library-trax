@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-library-%{DIRNAME}
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 22.5.2
+Version: 22.5.3
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -77,6 +77,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Tue May  3 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.5.3-1.fmi
+- Fixed double -> float rounding issues
+
 * Mon May  2 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.5.2-1.fmi
 - Fixed tiled contour bbox calculations
 
