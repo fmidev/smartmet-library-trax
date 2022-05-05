@@ -5,13 +5,13 @@
 namespace Trax
 {
 // Add a single isoline value
-void IsolineValues::add(double value)
+void IsolineValues::add(float value)
 {
   m_values.push_back(value);
 }
 
 // Add multiple isoline values
-void IsolineValues::add(const std::vector<double> &values)
+void IsolineValues::add(const std::vector<float> &values)
 {
   m_values.insert(m_values.end(), values.begin(), values.end());
 }

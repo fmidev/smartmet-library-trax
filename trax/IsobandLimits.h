@@ -8,7 +8,7 @@ namespace Trax
 class IsobandLimits
 {
  public:
-  void add(double lo, double hi);
+  void add(float lo, float hi);
   void add(const std::vector<Range> &limits);
 
   bool empty() const { return m_limits.empty(); }

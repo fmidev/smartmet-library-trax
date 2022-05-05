@@ -16,7 +16,7 @@ namespace Trax
  *  5. nan..hi     - ordering makes no sense
  */
 
-Range::Range(double lo, double hi) : m_lo(lo), m_hi(hi)
+Range::Range(float lo, float hi) : m_lo(lo), m_hi(hi)
 {
   if (std::isnormal(lo) && std::isnormal(hi))
   {
@@ -86,7 +86,7 @@ bool Range::missing() const
 // Needed since NaN comparisons are always false
 namespace
 {
-bool same(double value1, double value2)
+bool same(float value1, float value2)
 {
   if (std::isnan(value1))
     return std::isnan(value2);
@@ -101,7 +101,7 @@ bool Range::operator==(const Range& other) const
   return same(m_lo, other.m_lo) && same(m_hi, other.m_hi);
 }
 
-bool Range::overlaps(double lo, double hi) const
+bool Range::overlaps(float lo, float hi) const
 {
   const auto common_lo = std::max(m_lo, lo);
   const auto common_hi = std::min(m_hi, hi);
