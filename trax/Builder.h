@@ -4,7 +4,6 @@
 #include "GeometryCollection.h"
 #include "JointMerger.h"
 #include "Vertex.h"
-#include <gis/Box.h>
 #include <list>
 #include <vector>
 
