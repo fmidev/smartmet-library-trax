@@ -5,6 +5,7 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <sstream>
 
 namespace Trax
 {
@@ -32,7 +33,11 @@ class Polygon
   std::string wkt() const;
   std::string wkt_body() const;
 
+  void wkb(std::ostringstream& out) const;
+  void wkb_body(std::ostringstream& out) const;
+
  private:
+
   Polyline m_exterior;
   std::vector<Polyline> m_holes;
 };

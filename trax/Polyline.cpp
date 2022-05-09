@@ -216,6 +216,41 @@ std::string Polyline::wkt_body() const
   return ret;
 }
 
+
+
+void Polyline::wkb(std::ostringstream& out) const
+{
+  unsigned char byteOrder = 1;
+  int n = 1;
+  if(*(char *)&n == 0)
+    byteOrder = 0;
+
+  out.write((const char*)&byteOrder,sizeof(byteOrder));
+  uint type = 2; // Line
+  out.write((const char*)&type,sizeof(type));
+  wkb_body(out);
+}
+
+
+
+void Polyline::wkb_body(std::ostringstream& out) const
+{
+  uint n = size();
+  out.write((const char*)&n,sizeof(n));
+
+  for (uint i = 0; i < n; i++)
+  {
+    double x = m_points[i].x;
+    double y = m_points[i].y;
+
+    //printf("Point %f,%f\n",x,y);
+    out.write((const char*)&x,8);
+    out.write((const char*)&y,8);
+  }
+}
+
+
+
 // Normalize coordinates to lexicographic order for testing purposes
 Polyline& Polyline::normalize()
 {
