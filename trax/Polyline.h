@@ -6,6 +6,7 @@
 #include <initializer_list>
 #include <list>
 #include <string>
+#include <sstream>
 
 namespace Trax
 {
@@ -48,6 +49,9 @@ class Polyline
 
   std::string wkt() const;
   std::string wkt_body() const;
+
+  void wkb(std::ostringstream& out) const;
+  void wkb_body(std::ostringstream& out) const;
 
   bool closed() const;
   bool stopped() const;
