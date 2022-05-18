@@ -18,7 +18,7 @@ namespace Trax
 
 Range::Range(float lo, float hi) : m_lo(lo), m_hi(hi)
 {
-  if (std::isnormal(lo) && std::isnormal(hi))
+  if (std::isfinite(lo) && std::isfinite(hi))
   {
     if (lo > hi)
       throw Fmi::Exception(

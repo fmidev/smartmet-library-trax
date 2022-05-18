@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-library-%{DIRNAME}
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 22.5.16
+Version: 22.5.18
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -77,6 +77,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Wed May 18 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.5.18-1.fmi
+- Fixed code to use isfinite instead of isnormal
+
 * Mon May 16 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.5.16-1.fmi
 - Added WKB methods needed by the GRIB-server
 
