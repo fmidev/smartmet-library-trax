@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-library-%{DIRNAME}
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 22.5.18
+Version: 22.5.23
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -53,7 +53,7 @@ make %{_smp_mflags}
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%defattr(0664,root,root,0775)
+%defattr(0775,root,root,0775)
 %{_libdir}/lib%{LIBNAME}.so
 
 %package -n %{SPECNAME}-devel
