@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-library-%{DIRNAME}
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 22.5.23
+Version: 22.6.2
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -77,6 +77,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Thu Jun  2 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.6.2-1.fmi
+- Added Grid::shift method to enable better world wrapped contouring
+
 * Wed May 18 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.5.18-1.fmi
 - Fixed code to use isfinite instead of isnormal
 

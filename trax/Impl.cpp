@@ -264,11 +264,11 @@ void fill_buffers(const Grid& grid,
 // Contour full grid
 GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimits& limits)
 {
-  auto bbox = grid.bbox();
-  auto imin = bbox[0];
-  auto jmin = bbox[1];
-  auto imax = bbox[2];
-  auto jmax = bbox[3];
+  const auto bbox = grid.bbox();
+  const auto imin = bbox[0];
+  const auto jmin = bbox[1];
+  const auto imax = bbox[2];
+  const auto jmax = bbox[3];
 
   if (imax < imin || jmax < jmin)
   {
@@ -276,9 +276,16 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
     return result();
   }
 
-  auto nx = imax - imin + 2;
-  auto ny = jmax - jmin + 2;
+  const auto nx = imax - imin + 2;
+  const auto ny = jmax - jmin + 2;
   init(limits, nx, ny);
+
+  // Determine whether we need to split rows into two parts due to shifted global data. Otherwise
+  // we'd need special code to handle joining the first and last cells.
+
+  const auto shift = grid.shift();
+  const auto imid = shift - imin;
+  const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
 
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
   // and just swap them after each row to avoid unnecessary copying.
@@ -295,24 +302,34 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   {
     fill_buffers(grid, bbox, j + 1, x2, y2, z2);  // update the 2nd row
 
-    for (std::size_t i = 0; i < nx - 1; i++)
+    if (!needs_two_passes)
     {
-      if (grid.valid(imin + i, j))
-        isoband(Cell(x1[i],
-                     y1[i],
-                     z1[i],
-                     x2[i],
-                     y2[i],
-                     z2[i],
-                     x2[i + 1],
-                     y2[i + 1],
-                     z2[i + 1],
-                     x1[i + 1],
-                     y1[i + 1],
-                     z1[i + 1],
-                     imin + i,
-                     j));
+      for (std::size_t i = 0; i < nx - 1; i++)
+      {
+        // clang-format off
+        if (grid.valid(imin + i, j))
+          isoband(Cell(x1[i],y1[i],z1[i],x2[i],y2[i],z2[i],x2[i+1],y2[i+1],z2[i+1],x1[i+1],y1[i+1],z1[i+1],imin+i,j));
+        // clang-format on
+      }
     }
+    else
+    {
+      for (std::size_t i = imid; i < nx - 1; i++)
+      {
+        // clang-format off
+        if (grid.valid(imin + i, j))
+          isoband(Cell(x1[i],y1[i],z1[i],x2[i],y2[i],z2[i],x2[i+1],y2[i+1],z2[i+1],x1[i+1],y1[i+1],z1[i+1],imin+i,j));
+        // clang-format on
+      }
+      for (std::size_t i = 0; i < imid - 1; i++)
+      {
+        // clang-format off
+        if (grid.valid(imin + i, j))
+          isoband(Cell(x1[i],y1[i],z1[i],x2[i],y2[i],z2[i],x2[i+1],y2[i+1],z2[i+1],x1[i+1],y1[i+1],z1[i+1],imin+i,j));
+        // clang-format on
+      }
+    }
+
     finish_row();
 
     std::swap(x2, x1);  // roll down the coordinates to the bottom row
@@ -359,6 +376,13 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   auto ny = jmax - jmin + 2;
   init(limits, nx, ny);
 
+  // Determine whether we need to split rows into two parts due to shifted global data. Otherwise
+  // we'd need special code to handle joining the first and last cells.
+
+  const auto shift = grid.shift();
+  const auto imid = shift - imin;
+  const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
+
   // Accessing data through grid is sometimes slow, so we buffer the values into vectors
   // and just swap them after each row to avoid unnecessary copying.
   std::vector<double> x1(nx);
@@ -374,13 +398,34 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   {
     fill_buffers(grid, bbox, j + 1, x2, y2, z2);  // update the 2nd row
 
-    for (std::size_t i = 0; i < nx - 1; i++)
+    if (!needs_two_passes)
     {
-      // clang-format off
-      if (grid.valid(imin + i, j))
-        isoline(Cell(x1[i], y1[i], z1[i], x2[i], y2[i], z2[i], x2[i+1], y2[i+1], z2[i+1], x1[i+1], y1[i+1], z1[i+1], imin + i, j));
-      // clang-format on
+      for (std::size_t i = 0; i < nx - 1; i++)
+      {
+        // clang-format off
+        if (grid.valid(imin + i, j))
+          isoline(Cell(x1[i],y1[i],z1[i],x2[i],y2[i],z2[i],x2[i+1],y2[i+1],z2[i+1],x1[i+1],y1[i+1],z1[i+1],imin+i,j));
+        // clang-format on
+      }
     }
+    else
+    {
+      for (std::size_t i = imid; i < nx - 1; i++)
+      {
+        // clang-format off
+        if (grid.valid(imin + i, j))
+          isoline(Cell(x1[i],y1[i],z1[i],x2[i],y2[i],z2[i],x2[i+1],y2[i+1],z2[i+1],x1[i+1],y1[i+1],z1[i+1],imin+i,j));
+        // clang-format on
+      }
+      for (std::size_t i = 0; i < imid - 1; i++)
+      {
+        // clang-format off
+        if (grid.valid(imin + i, j))
+          isoline(Cell(x1[i],y1[i],z1[i],x2[i],y2[i],z2[i],x2[i+1],y2[i+1],z2[i+1],x1[i+1],y1[i+1],z1[i+1],imin+i,j));
+        // clang-format on
+      }
+    }
+
     finish_row();
 
     std::swap(x2, x1);  // roll down the coordinates to the bottom row
