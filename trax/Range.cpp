@@ -4,6 +4,9 @@
 #include <cmath>
 #include <stdexcept>
 
+#include <fmt/format.h>
+#include <iostream>
+
 namespace Trax
 {
 /*
@@ -71,8 +74,8 @@ bool Range::operator<(const Range& other) const
 {
   if (std::isnan(m_lo) || std::isnan(m_hi))
     return true;
-  if (!std::isfinite(m_lo))
-    return true;
+  if (std::isnan(other.m_lo) || std::isnan(other.m_hi))
+    return false;
   if (m_lo != other.lo())
     return (m_lo < other.lo());
   return (m_hi < other.hi());

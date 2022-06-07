@@ -1,4 +1,5 @@
 #include "IsobandLimits.h"
+#include <fmt/format.h>
 #include <macgyver/Exception.h>
 #include <algorithm>
 #include <cmath>
@@ -61,6 +62,21 @@ void IsobandLimits::sort(bool closed_range)
 
   if (closed_range)
     adjust_last_finite_isoband(m_limits);
+}
+
+std::string IsobandLimits::dump() const
+{
+  std::string ret;
+  for (const auto& limits : m_limits)
+  {
+    if (ret.empty())
+      ret += '[';
+    else
+      ret += ',';
+    ret += fmt::format("{}...{}", limits.lo(), limits.hi());
+  }
+  ret += ']';
+  return ret;
 }
 
 }  // namespace Trax

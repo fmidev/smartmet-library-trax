@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Range.h"
+#include <string>
 #include <vector>
 
 namespace Trax
@@ -16,6 +17,7 @@ class IsobandLimits
 
   void sort(bool closed_range);
   bool valid() const;
+  std::string dump() const;
 
   const Range &operator[](std::size_t i) const { return m_limits[i]; }
   const Range &at(std::size_t i) const { return m_limits.at(i); }

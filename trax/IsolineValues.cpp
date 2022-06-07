@@ -1,4 +1,5 @@
 #include "IsolineValues.h"
+#include <fmt/format.h>
 #include <macgyver/Exception.h>
 #include <algorithm>
 
@@ -43,6 +44,21 @@ void IsolineValues::sort()
     if (!ok)
       throw Fmi::Exception(BCP, "Found no original position for isoline limit");
   }
+}
+
+std::string IsolineValues::dump() const
+{
+  std::string ret;
+  for (auto value : m_values)
+  {
+    if (ret.empty())
+      ret += '[';
+    else
+      ret += ',';
+    ret += fmt::format("{}", value);
+  }
+  ret += ']';
+  return ret;
 }
 
 }  // namespace Trax

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <vector>
 
 namespace Trax
@@ -15,6 +16,7 @@ class IsolineValues
 
   void sort();
   bool valid() const;
+  std::string dump() const;
 
   float operator[](std::size_t i) const { return m_values[i]; }
   float at(std::size_t i) const { return m_values.at(i); }

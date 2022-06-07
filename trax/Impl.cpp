@@ -38,7 +38,8 @@ void Contour::Impl::init(const IsolineValues& values, std::size_t width, std::si
   m_isoline_values.sort();
 
   if (!m_isoline_values.valid())
-    throw Fmi::Exception(BCP, "Isoline values not valid");
+    throw Fmi::Exception(BCP, "Isoline values not valid")
+        .addParameter("Limits", m_isoline_values.dump());
 
   m_builders.clear();
   m_builders.reserve(m_isoline_values.size());
@@ -56,7 +57,8 @@ void Contour::Impl::init(const IsobandLimits& limits, std::size_t width, std::si
   m_isoband_limits.sort(m_closed_range);
 
   if (!m_isoband_limits.valid())
-    throw Fmi::Exception(BCP, "Isoband limits not valid");
+    throw Fmi::Exception(BCP, "Isoband limits not valid")
+        .addParameter("Limits", m_isoband_limits.dump());
 
   // Flag whether we should contour all valid values for later inversion to missing values
   // Range sorting forces this case to be the first one in the list of isobands.
