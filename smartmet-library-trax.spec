@@ -1,6 +1,13 @@
 %define DIRNAME trax
 %define LIBNAME smartmet-%{DIRNAME}
 %define SPECNAME smartmet-library-%{DIRNAME}
+
+%if 0%{?rhel} && 0%{rhel} < 9
+%define smartmet_boost boost169
+%else
+%define smartmet_boost boost
+%endif
+
 Summary: Trax library
 Name: %{SPECNAME}
 Version: 22.6.7
@@ -10,7 +17,7 @@ Group: Development/Libraries
 URL: https://github.com/fmidev/smartmet-library-trax
 Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
-BuildRequires: boost169-devel
+BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
 BuildRequires: smartmet-library-macgyver-devel >= 22.3.28
 %if %{defined el7}
@@ -27,7 +34,7 @@ Requires: gdal34
 Requires: geos310
 Requires: fmt
 Provides: %{LIBNAME}
-#TestRequires: boost169-devel
+#TestRequires: %{smartmet_boost}-devel
 #TestRequires: gcc-c++
 #TestRequires: make
 #TestRequires: fmt-devel
@@ -60,7 +67,7 @@ rm -rf $RPM_BUILD_ROOT
 Summary: Isoband/isoline calculation development files
 Provides: %{SPECNAME}-devel
 Requires: %{SPECNAME} = %{version}-%{release}
-BuildRequires: boost169-devel
+BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
 %if %{defined el7}
 BuildRequires: devtoolset-7-gcc-c++
