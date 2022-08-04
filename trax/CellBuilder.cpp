@@ -10,6 +10,7 @@
 #if 0
 #include <fmt/format.h>
 #include <iostream>
+bool print_it = true;
 #endif
 
 namespace Trax
@@ -24,10 +25,6 @@ struct point
   int di;
   int dj;
 };
-
-#if 0
-bool print_it = false;
-#endif
 
 // Calculate intersection coordinates adjust to VertexType corner if necessary. di/dj are used only
 // when the intersection is at a corner
@@ -154,7 +151,7 @@ void JointBuilder::add(
   else if (m_vertices.back() == vertex)  // avoid consecutive duplicates
   {
   }
-#if 0
+#ifdef HANDLE_REDUNDANCIES
   else if (match(m_vertices.back(), vertex))  // same coordinates but different type?
   {
     if (m_vertices.back().type != VertexType::Corner)  // prefer corners over edges
@@ -230,7 +227,7 @@ void JointBuilder::build_linear(const Cell& c)
   if (print_it)
   {
     std::cout << fmt::format(
-        "{},{}\t{} {}\t\t{} {}\t{} {}\t{} {}\n\t{} {}\t\t{} {}\t{} {}\t{} {}\n",
+        "{},{}\t{} {}\t\t{} {}\t{} {}\t{} {}\n\t{} {}\t\t{} {}\t{} {}\t{} {}\t\trange={}...{}\n",
         c.i,
         c.j,
         c.z2,
@@ -239,16 +236,18 @@ void JointBuilder::build_linear(const Cell& c)
         c.y2,
         c.x3,
         c.y3,
-        c2,
-        c3,
+        to_string(c2),
+        to_string(c3),
         c.z1,
         c.z4,
         c.x1,
         c.y1,
         c.x4,
         c.y4,
-        c1,
-        c4);
+        to_string(c1),
+        to_string(c4),
+        m_range.lo(),
+        m_range.hi());
   }
 #endif
 
@@ -1219,7 +1218,7 @@ void JointBuilder::build_linear(const Cell& c)
       add(c.i, c.j, p1, m_range.lo());                          // I----B    I----B
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);  // |***\|    |*/  |
       add(c.i, c.j + 1, p2, m_range.lo());                      // |\*I*|    |/ X/|  X = A or B
-      if (cc != Place::Below)                                   // | \*/|    |  //|
+      if (cc != Place::Inside)                                  // | \*/|    |  //|
         close();                                                // B----A    B----A
       add(c.i + 1, c.j, p3, m_range.lo());
       add(c.i + 1, c.j, p4, m_range.hi());
