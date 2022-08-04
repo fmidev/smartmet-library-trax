@@ -84,9 +84,9 @@ isoband 4 10 MULTIPOLYGON (((0 8,0 10,2 10,0 8)),((8 0,10 2,10 0,8 0)))
 grid 2 2
 5 0
 0 10
-isoband 4 6 POLYGON ((0 8,0 10,2 10,10 6,10 4,6 0,4 0,0 8))
+isoband 4 6 MULTIPOLYGON (((0 8,0 10,2 10,0 8)),((4 0,10 6,10 4,6 0,4 0)))
 isoband 0 6 POLYGON ((0 0,0 10,10 10,10 4,6 0,0 0))
-isoband 4 10 POLYGON ((0 8,0 10,2 10,10 6,10 0,4 0,0 8))
+isoband 4 10 MULTIPOLYGON (((0 8,0 10,2 10,0 8)),((4 0,10 6,10 0,4 0)))
 
 grid 2 2
 5 5
