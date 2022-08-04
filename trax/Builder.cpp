@@ -85,12 +85,12 @@ void Builder::finish_isobands(bool strict, bool missing, double mincoord, double
   Holes holes;
   build_rings(shells, holes, m_merger.pool(), strict);
 
-#if 0  
+#if 0
   std::cout << "Before:\n";
   for (const auto& shell : shells)
-    std::cout << "\tshell: " << shell.wkt();
+    std::cout << "\tshell: " << shell.wkt() << "\n";
   for (const auto& hole : holes)
-    std::cout << "\thole: " << hole.wkt();
+    std::cout << "\thole: " << hole.wkt() << "\n";
 #endif
 
   // Invert when contouring missing values
@@ -100,12 +100,12 @@ void Builder::finish_isobands(bool strict, bool missing, double mincoord, double
     std::cout << "Inverting\n";
 #endif
     invert(shells, holes, mincoord, maxcoord);
-#if 0    
+#if 0
     std::cout << "After:\n";
     for (const auto& shell : shells)
-      std::cout << "\tshell: " << shell.wkt();
+      std::cout << "\tshell: " << shell.wkt() << "\n";
     for (const auto& hole : holes)
-      std::cout << "\thole: " << hole.wkt();
+      std::cout << "\thole: " << hole.wkt() << "\n";
 #endif
   }
 
