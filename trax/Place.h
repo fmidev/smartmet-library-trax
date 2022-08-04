@@ -1,5 +1,6 @@
 #pragma once
 #include "Range.h"
+#include <iostream>
 
 namespace Trax
 {
@@ -37,5 +38,7 @@ inline int place_hash(Place c1, Place c2, Place c3, Place c4)
 {
   return TRAX_PLACE_HASH(c1, c2, c3, c4);
 }
+
+std::string to_string(Place place);
 
 }  // namespace Trax

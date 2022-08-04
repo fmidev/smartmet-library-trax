@@ -18,4 +18,18 @@ Place place(double value, double limit)
   return Place::Above;
 }
 
+std::string to_string(Place place)
+{
+  switch (place)
+  {
+    case Place::Below:
+      return "Below";
+    case Place::Inside:
+      return "Inside";
+    case Place::Above:
+      return "Above";
+  }
+  return "Unknown";
+}
+
 }  // namespace Trax
