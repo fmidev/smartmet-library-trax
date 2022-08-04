@@ -16,8 +16,8 @@ DEFINES = -DUNIX -D_REENTRANT -DUSE_UNSTABLE_GEOS_CPP_API
 # Common library compiling template
 
 LIBS +=	-L$(libdir) \
-	$(REQUIRED_LIBS) \
-	-lsmartmet-macgyver
+	-lsmartmet-macgyver \
+	$(REQUIRED_LIBS)
 
 # What to install
 
