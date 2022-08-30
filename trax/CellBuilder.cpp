@@ -7,6 +7,8 @@
 #include "Vertex.h"
 #include <limits>
 
+#include <fmt/format.h>
+
 #if 0
 #include <fmt/format.h>
 #include <iostream>
@@ -112,6 +114,21 @@ class JointBuilder
 
   void build_linear(const Cell& c);
   void build_midpoint(const Cell& c);
+  void build_edge(VertexType type,
+                  int di,
+                  int dj,
+                  Place c1,
+                  int i1,
+                  int j1,
+                  float x1,
+                  float y1,
+                  float z1,
+                  Place c2,
+                  int i2,
+                  int j2,
+                  float x2,
+                  float y2,
+                  float z2);
   void add(std::uint32_t column, std::uint32_t row, const point& p, float z);
   void add(std::uint32_t column, std::uint32_t row, VertexType vtype, float x, float y, float z);
   void close();
@@ -143,6 +160,7 @@ void JointBuilder::add(
     std::uint32_t column, std::uint32_t row, VertexType vtype, float x, float y, float z)
 {
   const auto n = m_vertices.size();
+  // Note that NaN is always marked a ghost as needed for midpoint algorithm
   const bool ghost = z != m_range.lo();
   Vertex vertex(column, row, vtype, x, y, ghost);
 
@@ -227,7 +245,7 @@ void JointBuilder::build_linear(const Cell& c)
   if (print_it)
   {
     std::cout << fmt::format(
-        "{},{}\t{} {}\t\t{} {}\t{} {}\t{} {}\n\t{} {}\t\t{} {}\t{} {}\t{} {}\t\trange={}...{}\n",
+        "\n{},{}\t{} {}\t\t{} {}\t{} {}\t{} {}\n\t{} {}\t\t{} {}\t{} {}\t{} {}\t\trange={}...{}\n",
         c.i,
         c.j,
         c.z2,
@@ -253,11 +271,11 @@ void JointBuilder::build_linear(const Cell& c)
 
   switch (place_hash(c1, c2, c3, c4))
   {
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Below, Place::Below):
-    case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Above, Place::Above):
       break;
 
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Inside):
     {
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // I----I
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);      // |****|
@@ -267,8 +285,8 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-      // Corner triangles
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Below, Place::Inside):
+    // Corner triangles
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Inside):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
@@ -278,7 +296,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                  // |  /*|
       break;                                                    // B----I
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Below):
     {
       const auto p1 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -288,7 +306,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                      // |    |
       break;                                                        // B----B
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -298,7 +316,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                  // |    |
       break;                                                    // B----B
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
@@ -308,7 +326,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                              // |*\  |
       break;                                                // I----B
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Above, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
@@ -318,7 +336,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                              // |*\  |
       break;                                                // I----A
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Above, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -328,7 +346,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                  // |    |
       break;                                                    // A----A
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Inside, Place::Above):
     {
       const auto p1 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
@@ -338,7 +356,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                      // |    |
       break;                                                        // A----A
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Above, Place::Inside):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
@@ -349,9 +367,8 @@ void JointBuilder::build_linear(const Cell& c)
       break;                                                    // A----I
     }
 
-      // Side rectangles
-
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Inside, Place::Inside):
+    // Side rectangles
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Inside):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -362,7 +379,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                      // B----I
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Inside, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
@@ -374,7 +391,7 @@ void JointBuilder::build_linear(const Cell& c)
 
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
@@ -385,7 +402,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                  // I----I
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Below, Place::Below):
     {
       const auto p1 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
@@ -396,7 +413,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                  // I----B
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Above, Place::Above):
     {
       const auto p1 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
@@ -407,7 +424,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                  // I----A
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Above, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
@@ -418,7 +435,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                  // I----I
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Inside, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
@@ -429,7 +446,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                                                      // A----A
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Inside, Place::Inside):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -442,7 +459,7 @@ void JointBuilder::build_linear(const Cell& c)
     }
 
       // Side stripes
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Above):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
@@ -455,7 +472,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                              // B----A
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Above, Place::Below):
     {
       const auto p1 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -468,7 +485,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                              // B----B
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Below, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -481,7 +498,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                              // B----B
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Above, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -494,7 +511,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                          // B----A
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Below, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -507,7 +524,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                          // A----B
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Above, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -520,7 +537,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                              // A----A
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Below, Place::Above):
     {
       const auto p1 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -533,7 +550,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                              // A----A
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Above, Place::Below):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
@@ -546,7 +563,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                              // A----B  A may be H!
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Above, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -559,7 +576,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                              // B----B
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Below, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -572,7 +589,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                              // A----A
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Below, Place::Below):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -585,7 +602,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();                              // A----B
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Above, Place::Above):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
@@ -599,8 +616,8 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-      // Pentagons
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Inside, Place::Above):
+    // Pentagons
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Above):
     {
       const auto p1 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
@@ -614,7 +631,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Above, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -628,7 +645,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Above, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -642,7 +659,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Inside, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -656,7 +673,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Above, Place::Inside):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -670,7 +687,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Inside, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
@@ -682,7 +699,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Above, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -696,7 +713,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
@@ -710,7 +727,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -722,7 +739,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Above, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -736,7 +753,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Below, Place::Inside):
     {
       const auto p1 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
@@ -748,7 +765,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Below):
     {
       const auto p1 = intersect_right(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
@@ -760,7 +777,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Above):
     {
       const auto p1 = intersect_right(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
@@ -772,7 +789,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Above, Place::Inside):
     {
       const auto p1 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
@@ -784,7 +801,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Below, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -798,7 +815,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Inside, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -810,7 +827,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Above, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
@@ -824,7 +841,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Below, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -838,7 +855,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Inside, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -852,7 +869,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Below, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -866,7 +883,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Below, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -880,7 +897,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Inside, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
@@ -892,7 +909,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Below, Place::Inside):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -906,7 +923,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Above, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Inside, Place::Below):
     {
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -921,8 +938,8 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-      // Hexagons
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Below, Place::Above):
+    // Hexagons
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Below, Place::Above):
     {
       const auto p1 = intersect_top(c, VertexType::Horizontal_lo, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
@@ -937,7 +954,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Above, Place::Below):
     {
       const auto p1 = intersect_top(c, VertexType::Horizontal_hi, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
@@ -952,7 +969,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Inside, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -967,7 +984,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Inside, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -982,7 +999,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Inside, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
@@ -997,7 +1014,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Inside, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
@@ -1012,7 +1029,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Above, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -1027,7 +1044,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Below, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -1043,7 +1060,7 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Above, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -1058,7 +1075,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Below, Place::Inside):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -1073,7 +1090,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Inside, Place::Below):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
@@ -1088,7 +1105,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Above):
     {
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
@@ -1104,10 +1121,9 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-      // Saddle point cases need to be resolved by the value at the center of the
-      // grid cell.
-
-    case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Above, Place::Inside):
+    // Saddle point cases need to be resolved by the value at the center of the
+    // grid cell.
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Above, Place::Inside):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -1125,7 +1141,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Inside):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -1144,7 +1160,7 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-    case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Inside, Place::Above):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -1175,7 +1191,7 @@ void JointBuilder::build_linear(const Cell& c)
       }
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Below):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -1206,7 +1222,7 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Above):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -1227,7 +1243,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Inside, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Above, Place::Below):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -1248,7 +1264,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Below, Place::Inside):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -1269,7 +1285,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Above, Place::Inside):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -1290,7 +1306,7 @@ void JointBuilder::build_linear(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Above, Place::Below):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -1324,7 +1340,7 @@ void JointBuilder::build_linear(const Cell& c)
       }
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Above, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Below, Place::Above):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -1358,7 +1374,7 @@ void JointBuilder::build_linear(const Cell& c)
       }
       break;
     }
-    case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Inside, Place::Below):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -1392,7 +1408,7 @@ void JointBuilder::build_linear(const Cell& c)
       }
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Inside, Place::Above):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -1427,7 +1443,7 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-    case TRAX_PLACE_HASH(Place::Below, Place::Above, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Below, Place::Above):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
@@ -1479,7 +1495,7 @@ void JointBuilder::build_linear(const Cell& c)
       break;
     }
 
-    case TRAX_PLACE_HASH(Place::Above, Place::Below, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Above, Place::Below):
     {
       const auto cc = center_place(c, m_range);
       const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
@@ -1531,9 +1547,252 @@ void JointBuilder::build_linear(const Cell& c)
       }
       break;
     }
+
+    // Cases with exactly one corner missing
+    case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Below, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Above, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Above, Place::Invalid, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Invalid, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Invalid, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Invalid, Place::Below):
+      break;
+
+    case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Below, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Below, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Below, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Below, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Below, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Below, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Below, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Below, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Inside, Place::Inside):
+    {
+      // clang-format off
+      build_edge(VertexType::Horizontal_lo, 1, 0, c2, c.i, c.j + 1, c.x2, c.y2, c.z2, c3, c.i + 1, c.j + 1, c.x3, c.y3, c.z3);
+      build_edge(VertexType::Vertical_lo, 0, -1, c3, c.i + 1, c.j + 1, c.x3, c.y3, c.z3, c4, c.i + 1, c.j, c.x4, c.y4, c.z4);
+      build_edge(VertexType::Diagonal_lo, -1, 0, c4, c.i + 1, c.j, c.x4, c.y4, c.z4, c2, c.i, c.j + 1, c.x2, c.y2, c.z2);
+      // clang-format on
+      close();
+      break;
+    }
+
+    case TRAX_RECT_HASH(Place::Above, Place::Invalid, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Invalid, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Invalid, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Invalid, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Invalid, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Invalid, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Invalid, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Invalid, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Invalid, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Invalid, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Invalid, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Invalid, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Invalid, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Invalid, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Invalid, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Invalid, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Above, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Above, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Above, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Below, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Inside, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Inside, Place::Inside):
+    {
+      // clang-format off
+      build_edge(VertexType::Diagonal_lo, 1, 1, c1, c.i, c.j, c.x1, c.y1, c.z1, c3, c.i + 1, c.j + 1, c.x3, c.y3, c.z3);
+      build_edge(VertexType::Vertical_lo, 0, -1, c3, c.i + 1, c.j + 1, c.x3, c.y3, c.z3, c4, c.i + 1, c.j, c.x4, c.y4, c.z4);
+      build_edge(VertexType::Horizontal_lo, -1, 0, c4, c.i + 1, c.j, c.x4, c.y4, c.z4, c1, c.i, c.j, c.x1, c.y1, c.z1);
+      // clang-format on
+      close();
+      break;
+    }
+
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Invalid, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Invalid, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Invalid, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Invalid, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Invalid, Place::Inside):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Invalid, Place::Above):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Invalid, Place::Below):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Invalid, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Invalid, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Invalid, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Invalid, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Invalid, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Invalid, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Invalid, Place::Above):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Invalid, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Invalid, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Invalid, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Invalid, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Invalid, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Invalid, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Invalid, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Invalid, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Invalid, Place::Above):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Invalid, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Invalid, Place::Inside):
+    {
+      // clang-format off
+      build_edge(VertexType::Vertical_lo, 0, 1, c1, c.i, c.j, c.x1, c.y1, c.z1, c2, c.i, c.j + 1, c.x2, c.y2, c.z2);
+      build_edge(VertexType::Diagonal_lo, 1, -1, c2, c.i, c.j + 1, c.x2, c.y2, c.z2, c4, c.i + 1, c.j, c.x4, c.y4, c.z4);
+      build_edge(VertexType::Horizontal_lo, -1, 0, c4, c.i + 1, c.j, c.x4, c.y4, c.z4, c1, c.i, c.j, c.x1, c.y1, c.z1);
+      // clang-format on
+      close();
+      break;
+    }
+
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Below, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Inside, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Above, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Below, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Inside, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Above, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Below, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Inside, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Above, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Below, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Inside, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Above, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Above, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Inside, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Above, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Below, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Inside, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Above, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Above, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Below, Place::Invalid):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Invalid):
+    {
+      // clang-format off
+      build_edge(VertexType::Vertical_lo, 0, 1, c1, c.i, c.j, c.x1, c.y1, c.z1, c2, c.i, c.j + 1, c.x2, c.y2, c.z2);
+      build_edge(VertexType::Horizontal_lo, 1, 0, c2, c.i, c.j + 1, c.x2, c.y2, c.z2, c3, c.i + 1, c.j + 1, c.x3, c.y3, c.z3);
+      build_edge(VertexType::Diagonal_lo, -1, -1, c3, c.i + 1, c.j + 1, c.x3, c.y3, c.z3, c1, c.i, c.j, c.x1, c.y1, c.z1);
+      // clang-format on
+      close();
+      break;
+    }
+
+      // At least two corner values are NaN
+    default:
+      break;
   }
   finish_cell();
-}  // namespace
+}
+
+void JointBuilder::build_edge(VertexType type,
+                              int di,
+                              int dj,
+                              Place c1,
+                              int i1,
+                              int j1,
+                              float x1,
+                              float y1,
+                              float z1,
+                              Place c2,
+                              int i2,
+                              int j2,
+                              float x2,
+                              float y2,
+                              float z2)
+{
+  // never add the second inside corner, it will be inserted by the next edge
+  switch (place_hash(c1, c2))
+  {
+    case TRAX_EDGE_HASH(Place::Below, Place::Below):
+    {
+      break;
+    }
+    case TRAX_EDGE_HASH(Place::Below, Place::Inside):
+    {
+      const auto p = intersect(x1, y1, z1, x2, y2, z2, di, dj, lo(type), m_range.lo());
+      add(std::min(i1, i2), std::min(j1, j2), p, m_range.lo());
+      break;
+    }
+    case TRAX_EDGE_HASH(Place::Below, Place::Above):
+    {
+      const auto p1 = intersect(x1, y1, z1, x2, y2, z2, di, dj, lo(type), m_range.lo());
+      const auto p2 = intersect(x1, y1, z1, x2, y2, z2, di, dj, hi(type), m_range.hi());
+      add(std::min(i1, i2), std::min(j1, j2), p1, m_range.lo());
+      if (p2.type != VertexType::Corner)  // in case z2==range.hi()
+        add(std::min(i1, i2), std::min(j1, j2), p2, m_range.hi());
+      break;
+    }
+    case TRAX_EDGE_HASH(Place::Inside, Place::Below):
+    {
+      const auto p = intersect(x1, y1, z1, x2, y2, z2, di, dj, lo(type), m_range.lo());
+      add(i1, j1, VertexType::Corner, x1, y1, z1);
+      add(std::min(i1, i2), std::min(j1, j2), p, m_range.lo());
+      break;
+    }
+    case TRAX_EDGE_HASH(Place::Inside, Place::Inside):
+    {
+      add(i1, j1, VertexType::Corner, x1, y1, z1);
+      break;
+    }
+    case TRAX_EDGE_HASH(Place::Inside, Place::Above):
+    {
+      const auto p = intersect(x1, y1, z1, x2, y2, z2, di, dj, hi(type), m_range.hi());
+      add(i1, j1, VertexType::Corner, x1, y1, z1);
+      if (p.type != VertexType::Corner)  // in case z2==range.hi()
+        add(std::min(i1, i2), std::min(j1, j2), p, m_range.hi());
+      break;
+    }
+    case TRAX_EDGE_HASH(Place::Above, Place::Below):
+    {
+      const auto p1 = intersect(x1, y1, z1, x2, y2, z2, di, dj, hi(type), m_range.hi());
+      const auto p2 = intersect(x1, y1, z1, x2, y2, z2, di, dj, lo(type), m_range.lo());
+      if (z1 != m_range.hi())
+        add(std::min(i1, i2), std::min(j1, j2), p1, m_range.hi());
+      else
+        add(i1, j1, p1, m_range.hi());
+      add(std::min(i1, i2), std::min(j1, j2), p2, m_range.lo());
+      break;
+    }
+    case TRAX_EDGE_HASH(Place::Above, Place::Inside):
+    {
+      const auto p = intersect(x1, y1, z1, x2, y2, z2, di, dj, hi(type), m_range.hi());
+      if (z1 != m_range.hi())
+        add(std::min(i1, i2), std::min(j1, j2), p, m_range.hi());
+      else
+        add(i1, j1, p, m_range.hi());
+      add(i2, j2, VertexType::Corner, x2, y2, z2);
+      break;
+    }
+    case TRAX_EDGE_HASH(Place::Above, Place::Above):
+    {
+      if (z1 == m_range.hi() && z2 == m_range.hi())
+        add(i1, j1, VertexType::Corner, x1, y1, z1);
+      break;
+    }
+  }
+}
 
 void JointBuilder::build_midpoint(const Cell& c)
 {
@@ -1553,11 +1812,11 @@ void JointBuilder::build_midpoint(const Cell& c)
 
   switch (place_hash(c1, c2, c3, c4))
   {
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Below):
     {
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Inside):
     {
       add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);           // B--B
       add(c.i, c.j, VertexType::Horizontal_lo, xa, ya, m_range.lo());    // | /|
@@ -1565,7 +1824,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Below):
     {
       add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);         // B--I
       add(c.i + 1, c.j, VertexType::Vertical_lo, xd, yd, m_range.lo());    // | \|
@@ -1573,7 +1832,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Below, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Inside):
     {
       add(c.i + 1, c.j + 1, VertexType::Corner, c.x3, c.y3, c.z3);     // B--I
       add(c.i + 1, c.j, VertexType::Corner, c.x4, c.y4, c.z4);         // | ||
@@ -1582,7 +1841,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Below):
     {
       add(c.i, c.j, VertexType::Vertical_lo, xb, yb, m_range.lo());        // I--B
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);             // |/ |
@@ -1590,7 +1849,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Inside):
     {
       add(c.i, c.j, VertexType::Vertical_lo, xb, yb, m_range.lo());        // I--B
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);             // |//|
@@ -1602,7 +1861,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Inside, Place::Below):
     {
       add(c.i, c.j, VertexType::Vertical_lo, xb, yb, m_range.lo());  // I--I
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);       // |--|
@@ -1611,7 +1870,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Below, Place::Inside, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Inside, Place::Inside):
     {
       add(c.i, c.j, VertexType::Vertical_lo, xb, yb, m_range.lo());  // I--I
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);       // |\ |
@@ -1621,7 +1880,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Below):
     {
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);             // B--B
       add(c.i, c.j, VertexType::Vertical_lo, xb, yb, m_range.lo());    // |\ |
@@ -1629,7 +1888,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Inside):
     {
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);               // B--B
       add(c.i, c.j, VertexType::Vertical_lo, xb, yb, m_range.lo());      // |--|
@@ -1638,7 +1897,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Below):
     {
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);             // B--I
       add(c.i, c.j, VertexType::Vertical_lo, xb, yb, m_range.lo());    // |\\|
@@ -1650,7 +1909,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Below, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Inside):
     {
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);                 // B--I
       add(c.i, c.j, VertexType::Vertical_lo, xb, yb, m_range.lo());        // |/ |
@@ -1660,7 +1919,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Below, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Below, Place::Below):
     {
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);                 // I--B
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);             // || |
@@ -1669,7 +1928,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Below, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Below, Place::Inside):
     {
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);                 // I--B
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);             // | \|
@@ -1679,7 +1938,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Below):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Below):
     {
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // I--I
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);      // | /|
@@ -1689,7 +1948,7 @@ void JointBuilder::build_midpoint(const Cell& c)
       close();
       break;
     }
-    case TRAX_PLACE_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Inside):
+    case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Inside):
     {
       add(c.i, c.j, VertexType::Corner, c.x1, c.y1, c.z1);          // I--I
       add(c.i, c.j + 1, VertexType::Corner, c.x2, c.y2, c.z2);      // |  |

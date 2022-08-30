@@ -48,10 +48,16 @@ class TestGrid : public Grid
 
   bool valid(long i, long j) const override
   {
+#if 0    
     return !std::isnan(get(i, j)) && !std::isnan(get(i + 1, j)) && !std::isnan(get(i, j + 1)) &&
            !std::isnan(get(i + 1, j + 1)) && !std::isnan(x(i, j)) && !std::isnan(x(i + 1, j)) &&
            !std::isnan(x(i, j + 1)) && !std::isnan(x(i + 1, j + 1)) && !std::isnan(y(i, j)) &&
            !std::isnan(y(i + 1, j)) && !std::isnan(y(i, j + 1)) && !std::isnan(y(i + 1, j + 1));
+#else
+    return !std::isnan(x(i, j)) && !std::isnan(x(i + 1, j)) && !std::isnan(x(i, j + 1)) &&
+           !std::isnan(x(i + 1, j + 1)) && !std::isnan(y(i, j)) && !std::isnan(y(i + 1, j)) &&
+           !std::isnan(y(i, j + 1)) && !std::isnan(y(i + 1, j + 1));
+#endif
   }
 
   std::string dump(const std::string& indent) const

@@ -74,7 +74,7 @@ void run_file_tests(const std::string& filename)
     if (command[0] == '#')
     {
       std::getline(in, command);
-      script += "# " + command + "\n";
+      script += "#" + command + "\n";
     }
     else if (command == "interpolation")
     {
@@ -263,10 +263,22 @@ BOOST_AUTO_TEST_CASE(isoband_2x2)
   run_file_tests("data/isoband_2x2.txt");
 }
 
+BOOST_AUTO_TEST_CASE(isoband_2x2_missing)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband 2x2 missing data]");
+  run_file_tests("data/isoband_2x2_missing.txt");
+}
+
 BOOST_AUTO_TEST_CASE(midpoint_2x2)
 {
   BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband midpoint 2x2]");
   run_file_tests("data/midpoint_2x2.txt");
+}
+
+BOOST_AUTO_TEST_CASE(midpoint_2x2_missing)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband midpoint 2x2 missing data]");
+  run_file_tests("data/midpoint_2x2_missing.txt");
 }
 
 BOOST_AUTO_TEST_CASE(midpoint_4x3)
@@ -281,17 +293,17 @@ BOOST_AUTO_TEST_CASE(isoband_3x3)
   run_file_tests("data/isoband_3x3.txt");
 }
 
-BOOST_AUTO_TEST_CASE(isoband_3x3_missing)
-{
-  BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband 3x3 missing data]");
-  run_file_tests("data/isoband_3x3_missing.txt");
-}
-
-BOOST_AUTO_TEST_CASE(isoband_3x3_inf)
-{
-  BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband 3x3 inf limits]");
-  run_file_tests("data/isoband_3x3_inf.txt");
-}
+// BOOST_AUTO_TEST_CASE(isoband_3x3_missing)
+// {
+//   BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband 3x3 missing data]");
+//   run_file_tests("data/isoband_3x3_missing.txt");
+// }
+//
+// BOOST_AUTO_TEST_CASE(isoband_3x3_inf)
+// {
+//   BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband 3x3 inf limits]");
+//   run_file_tests("data/isoband_3x3_inf.txt");
+// }
 
 BOOST_AUTO_TEST_CASE(isoband_4x4)
 {

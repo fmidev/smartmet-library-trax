@@ -151,6 +151,9 @@ bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
   double minvalue = minmax.first;
   double maxvalue = minmax.second;
 
+  if (std::isnan(minvalue))
+    return false;
+
   auto n = m_isoband_limits.size();
 
   // Ignore possible NaN...NaN range in the search, it will be isobanded separately if necessary
@@ -206,8 +209,8 @@ void Contour::Impl::isoline(const Cell& c)
 
 void Contour::Impl::isoband(const Cell& c)
 {
-  if (std::isnan(c.z1) || std::isnan(c.z2) || std::isnan(c.z3) || std::isnan(c.z4))
-    return;
+  // if (std::isnan(c.z1) || std::isnan(c.z2) || std::isnan(c.z3) || std::isnan(c.z4))
+  // return;
 
   if (update_isobands_to_check(minmax(c)))
   {

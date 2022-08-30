@@ -10,12 +10,17 @@ enum class VertexType
   Vertical_lo,
   Vertical_hi,
   Horizontal_lo,
-  Horizontal_hi
+  Horizontal_hi,
+  Diagonal_lo,
+  Diagonal_hi
 };
 
 bool is_vertical(VertexType type);
 bool is_horizontal(VertexType type);
 
-const char* to_string(VertexType vtype);
+VertexType lo(VertexType type);
+VertexType hi(VertexType type);
+
+const char* to_string(VertexType type);
 
 }  // namespace Trax

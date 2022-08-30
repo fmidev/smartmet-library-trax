@@ -4,3 +4,4 @@ test/*Test
 tmp/
 compile_commands.json
 results
+.clangd

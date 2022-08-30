@@ -1,0 +1,1240 @@
+interpolation midpoint
+
+bbox 0 0 10 10
+
+# All valid
+
+grid 2 2
+0 0
+0 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 0
+0 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+0 1
+0 0
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+0 1
+0 1
+isoband 1 1 POLYGON ((5 0,5 10,10 10,10 0,5 0))
+
+grid 2 2
+1 0
+0 0
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 0
+0 1
+isoband 1 1 MULTIPOLYGON (((0 5,0 10,5 10,0 5)),((5 0,10 5,10 0,5 0)))
+
+grid 2 2
+1 1
+0 0
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 5,0 5))
+
+grid 2 2
+1 1
+0 1
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 0,5 0,0 5))
+
+grid 2 2
+0 0
+1 0
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+0 0
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,10 5,10 0,0 0))
+
+grid 2 2
+0 1
+1 0
+isoband 1 1 MULTIPOLYGON (((0 0,0 5,5 0,0 0)),((5 10,10 10,10 5,5 10)))
+
+grid 2 2
+0 1
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,5 10,10 10,10 0,0 0))
+
+grid 2 2
+1 0
+1 0
+isoband 1 1 POLYGON ((0 0,0 10,5 10,5 0,0 0))
+
+grid 2 2
+1 0
+1 1
+isoband 1 1 POLYGON ((0 0,0 10,5 10,10 5,10 0,0 0))
+
+grid 2 2
+1 1
+1 0
+isoband 1 1 POLYGON ((0 0,0 10,10 10,10 5,5 0,0 0))
+
+grid 2 2
+1 1
+1 1
+isoband 1 1 POLYGON ((0 0,0 10,10 10,10 0,0 0))
+
+# Lower left corner invalid
+
+grid 2 2
+0 0
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 0
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+0 1
+nan 0
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+0 1
+nan 1
+isoband 1 1 POLYGON ((5 0,5 10,10 10,10 0,5 0))
+
+grid 2 2
+1 0
+nan 0
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 0
+nan 1
+isoband 1 1 MULTIPOLYGON (((0 5,0 10,5 10,0 5)),((5 0,10 5,10 0,5 0)))
+
+grid 2 2
+1 1
+nan 0
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 5,0 5))
+
+grid 2 2
+1 1
+nan 1
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 0,5 0,0 5))
+
+grid 2 2
+0 0
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 0
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+0 1
+nan 0
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+0 1
+nan 1
+isoband 1 1 POLYGON ((5 0,5 10,10 10,10 0,5 0))
+
+grid 2 2
+1 0
+nan 0
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 0
+nan 1
+isoband 1 1 MULTIPOLYGON (((0 5,0 10,5 10,0 5)),((5 0,10 5,10 0,5 0)))
+
+grid 2 2
+1 1
+nan 0
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 5,0 5))
+
+grid 2 2
+1 1
+nan 1
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 0,5 0,0 5))
+
+# Upper left corner invalid
+
+grid 2 2
+nan 0
+0 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+0 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan 1
+0 0
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+0 1
+isoband 1 1 POLYGON ((5 0,5 10,10 10,10 0,5 0))
+
+grid 2 2
+nan 0
+0 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+0 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan 1
+0 0
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+0 1
+isoband 1 1 POLYGON ((5 0,5 10,10 10,10 0,5 0))
+
+grid 2 2
+nan 0
+1 0
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan 0
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,10 5,10 0,0 0))
+
+grid 2 2
+nan 1
+1 0
+isoband 1 1 MULTIPOLYGON (((0 0,0 5,5 0,0 0)),((5 10,10 10,10 5,5 10)))
+
+grid 2 2
+nan 1
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,5 10,10 10,10 0,0 0))
+
+grid 2 2
+nan 0
+1 0
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan 0
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,10 5,10 0,0 0))
+
+grid 2 2
+nan 1
+1 0
+isoband 1 1 MULTIPOLYGON (((0 0,0 5,5 0,0 0)),((5 10,10 10,10 5,5 10)))
+
+grid 2 2
+nan 1
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,5 10,10 10,10 0,0 0))
+
+# Upper right corner invalid
+
+grid 2 2
+0 nan
+0 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+0 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+0 nan
+0 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+0 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+1 nan
+0 0
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+0 1
+isoband 1 1 MULTIPOLYGON (((0 5,0 10,5 10,0 5)),((5 0,10 5,10 0,5 0)))
+
+grid 2 2
+1 nan
+0 0
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+0 1
+isoband 1 1 MULTIPOLYGON (((0 5,0 10,5 10,0 5)),((5 0,10 5,10 0,5 0)))
+
+grid 2 2
+0 nan
+1 0
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+0 nan
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,10 5,10 0,0 0))
+
+grid 2 2
+0 nan
+1 0
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+0 nan
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,10 5,10 0,0 0))
+
+grid 2 2
+1 nan
+1 0
+isoband 1 1 POLYGON ((0 0,0 10,5 10,5 0,0 0))
+
+grid 2 2
+1 nan
+1 1
+isoband 1 1 POLYGON ((0 0,0 10,5 10,10 5,10 0,0 0))
+
+grid 2 2
+1 nan
+1 0
+isoband 1 1 POLYGON ((0 0,0 10,5 10,5 0,0 0))
+
+grid 2 2
+1 nan
+1 1
+isoband 1 1 POLYGON ((0 0,0 10,5 10,10 5,10 0,0 0))
+
+# Lower right corner invalid
+
+grid 2 2
+0 0
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 0
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 1
+0 nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+0 1
+0 nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+1 0
+0 nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 0
+0 nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 1
+0 nan
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 5,0 5))
+
+grid 2 2
+1 1
+0 nan
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 5,0 5))
+
+grid 2 2
+0 0
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+0 0
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+0 1
+1 nan
+isoband 1 1 MULTIPOLYGON (((0 0,0 5,5 0,0 0)),((5 10,10 10,10 5,5 10)))
+
+grid 2 2
+0 1
+1 nan
+isoband 1 1 MULTIPOLYGON (((0 0,0 5,5 0,0 0)),((5 10,10 10,10 5,5 10)))
+
+grid 2 2
+1 0
+1 nan
+isoband 1 1 POLYGON ((0 0,0 10,5 10,5 0,0 0))
+
+grid 2 2
+1 0
+1 nan
+isoband 1 1 POLYGON ((0 0,0 10,5 10,5 0,0 0))
+
+grid 2 2
+1 1
+1 nan
+isoband 1 1 POLYGON ((0 0,0 10,10 10,10 5,5 0,0 0))
+
+grid 2 2
+1 1
+1 nan
+isoband 1 1 POLYGON ((0 0,0 10,10 10,10 5,5 0,0 0))
+
+# Left side invalid
+
+grid 2 2
+nan 0
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan 1
+nan 0
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+nan 1
+isoband 1 1 POLYGON ((5 0,5 10,10 10,10 0,5 0))
+
+grid 2 2
+nan 0
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan 1
+nan 0
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+nan 1
+isoband 1 1 POLYGON ((5 0,5 10,10 10,10 0,5 0))
+
+grid 2 2
+nan 0
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan 1
+nan 0
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+nan 1
+isoband 1 1 POLYGON ((5 0,5 10,10 10,10 0,5 0))
+
+grid 2 2
+nan 0
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan 1
+nan 0
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+nan 1
+isoband 1 1 POLYGON ((5 0,5 10,10 10,10 0,5 0))
+
+# Top row invalid
+
+grid 2 2
+nan nan
+0 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+0 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+0 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+0 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+1 0
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,10 5,10 0,0 0))
+
+grid 2 2
+nan nan
+1 0
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,10 5,10 0,0 0))
+
+grid 2 2
+nan nan
+1 0
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,10 5,10 0,0 0))
+
+grid 2 2
+nan nan
+1 0
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 1
+isoband 1 1 POLYGON ((0 0,0 5,10 5,10 0,0 0))
+
+# Right side invalid
+
+grid 2 2
+0 nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+1 nan
+0 nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+0 nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+0 nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+0 nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+0 nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+0 nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+0 nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+0 nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+1 nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 10,5 10,5 0,0 0))
+
+grid 2 2
+1 nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 10,5 10,5 0,0 0))
+
+grid 2 2
+1 nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 10,5 10,5 0,0 0))
+
+grid 2 2
+1 nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 10,5 10,5 0,0 0))
+
+# Bottom row invalid
+
+grid 2 2
+0 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+0 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+1 0
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 0
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 1
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 5,0 5))
+
+grid 2 2
+1 1
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 5,0 5))
+
+grid 2 2
+0 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+0 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+1 0
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 0
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 1
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 5,0 5))
+
+grid 2 2
+1 1
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,10 10,10 5,0 5))
+
+# First diagonal invalid
+
+grid 2 2
+0 nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+0 nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+1 nan
+nan 0
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan 1
+isoband 1 1 MULTIPOLYGON (((0 5,0 10,5 10,0 5)),((5 0,10 5,10 0,5 0)))
+
+grid 2 2
+1 nan
+nan 0
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan 1
+isoband 1 1 MULTIPOLYGON (((0 5,0 10,5 10,0 5)),((5 0,10 5,10 0,5 0)))
+
+grid 2 2
+0 nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+0 nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+1 nan
+nan 0
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan 1
+isoband 1 1 MULTIPOLYGON (((0 5,0 10,5 10,0 5)),((5 0,10 5,10 0,5 0)))
+
+grid 2 2
+1 nan
+nan 0
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan 1
+isoband 1 1 MULTIPOLYGON (((0 5,0 10,5 10,0 5)),((5 0,10 5,10 0,5 0)))
+
+# Second diagonal invalid
+
+grid 2 2
+nan 0
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 1
+0 nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+0 nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 0
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 1
+0 nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+0 nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 0
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan 0
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan 1
+1 nan
+isoband 1 1 MULTIPOLYGON (((0 0,0 5,5 0,0 0)),((5 10,10 10,10 5,5 10)))
+
+grid 2 2
+nan 1
+1 nan
+isoband 1 1 MULTIPOLYGON (((0 0,0 5,5 0,0 0)),((5 10,10 10,10 5,5 10)))
+
+grid 2 2
+nan 0
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan 0
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan 1
+1 nan
+isoband 1 1 MULTIPOLYGON (((0 0,0 5,5 0,0 0)),((5 10,10 10,10 5,5 10)))
+
+grid 2 2
+nan 1
+1 nan
+isoband 1 1 MULTIPOLYGON (((0 0,0 5,5 0,0 0)),((5 10,10 10,10 5,5 10)))
+
+# First three invalid
+
+grid 2 2
+nan nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+grid 2 2
+nan nan
+nan 0
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+nan 1
+isoband 1 1 POLYGON ((5 0,10 5,10 0,5 0))
+
+# Next three invalid
+
+grid 2 2
+nan nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+0 nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+grid 2 2
+nan nan
+1 nan
+isoband 1 1 POLYGON ((0 0,0 5,5 0,0 0))
+
+# Next three invalid
+
+grid 2 2
+0 nan
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+1 nan
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+0 nan
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+0 nan
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+1 nan
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+grid 2 2
+1 nan
+nan nan
+isoband 1 1 POLYGON ((0 5,0 10,5 10,0 5))
+
+# Last three invalid
+
+grid 2 2
+nan 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 0
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
+
+grid 2 2
+nan 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+grid 2 2
+nan 1
+nan nan
+isoband 1 1 POLYGON ((5 10,10 10,10 5,5 10))
+
+# All invalid
+
+grid 2 2
+nan nan
+nan nan
+isoband 1 1 GEOMETRYCOLLECTION EMPTY
