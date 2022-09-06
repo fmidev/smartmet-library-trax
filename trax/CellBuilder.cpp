@@ -105,6 +105,7 @@ class JointBuilder
   JointBuilder(JointMerger& joints, const Range& range) : m_range(range), m_joints(joints) {}
 
   void build_linear(const Cell& c);
+  void build_missing(const Cell& c);  // with linear interpolation
   void build_midpoint(const Cell& c);
   void build_edge(VertexType type,
                   int di,
@@ -217,6 +218,12 @@ void JointBuilder::finish_cell()
 
 void JointBuilder::build_linear(const Cell& c)
 {
+  if (m_range.missing())
+  {
+    build_missing(c);
+    return;
+  }
+
   const auto c1 = place(c.p1.z, m_range);
   const auto c2 = place(c.p2.z, m_range);
   const auto c3 = place(c.p3.z, m_range);
@@ -242,7 +249,7 @@ void JointBuilder::build_linear(const Cell& c)
   if (print_it)
   {
     std::cout << fmt::format(
-        "\n{},{}\t{} {}\t\t{} {}\t{} {}\t{} {}\n\t{} {}\t\t{} {}\t{} {}\t{} {}\t\trange={}...{}\n",
+        "\n{},{}\t{} {}\t\t{},{}\t{},{}\t{} {}\n\t{} {}\t\t{},{}\t{},{}\t{} {}\t\trange={}...{}\n",
         c.i,
         c.j,
         c.p2.z,
@@ -1583,9 +1590,15 @@ void JointBuilder::build_linear(const Cell& c)
     case TRAX_RECT_HASH(Place::Invalid, Place::Inside, Place::Inside, Place::Inside):
     {
       // clang-format off
-      build_edge(VertexType::Horizontal_lo, 1, 0, c2, c.i, c.j + 1, c.p2, c3, c.i + 1, c.j + 1, c.p3);
-      build_edge(VertexType::Vertical_lo, 0, -1, c3, c.i + 1, c.j + 1, c.p3, c4, c.i + 1, c.j, c.p4);
-      build_edge(VertexType::Diagonal_lo, -1, 0, c4, c.i + 1, c.j, c.p4, c2, c.i, c.j + 1, c.p2);
+      build_edge(VertexType::Horizontal_lo, 1, 0,
+                 c2, c.i, c.j + 1, c.p2,
+                 c3, c.i + 1, c.j + 1, c.p3);
+      build_edge(VertexType::Vertical_lo, 0, -1,
+                 c3, c.i + 1, c.j + 1, c.p3,
+                 c4, c.i + 1, c.j, c.p4);
+      build_edge(VertexType::Diagonal_lo, -1, 0,
+                 c4, c.i + 1, c.j, c.p4,
+                 c2, c.i, c.j + 1, c.p2);
       // clang-format on
       close();
       break;
@@ -1618,9 +1631,15 @@ void JointBuilder::build_linear(const Cell& c)
     case TRAX_RECT_HASH(Place::Inside, Place::Invalid, Place::Inside, Place::Inside):
     {
       // clang-format off
-      build_edge(VertexType::Diagonal_lo, 1, 1, c1, c.i, c.j, c.p1, c3, c.i + 1, c.j + 1, c.p3);
-      build_edge(VertexType::Vertical_lo, 0, -1, c3, c.i + 1, c.j + 1, c.p3, c4, c.i + 1, c.j, c.p4);
-      build_edge(VertexType::Horizontal_lo, -1, 0, c4, c.i + 1, c.j, c.p4, c1, c.i, c.j, c.p1);
+      build_edge(VertexType::Diagonal_lo, 1, 1,
+                 c1, c.i, c.j, c.p1,
+                 c3, c.i + 1, c.j + 1, c.p3);
+      build_edge(VertexType::Vertical_lo, 0, -1,
+                 c3, c.i + 1, c.j + 1, c.p3,
+                 c4, c.i + 1, c.j, c.p4);
+      build_edge(VertexType::Horizontal_lo, -1, 0,
+                 c4, c.i + 1, c.j, c.p4,
+                 c1, c.i, c.j, c.p1);
       // clang-format on
       close();
       break;
@@ -1653,9 +1672,15 @@ void JointBuilder::build_linear(const Cell& c)
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Invalid, Place::Inside):
     {
       // clang-format off
-      build_edge(VertexType::Vertical_lo, 0, 1, c1, c.i, c.j, c.p1, c2, c.i, c.j + 1, c.p2);
-      build_edge(VertexType::Diagonal_lo, 1, -1, c2, c.i, c.j + 1, c.p2, c4, c.i + 1, c.j, c.p4);
-      build_edge(VertexType::Horizontal_lo, -1, 0, c4, c.i + 1, c.j, c.p4, c1, c.i, c.j, c.p1);
+      build_edge(VertexType::Vertical_lo, 0, 1,
+                 c1, c.i, c.j, c.p1,
+                 c2, c.i, c.j + 1, c.p2);
+      build_edge(VertexType::Diagonal_lo, 1, -1,
+                 c2, c.i, c.j + 1, c.p2,
+                 c4, c.i + 1, c.j, c.p4);
+      build_edge(VertexType::Horizontal_lo, -1, 0,
+                 c4, c.i + 1, c.j, c.p4,
+                 c1, c.i, c.j, c.p1);
       // clang-format on
       close();
       break;
@@ -1688,9 +1713,15 @@ void JointBuilder::build_linear(const Cell& c)
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Invalid):
     {
       // clang-format off
-      build_edge(VertexType::Vertical_lo, 0, 1, c1, c.i, c.j, c.p1, c2, c.i, c.j + 1, c.p2);
-      build_edge(VertexType::Horizontal_lo, 1, 0, c2, c.i, c.j + 1, c.p2, c3, c.i + 1, c.j + 1, c.p3);
-      build_edge(VertexType::Diagonal_lo, -1, -1, c3, c.i + 1, c.j + 1, c.p3, c1, c.i, c.j, c.p1);
+      build_edge(VertexType::Vertical_lo, 0, 1,
+                 c1, c.i, c.j, c.p1,
+                 c2, c.i, c.j + 1, c.p2);
+      build_edge(VertexType::Horizontal_lo, 1, 0,
+                 c2, c.i, c.j + 1, c.p2,
+                 c3, c.i + 1, c.j + 1, c.p3);
+      build_edge(VertexType::Diagonal_lo, -1, -1,
+                 c3, c.i + 1, c.j + 1, c.p3,
+                 c1, c.i, c.j, c.p1);
       // clang-format on
       close();
       break;
@@ -1702,6 +1733,15 @@ void JointBuilder::build_linear(const Cell& c)
   }
   finish_cell();
 }
+
+// Grid cells with one corner missing are contoured as triangles. Such cases
+// have no ambiguities about saddle points, and can be processed one edge
+// at a time. Since there are 4*27=108 such triangles, and grid cells with
+// exactly one missing cell should be rare, we prefer this approach over
+// the faster handling of fully valid rectangles above.
+// Note that due to the merge algorithm, we must still process the left
+// edge first. Hence reducing the size of the switch for triangles at the
+// end of the above 'build_linear' method could be tricky.
 
 void JointBuilder::build_edge(VertexType type,
                               int di,
@@ -1787,13 +1827,93 @@ void JointBuilder::build_edge(VertexType type,
   }
 }
 
+// Isoband for missing values with linear interpolation must complement what is
+// done in build_linear, namely handling triangles similarly. Hence we *cannot*
+// use build_midpoint, since it will connect centers of edges instead of
+// the corners like build_linear does.
+
+void JointBuilder::build_missing(const Cell& c)
+{
+  auto hash = nan_hash(c.p1.z, c.p2.z, c.p3.z, c.p4.z);
+
+#if 0
+  print_it = true;
+  if (print_it)
+  {
+    std::cout << fmt::format(
+        "\n{},{}\t{} {}\t\t{},{}\t{},{}\n\t{} {}\t\t{},{}\t{},{}\t\trange={}...{}\n",
+        c.i,
+        c.j,
+        c.p2.z,
+        c.p3.z,
+        c.p2.x,
+        c.p2.y,
+        c.p3.x,
+        c.p3.y,
+
+        c.p1.z,
+        c.p4.z,
+        c.p1.x,
+        c.p1.y,
+        c.p4.x,
+        c.p4.y,
+
+        m_range.lo(),
+        m_range.hi());
+  }
+#endif
+  switch (hash)
+  {
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Below):
+      break;
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Inside):
+    {
+      add(c.i, c.j, VertexType::Corner, c.p1);          // B--B
+      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // | /|
+      add(c.i + 1, c.j, VertexType::Corner, c.p4);      // B--I
+      close();
+      break;
+    }
+    case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Below):
+    {
+      add(c.i, c.j + 1, VertexType::Corner, c.p2);      // B--I
+      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // | \|
+      add(c.i + 1, c.j, VertexType::Corner, c.p4);      // B--B
+      close();
+      break;
+    }
+    case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Below):
+    {
+      add(c.i, c.j, VertexType::Corner, c.p1);          // I--B
+      add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |/ |
+      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // B--B
+      close();
+      break;
+    }
+    case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Below):
+    {
+      add(c.i, c.j, VertexType::Corner, c.p1);      // B--B
+      add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |\ |
+      add(c.i + 1, c.j, VertexType::Corner, c.p4);  // I--B
+      close();
+      break;
+    }
+    default:
+    {
+      // at least two missing values, hence full cell is missing
+      add(c.i, c.j, VertexType::Corner, c.p1);
+      add(c.i, c.j + 1, VertexType::Corner, c.p2);
+      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
+      add(c.i + 1, c.j, VertexType::Corner, c.p4);
+      close();
+      break;
+    }
+  }
+  finish_cell();
+}
+
 void JointBuilder::build_midpoint(const Cell& c)
 {
-  const auto c1 = discrete_place(c.p1.z, m_range);
-  const auto c2 = discrete_place(c.p2.z, m_range);
-  const auto c3 = discrete_place(c.p3.z, m_range);
-  const auto c4 = discrete_place(c.p4.z, m_range);
-
   const auto xa = (c.p4.x + c.p1.x) / 2;  // bottom center
   const auto ya = (c.p4.y + c.p1.y) / 2;
   const auto xb = (c.p1.x + c.p2.x) / 2;  // left center
@@ -1803,7 +1923,19 @@ void JointBuilder::build_midpoint(const Cell& c)
   const auto xd = (c.p3.x + c.p4.x) / 2;  // right center
   const auto yd = (c.p3.y + c.p4.y) / 2;
 
-  switch (place_hash(c1, c2, c3, c4))
+  std::size_t hash = 0;
+  if (m_range.missing())
+    hash = nan_hash(c.p1.z, c.p2.z, c.p3.z, c.p4.z);
+  else
+  {
+    const auto c1 = discrete_place(c.p1.z, m_range);
+    const auto c2 = discrete_place(c.p2.z, m_range);
+    const auto c3 = discrete_place(c.p3.z, m_range);
+    const auto c4 = discrete_place(c.p4.z, m_range);
+    hash = place_hash(c1, c2, c3, c4);
+  }
+
+  switch (hash)
   {
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Below):
     {

@@ -16,11 +16,6 @@ class Contour::Impl
   void closed_range(bool flag) { m_closed_range = flag; }
   void strict(bool flag) { m_strict = flag; }
   void validate(bool flag) { m_validate = flag; }
-  void bbox(double mincoord, double maxcoord)
-  {
-    m_mincoord = mincoord;
-    m_maxcoord = maxcoord;
-  }
 
   // Calculate full set of contours
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -71,17 +66,6 @@ class Contour::Impl
 
   // Perform geometry validation with GEOS. This can be very slow.
   bool m_validate = false;
-
-  // Rectangle limits when inverting isobands for missing values
-
-  // These values seem to break clipping:
-  // double m_mincoord = std::numeric_limits<double>::lowest();
-  // double m_maxcoord = std::numeric_limits<double>::max();
-  // double m_mincoord = -std::numeric_limits<double>::infinity();
-  // double m_maxcoord = +std::numeric_limits<double>::infinity();
-
-  double m_mincoord = -1e100;
-  double m_maxcoord = +1e100;
 
   // Requested isolines
   IsolineValues m_isoline_values;

@@ -91,7 +91,7 @@ void Contour::Impl::finish_isolines()
 void Contour::Impl::finish_isobands()
 {
   for (auto i = 0UL; i < m_builders.size(); i++)
-    m_builders[i].finish_isobands(m_strict, m_isoband_limits[i].missing(), m_mincoord, m_maxcoord);
+    m_builders[i].finish_isobands(m_strict, m_isoband_limits[i].missing());
 }
 
 // Move the result for the caller
@@ -134,12 +134,6 @@ bool Contour::Impl::update_isolines_to_check(const MinMax& minmax)
   bool ok = (m_min_index <= m_max_index && minvalue <= m_isoline_values[m_min_index] &&
              maxvalue >= m_isoline_values[m_max_index]);
 
-#if 0
-  std::cout << "Range: " << minvalue << "..." << maxvalue << "\tlimits = " << m_min_index << ","
-            << m_max_index << "\t= " << m_isoline_values[m_min_index] << "..."
-            << m_isoline_values[m_max_index] << "\t";
-  std::cout << (ok ? "ok" : "***") << "\n";
-#endif
   return ok;
 }
 
@@ -179,13 +173,6 @@ bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
   bool ok = (m_min_index < m_isoband_limits.size() &&
              m_isoband_limits[m_min_index].overlaps(minvalue, maxvalue));
 
-#if 0
-  std::cout << "Range: " << minvalue << "..." << maxvalue << "\tlimits = " << m_min_index << ","
-            << m_max_index << "\t= " << m_isoband_limits[m_min_index].lo() << "..."
-            << m_isoband_limits[m_min_index].hi() << " to " << m_isoband_limits[m_max_index].lo()
-            << "..." << m_isoband_limits[m_max_index].hi() << "\t";
-  std::cout << (ok ? "ok" : "***") << "\n";
-#endif
   return ok;
 }
 
@@ -210,9 +197,6 @@ void Contour::Impl::isoline(const Cell& c)
 
 void Contour::Impl::isoband(const Cell& c)
 {
-  // if (std::isnan(c.z1) || std::isnan(c.z2) || std::isnan(c.z3) || std::isnan(c.z4))
-  // return;
-
   if (update_isobands_to_check(minmax(c)))
   {
     // Process isobands min_index...max_index
@@ -230,13 +214,6 @@ void Contour::Impl::isoband(int index, const Cell& c)
   auto& builder = m_builders[index];
   auto& merger = builder.merger();
   auto range = m_isoband_limits[index];
-
-  // Contour NaN...NaN as -inf...inf for later inversion from valid values to missing values
-  if (range.missing())
-  {
-    auto inf = std::numeric_limits<double>::infinity();
-    range = Range(-inf, inf);
-  }
 
   switch (m_itype)
   {
@@ -327,8 +304,7 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
     if (!err.empty())
       std::cerr << "Isoband error: " << err << "\n"
                 << "Limits: " << limits[i].lo() << "..." << limits[i].hi() << "\n"
-                << "WKT:\n"
-                << tmp.wkt() << "\n";
+                << "WKT: " << tmp.wkt() << "\n";
   }
   return res;
 

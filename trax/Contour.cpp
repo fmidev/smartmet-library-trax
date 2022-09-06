@@ -33,12 +33,6 @@ void Contour::validate(bool flag)
   impl->validate(flag);
 }
 
-// Set bbox for inverting isobands for missing values
-void Contour::bbox(double mincoord, double maxcoord)
-{
-  impl->bbox(mincoord, maxcoord);
-}
-
 // Contour full grid
 GeometryCollections Contour::isobands(const Grid& grid, const IsobandLimits& limits)
 {

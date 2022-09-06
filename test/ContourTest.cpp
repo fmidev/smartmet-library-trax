@@ -87,14 +87,6 @@ void run_file_tests(const std::string& filename)
       in >> x1 >> y1 >> x2 >> y2;
       script += fmt::format("bbox {} {} {} {}\n", x1, y1, x2, y2);
     }
-    else if (command == "shell")
-    {
-      double mincoord;
-      double maxcoord;
-      in >> mincoord >> maxcoord;
-      contourer.bbox(mincoord, maxcoord);
-      script += fmt::format("shell {} {}\n", mincoord, maxcoord);
-    }
     else if (command == "grid")
     {
       int nx = 0;
@@ -293,17 +285,17 @@ BOOST_AUTO_TEST_CASE(isoband_3x3)
   run_file_tests("data/isoband_3x3.txt");
 }
 
-// BOOST_AUTO_TEST_CASE(isoband_3x3_missing)
-// {
-//   BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband 3x3 missing data]");
-//   run_file_tests("data/isoband_3x3_missing.txt");
-// }
-//
-// BOOST_AUTO_TEST_CASE(isoband_3x3_inf)
-// {
-//   BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband 3x3 inf limits]");
-//   run_file_tests("data/isoband_3x3_inf.txt");
-// }
+BOOST_AUTO_TEST_CASE(isoband_3x3_missing)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband 3x3 missing data]");
+  run_file_tests("data/isoband_3x3_missing.txt");
+}
+
+BOOST_AUTO_TEST_CASE(isoband_3x3_inf)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband 3x3 inf limits]");
+  run_file_tests("data/isoband_3x3_inf.txt");
+}
 
 BOOST_AUTO_TEST_CASE(isoband_4x4)
 {

@@ -42,6 +42,7 @@ HDRS =	$(SUBNAME)/BBox.h \
 	$(SUBNAME)/GeometryCollection.h \
 	$(SUBNAME)/Geos.h \
 	$(SUBNAME)/Grid.h \
+	$(SUBNAME)/GridPoint.h \
 	$(SUBNAME)/InterpolationType.h \
 	$(SUBNAME)/IsobandLimits.h \
 	$(SUBNAME)/IsolineValues.h \

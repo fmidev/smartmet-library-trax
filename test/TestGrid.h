@@ -71,7 +71,11 @@ class TestGrid : public Grid
           out += indent;
         else
           out += ' ';
-        out += fmt::format("{}", (*this)(i, j));
+        auto value = (*this)(i, j);
+        if (std::isnan(value))
+          out += '-';
+        else
+          out += fmt::format("{}", value);
       }
       out += '\n';
     }

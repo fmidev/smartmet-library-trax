@@ -25,28 +25,6 @@ void remove_ghosts(Polylines& rings, Polylines& lines)
   }
 }
 
-Polyline make_invert_bbox(double mincoord, double maxcoord)
-{
-  auto xmin = mincoord;
-  auto xmax = maxcoord;
-  auto ymin = mincoord;
-  auto ymax = maxcoord;
-  return Polyline{xmin, ymin, xmin, ymax, xmax, ymax, xmax, ymin, xmin, ymin};
-}
-
-void invert(Polylines& shells, Holes& holes, double mincoord, double maxcoord)
-{
-  for (auto& shell : shells)
-    shell.reverse();
-
-  for (auto& hole : holes)
-    hole.reverse();
-
-  std::swap(shells, holes);
-
-  shells.push_back(make_invert_bbox(mincoord, maxcoord));
-}
-
 }  // namespace
 
 Builder::Builder(Builder&& other) noexcept
@@ -79,7 +57,7 @@ void Builder::finish_isolines(bool strict)
     m_geom.add(std::move(line));
 }
 
-void Builder::finish_isobands(bool strict, bool missing, double mincoord, double maxcoord)
+void Builder::finish_isobands(bool strict, bool missing)
 {
   Polylines shells;
   Holes holes;
@@ -92,22 +70,6 @@ void Builder::finish_isobands(bool strict, bool missing, double mincoord, double
   for (const auto& hole : holes)
     std::cout << "\thole: " << hole.wkt() << "\n";
 #endif
-
-  // Invert when contouring missing values
-  if (missing)
-  {
-#if 0
-    std::cout << "Inverting\n";
-#endif
-    invert(shells, holes, mincoord, maxcoord);
-#if 0
-    std::cout << "After:\n";
-    for (const auto& shell : shells)
-      std::cout << "\tshell: " << shell.wkt() << "\n";
-    for (const auto& hole : holes)
-      std::cout << "\thole: " << hole.wkt() << "\n";
-#endif
-  }
 
   Polygons polygons;
   build_polygons(polygons, shells, holes);

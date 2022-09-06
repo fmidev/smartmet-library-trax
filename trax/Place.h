@@ -58,6 +58,17 @@ inline int place_hash(Place c1, Place c2)
   return TRAX_EDGE_HASH(c1, c2);
 }
 
+inline int nan_hash(double z)
+{
+  return static_cast<int>(std::isnan(z) ? Place::Inside : Place::Below);
+}
+
+// The hash value must match the rect hash above for Inside and Below, hence times 4 instead of 2
+inline int nan_hash(double z1, double z2, double z3, double z4)
+{
+  return nan_hash(z1) + 4 * (nan_hash(z2) + 4 * (nan_hash(z3) + 4 * nan_hash(z4)));
+}
+
 std::string to_string(Place place);
 
 }  // namespace Trax
