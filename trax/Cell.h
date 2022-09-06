@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GridPoint.h"
 #include <utility>  // std::pair
 
 namespace Trax
@@ -9,25 +10,17 @@ struct Cell
   Cell() = delete;
 
   // clang-format off
-  Cell(float X1, float Y1, float Z1,
-       float X2, float Y2, float Z2,
-       float X3, float Y3, float Z3,
-       float X4, float Y4, float Z4,
-       int I, int J)
-      : x1(X1), y1(Y1), z1(Z1),
-        x2(X2), y2(Y2), z2(Z2),
-        x3(X3), y3(Y3), z3(Z3),
-        x4(X4), y4(Y4), z4(Z4),
-        i(I), j(J)
+  Cell(const GridPoint& P1, const GridPoint& P2, const GridPoint& P3, const GridPoint& P4, int I, int J)
+      : p1(P1), p2(P2), p3(P3), p4(P4), i(I), j(J)
   {
   }
   // clang-format on
 
-  float x1, y1, z1;  // below left
-  float x2, y2, z2;  // above left
-  float x3, y3, z3;  // above right
-  float x4, y4, z4;  // below right
-  int i;             // below left corner indices
+  GridPoint p1;  // below left
+  GridPoint p2;  // above left
+  GridPoint p3;  // above right
+  GridPoint p4;  // below right
+  int i;         // below left corner indices
   int j;
 };
 

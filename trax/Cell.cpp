@@ -9,25 +9,25 @@ namespace Trax
 
 bool is_saddle(const Cell& cell)
 {
-  auto lo = std::min(cell.z1, cell.z2);
-  auto hi = std::max(cell.z1, cell.z2);
-  lo = std::max(lo, std::min(cell.z2, cell.z3));
-  hi = std::min(hi, std::max(cell.z2, cell.z3));
+  auto lo = std::min(cell.p1.z, cell.p2.z);
+  auto hi = std::max(cell.p1.z, cell.p2.z);
+  lo = std::max(lo, std::min(cell.p2.z, cell.p3.z));
+  hi = std::min(hi, std::max(cell.p2.z, cell.p3.z));
   if (lo >= hi)
     return false;
-  lo = std::max(lo, std::min(cell.z3, cell.z4));
-  hi = std::min(hi, std::max(cell.z3, cell.z4));
+  lo = std::max(lo, std::min(cell.p3.z, cell.p4.z));
+  hi = std::min(hi, std::max(cell.p3.z, cell.p4.z));
   if (lo >= hi)
     return false;
-  lo = std::max(lo, std::min(cell.z4, cell.z1));
-  hi = std::min(hi, std::max(cell.z4, cell.z1));
+  lo = std::max(lo, std::min(cell.p4.z, cell.p1.z));
+  hi = std::min(hi, std::max(cell.p4.z, cell.p1.z));
   return (hi > lo);
 }
 
 // Test which diagonal has larger values
 bool first_diagonal_larger(const Cell& cell)
 {
-  return (cell.z1 + cell.z3 > cell.z2 + cell.z4);
+  return (cell.p1.z + cell.p3.z > cell.p2.z + cell.p4.z);
 }
 
 // Return minmax values of a grid cell. Returns NaN if all the elements are NaN.
@@ -47,8 +47,8 @@ inline MinMax minmax(float z1, float z2)
 
 MinMax minmax(const Cell& cell)
 {
-  auto tmp1 = minmax(cell.z1, cell.z2);
-  auto tmp2 = minmax(cell.z3, cell.z4);
+  auto tmp1 = minmax(cell.p1.z, cell.p2.z);
+  auto tmp2 = minmax(cell.p3.z, cell.p4.z);
   auto tmp3 = minmax(tmp1.first, tmp2.first);
   auto tmp4 = minmax(tmp1.second, tmp2.second);
   return MinMax(tmp3.first, tmp4.second);
