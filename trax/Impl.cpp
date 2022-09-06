@@ -296,34 +296,21 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 
   fill_buffers(grid, bbox, jmin, row1);
 
+  std::vector<std::size_t> loop_limits;
+  if (!needs_two_passes)
+    loop_limits = {0, nx - 1};
+  else
+    loop_limits = {imid, nx - 1, 0, imid - 1};
+
   for (std::size_t j = jmin; j <= jmax; j++)
   {
     fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
 
-    if (!needs_two_passes)
-    {
-      for (std::size_t i = 0; i < nx - 1; i++)
-      {
+    for (std::size_t k = 0; k < loop_limits.size(); k += 2)
+      for (std::size_t i = loop_limits[k]; i < loop_limits[k + 1]; i++)
         if (grid.valid(imin + i, j))
           isoband(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i, j));
-      }
-    }
-    else
-    {
-      for (std::size_t i = imid; i < nx - 1; i++)
-      {
-        if (grid.valid(imin + i, j))
-          isoband(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i, j));
-      }
-      for (std::size_t i = 0; i < imid - 1; i++)
-      {
-        if (grid.valid(imin + i, j))
-          isoband(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i, j));
-      }
-    }
-
     finish_row();
-
     std::swap(row1, row2);  // roll down the coordinates to the bottom row
   }
 
@@ -379,34 +366,21 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   std::vector<GridPoint> row2(nx);
   fill_buffers(grid, bbox, jmin, row1);
 
+  std::vector<std::size_t> loop_limits;
+  if (!needs_two_passes)
+    loop_limits = {0, nx - 1};
+  else
+    loop_limits = {imid, nx - 1, 0, imid - 1};
+
   for (std::size_t j = jmin; j <= jmax; j++)
   {
     fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
 
-    if (!needs_two_passes)
-    {
-      for (std::size_t i = 0; i < nx - 1; i++)
-      {
+    for (std::size_t k = 0; k < loop_limits.size(); k += 2)
+      for (std::size_t i = loop_limits[k]; i < loop_limits[k + 1]; i++)
         if (grid.valid(imin + i, j))
           isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i, j));
-      }
-    }
-    else
-    {
-      for (std::size_t i = imid; i < nx - 1; i++)
-      {
-        if (grid.valid(imin + i, j))
-          isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i, j));
-      }
-      for (std::size_t i = 0; i < imid - 1; i++)
-      {
-        if (grid.valid(imin + i, j))
-          isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i, j));
-      }
-    }
-
     finish_row();
-
     std::swap(row1, row2);  // roll down the coordinates to the bottom row
   }
 
@@ -427,6 +401,6 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
                 << tmp.wkt() << "\n";
   }
   return res;
-}
+}  // namespace Trax
 
 }  // namespace Trax
