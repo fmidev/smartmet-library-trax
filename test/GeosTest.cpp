@@ -33,26 +33,30 @@ BOOST_AUTO_TEST_CASE(to_geos_geom)
   {
     Trax::GeometryCollection geom;
 
-    BOOST_CHECK_EQUAL(writer.write(Trax::to_geos_geom(geom, factory).get()), "GEOMETRYCOLLECTION EMPTY");
+    BOOST_CHECK_EQUAL(writer.write(Trax::to_geos_geom(geom, factory).get()),
+                      "GEOMETRYCOLLECTION EMPTY");
 
     geom.add(Trax::Polygon({{0, 0, 0, 4, 4, 4, 4, 0, 0, 0}}));
-    BOOST_CHECK_EQUAL(writer.write(Trax::to_geos_geom(geom, factory).get()), "POLYGON ((0 0, 0 4, 4 4, 4 0, 0 0))");
+    BOOST_CHECK_EQUAL(writer.write(Trax::to_geos_geom(geom, factory).get()),
+                      "POLYGON ((0 0, 0 4, 4 4, 4 0, 0 0))");
 
     geom.add(Trax::Polygon({{5, 5, 5, 6, 6, 6, 6, 5, 5, 5}}));
     BOOST_CHECK_EQUAL(writer.write(Trax::to_geos_geom(geom, factory).get()),
                       "MULTIPOLYGON (((0 0, 0 4, 4 4, 4 0, 0 0)), ((5 5, 5 6, 6 6, 6 5, 5 5)))");
 
     geom.add(Trax::Polyline({1, 1, 2, 2}));
-    BOOST_CHECK_EQUAL(writer.write(Trax::to_geos_geom(geom, factory).get()),
-                      "GEOMETRYCOLLECTION (MULTIPOLYGON (((0 0, 0 4, 4 4, 4 0, 0 0)), ((5 5, 5 6, 6 6, 6 5, 5 "
-                      "5))), LINESTRING (1 1, 2 2))");
+    BOOST_CHECK_EQUAL(
+        writer.write(Trax::to_geos_geom(geom, factory).get()),
+        "GEOMETRYCOLLECTION (MULTIPOLYGON (((0 0, 0 4, 4 4, 4 0, 0 0)), ((5 5, 5 6, 6 6, 6 5, 5 "
+        "5))), LINESTRING (1 1, 2 2))");
   }
 
   {
     Trax::GeometryCollection geom;
 
     geom.add(Trax::Polyline({1, 1, 2, 2}));
-    BOOST_CHECK_EQUAL(writer.write(Trax::to_geos_geom(geom, factory).get()), "LINESTRING (1 1, 2 2)");
+    BOOST_CHECK_EQUAL(writer.write(Trax::to_geos_geom(geom, factory).get()),
+                      "LINESTRING (1 1, 2 2)");
 
     geom.add(Trax::Polyline({5, 5, 6, 6}));
     BOOST_CHECK_EQUAL(writer.write(Trax::to_geos_geom(geom, factory).get()),

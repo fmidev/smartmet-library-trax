@@ -54,7 +54,7 @@ class JointMerger
   JointPool::iterator m_last_cell_start{m_pool.end()};  // range of last cell
   JointPool::iterator m_last_cell_end{m_pool.end()};    // merge may include last cell plus one ring
   JointPool::iterator m_cell_merge_end{m_pool.end()};  // from current cell, this iterator tracks it
-  std::uint32_t m_maxrow = 0;  // maximum row number in the data so far in the topmost finished row
+  std::int32_t m_maxrow = 0;  // maximum row number in the data so far in the topmost finished row
 };
 
 }  // namespace Trax

@@ -19,8 +19,8 @@ class Grid
   virtual bool valid(long i, long j) const = 0;
   virtual std::size_t width() const = 0;
   virtual std::size_t height() const = 0;
-  virtual std::size_t shift() const { return 0UL; }
-  virtual std::array<std::size_t, 4> bbox() const { return {0, 0, width() - 2, height() - 2}; }
+  virtual std::size_t shift() const;
+  virtual std::array<long, 4> bbox() const;
 };
 
 }  // namespace Trax

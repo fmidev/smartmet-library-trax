@@ -8,7 +8,7 @@ namespace Trax
 {
 struct Vertex
 {
-  Vertex(std::uint32_t i, std::uint32_t j, VertexType vt, double x, double y, bool gh)
+  Vertex(std::int32_t i, std::int32_t j, VertexType vt, double x, double y, bool gh)
       : x(x), y(y), column(i), row(j), type(vt), ghost(gh)
   {
   }
@@ -16,8 +16,8 @@ struct Vertex
 
   float x = 0;  // using float instead of double gives another performance boost
   float y = 0;
-  std::uint32_t column = 0;              // we need column at the minimum for fast merge of rows
-  std::uint32_t row = 0;                 // but also use row for exact vertex comparisons.
+  std::int32_t column = 0;               // we need column at the minimum for fast merge of rows
+  std::int32_t row = 0;                  // but also use row for exact vertex comparisons.
   VertexType type = VertexType::Corner;  // intersection type
   bool ghost = false;                    // true if the value is not exactly range.lo()
 };

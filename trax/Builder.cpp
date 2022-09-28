@@ -63,14 +63,6 @@ void Builder::finish_isobands(bool strict, bool missing)
   Holes holes;
   build_rings(shells, holes, m_merger.pool(), strict);
 
-#if 0
-  std::cout << "Before:\n";
-  for (const auto& shell : shells)
-    std::cout << "\tshell: " << shell.wkt() << "\n";
-  for (const auto& hole : holes)
-    std::cout << "\thole: " << hole.wkt() << "\n";
-#endif
-
   Polygons polygons;
   build_polygons(polygons, shells, holes);
 

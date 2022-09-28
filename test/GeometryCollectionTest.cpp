@@ -31,9 +31,9 @@ BOOST_AUTO_TEST_CASE(wkt)
     BOOST_CHECK_EQUAL(geom.wkt(), "MULTIPOLYGON (((0 0,0 4,4 4,4 0,0 0)),((5 5,5 6,6 6,6 5,5 5)))");
 
     geom.add(Trax::Polyline({1, 1, 2, 2}));
-    BOOST_CHECK_EQUAL(
-        geom.wkt(),
-        "GEOMETRYCOLLECTION (MULTIPOLYGON (((0 0,0 4,4 4,4 0,0 0)),((5 5,5 6,6 6,6 5,5 5))),LINESTRING (1 1,2 2))");
+    BOOST_CHECK_EQUAL(geom.wkt(),
+                      "GEOMETRYCOLLECTION (MULTIPOLYGON (((0 0,0 4,4 4,4 0,0 0)),((5 5,5 6,6 6,6 "
+                      "5,5 5))),LINESTRING (1 1,2 2))");
   }
 
   {

@@ -228,7 +228,7 @@ void Contour::Impl::isoband(int index, const Cell& c)
 
 // Extract data from grid valid area
 void fill_buffers(const Grid& grid,
-                  const std::array<std::size_t, 4>& area,
+                  const std::array<long, 4>& area,
                   std::size_t j,
                   std::vector<GridPoint>& points)
 {
@@ -262,7 +262,7 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   // Determine whether we need to split rows into two parts due to shifted global data. Otherwise
   // we'd need special code to handle joining the first and last cells.
 
-  const auto shift = grid.shift();
+  long shift = grid.shift();
   const auto imid = shift - imin;
   const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
 
@@ -273,20 +273,26 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 
   fill_buffers(grid, bbox, jmin, row1);
 
-  std::vector<std::size_t> loop_limits;
+  std::vector<long> loop_limits;
   if (!needs_two_passes)
     loop_limits = {0, nx - 1};
   else
     loop_limits = {imid, nx - 1, 0, imid - 1};
 
-  for (std::size_t j = jmin; j <= jmax; j++)
+  for (auto j = jmin; j <= jmax; j++)
   {
     fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
 
-    for (std::size_t k = 0; k < loop_limits.size(); k += 2)
-      for (std::size_t i = loop_limits[k]; i < loop_limits[k + 1]; i++)
+    // Keep Cell i,j coordinates continuous by applying a shift in the second loop
+    auto ishift = 0;
+    for (auto k = 0UL; k < loop_limits.size(); k += 2)
+    {
+      for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
         if (grid.valid(imin + i, j))
-          isoband(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i, j));
+          isoband(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
+      ishift = loop_limits[k + 1];
+    }
+
     finish_row();
     std::swap(row1, row2);  // roll down the coordinates to the bottom row
   }
@@ -332,7 +338,7 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   // Determine whether we need to split rows into two parts due to shifted global data. Otherwise
   // we'd need special code to handle joining the first and last cells.
 
-  const auto shift = grid.shift();
+  long shift = grid.shift();
   const auto imid = shift - imin;
   const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
 
@@ -342,20 +348,25 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   std::vector<GridPoint> row2(nx);
   fill_buffers(grid, bbox, jmin, row1);
 
-  std::vector<std::size_t> loop_limits;
+  std::vector<long> loop_limits;
   if (!needs_two_passes)
     loop_limits = {0, nx - 1};
   else
     loop_limits = {imid, nx - 1, 0, imid - 1};
 
-  for (std::size_t j = jmin; j <= jmax; j++)
+  for (auto j = jmin; j <= jmax; j++)
   {
     fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
 
-    for (std::size_t k = 0; k < loop_limits.size(); k += 2)
-      for (std::size_t i = loop_limits[k]; i < loop_limits[k + 1]; i++)
+    // Keep Cell i,j coordinates continuous by applying a shift in the second loop
+    auto ishift = 0;
+    for (auto k = 0UL; k < loop_limits.size(); k += 2)
+    {
+      for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
         if (grid.valid(imin + i, j))
-          isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i, j));
+          isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
+      ishift = loop_limits[k + 1];
+    }
     finish_row();
     std::swap(row1, row2);  // roll down the coordinates to the bottom row
   }

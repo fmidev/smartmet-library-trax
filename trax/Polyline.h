@@ -5,8 +5,8 @@
 #include <deque>
 #include <initializer_list>
 #include <list>
-#include <string>
 #include <sstream>
+#include <string>
 
 namespace Trax
 {

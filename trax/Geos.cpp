@@ -55,7 +55,8 @@ gg::LinearRing* to_geos_linearring(const Polyline& ring, const gg::GeometryFacto
 }
 }  // namespace
 
-std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom, const gg::GeometryFactory::Ptr& factory)
+std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
+                                           const gg::GeometryFactory::Ptr& factory)
 {
   if (geom.empty())
     return factory->createEmptyGeometry();

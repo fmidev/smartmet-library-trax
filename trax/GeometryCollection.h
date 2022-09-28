@@ -2,8 +2,8 @@
 
 #include "Polygon.h"
 #include "Polyline.h"
-#include <vector>
 #include <sstream>
+#include <vector>
 
 namespace Trax
 {
@@ -22,7 +22,7 @@ class GeometryCollection
   GeometryCollection& normalize();
 
  private:
-  uint writeData(unsigned char *pos,unsigned char *endBuf,void *data,uint dataSize) const;
+  uint writeData(unsigned char* pos, unsigned char* endBuf, void* data, uint dataSize) const;
 
   std::vector<Polygon> m_polygons;
   std::vector<Polyline> m_polylines;

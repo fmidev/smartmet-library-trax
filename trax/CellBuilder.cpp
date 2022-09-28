@@ -118,9 +118,9 @@ class JointBuilder
                   int i2,
                   int j2,
                   const GridPoint& g2);
-  void add(std::uint32_t column, std::uint32_t row, const point& p, float z);
-  void add(std::uint32_t column, std::uint32_t row, VertexType vtype, const GridPoint& p);
-  void add(std::uint32_t column, std::uint32_t row, VertexType vtype, float x, float y, float z);
+  void add(std::int32_t column, std::int32_t row, const point& p, float z);
+  void add(std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p);
+  void add(std::int32_t column, std::int32_t row, VertexType vtype, float x, float y, float z);
   void close();
   void finish_cell();
 
@@ -141,21 +141,18 @@ class JointBuilder
 // and neither can decrease (both row&column are equal at the bottom left corner). Hence a simple
 // std::max solution is enough to merge the two vertices.
 
-inline void JointBuilder::add(std::uint32_t column, std::uint32_t row, const point& p, float z)
+inline void JointBuilder::add(std::int32_t column, std::int32_t row, const point& p, float z)
 {
   add(column + p.di, row + p.dj, p.type, p.x, p.y, z);
 }
 
-void JointBuilder::add(std::uint32_t column,
-                       std::uint32_t row,
-                       VertexType vtype,
-                       const GridPoint& p)
+void JointBuilder::add(std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p)
 {
   add(column, row, vtype, p.x, p.y, p.z);
 }
 
 void JointBuilder::add(
-    std::uint32_t column, std::uint32_t row, VertexType vtype, float x, float y, float z)
+    std::int32_t column, std::int32_t row, VertexType vtype, float x, float y, float z)
 {
   const auto n = m_vertices.size();
   // Note that NaN is always marked a ghost as needed for midpoint algorithm

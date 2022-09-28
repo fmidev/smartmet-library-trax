@@ -3,9 +3,9 @@
 
 #include "Polyline.h"
 #include <list>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
 
 namespace Trax
 {
@@ -37,7 +37,6 @@ class Polygon
   void wkb_body(std::ostringstream& out) const;
 
  private:
-
   Polyline m_exterior;
   std::vector<Polyline> m_holes;
 };

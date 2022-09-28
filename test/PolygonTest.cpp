@@ -25,8 +25,11 @@ BOOST_AUTO_TEST_CASE(wkt)
   Trax::Polygon poly2{{0, 0, 0, 4, 4, 4, 4, 0, 0, 0}, {1, 1, 1, 2, 2, 2, 2, 1, 1, 1}};
   BOOST_CHECK_EQUAL(poly2.wkt(), "POLYGON ((0 0,0 4,4 4,4 0,0 0),(1 1,1 2,2 2,2 1,1 1))");
 
-  Trax::Polygon poly3{{0, 0, 0, 4, 4, 4, 4, 0, 0, 0}, {1, 1, 1, 2, 2, 2, 2, 1, 1, 1}, {2, 2, 2, 3, 3, 3, 3, 2, 2, 2}};
-  BOOST_CHECK_EQUAL(poly3.wkt(), "POLYGON ((0 0,0 4,4 4,4 0,0 0),(1 1,1 2,2 2,2 1,1 1),(2 2,2 3,3 3,3 2,2 2))");
+  Trax::Polygon poly3{{0, 0, 0, 4, 4, 4, 4, 0, 0, 0},
+                      {1, 1, 1, 2, 2, 2, 2, 1, 1, 1},
+                      {2, 2, 2, 3, 3, 3, 3, 2, 2, 2}};
+  BOOST_CHECK_EQUAL(poly3.wkt(),
+                    "POLYGON ((0 0,0 4,4 4,4 0,0 0),(1 1,1 2,2 2,2 1,1 1),(2 2,2 3,3 3,3 2,2 2))");
 }
 
 BOOST_AUTO_TEST_CASE(hole)

@@ -63,27 +63,23 @@ std::string Polygon::wkt_body() const
   return ret;
 }
 
-
-
 void Polygon::wkb(std::ostringstream& out) const
 {
   unsigned char byteOrder = 1;
   int n = 1;
-  if(*(char *)&n == 0)
+  if (*(char*)&n == 0)
     byteOrder = 0;
 
-  out.write((const char*)&byteOrder,sizeof(byteOrder));
-  uint type = 3; // polygon
-  out.write((const char*)&type,sizeof(type));
+  out.write((const char*)&byteOrder, sizeof(byteOrder));
+  uint type = 3;  // polygon
+  out.write((const char*)&type, sizeof(type));
   wkb_body(out);
 }
-
-
 
 void Polygon::wkb_body(std::ostringstream& out) const
 {
   uint ringCount = m_holes.size() + 1;
-  out.write((const char*)&ringCount,sizeof(ringCount));
+  out.write((const char*)&ringCount, sizeof(ringCount));
 
   m_exterior.wkb_body(out);
 
@@ -92,7 +88,6 @@ void Polygon::wkb_body(std::ostringstream& out) const
     hole.wkb_body(out);
   }
 }
-
 
 // Normalize for testing purposes
 Polygon& Polygon::normalize()

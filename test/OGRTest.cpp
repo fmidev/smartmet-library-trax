@@ -32,9 +32,10 @@ BOOST_AUTO_TEST_CASE(to_ogr_geom)
                       "MULTIPOLYGON (((0 0,0 4,4 4,4 0,0 0)),((5 5,5 6,6 6,6 5,5 5)))");
 
     geom.add(Trax::Polyline({1, 1, 2, 2}));
-    BOOST_CHECK_EQUAL(Trax::to_ogr_geom(geom)->exportToWkt(),
-                      "GEOMETRYCOLLECTION (MULTIPOLYGON (((0 0,0 4,4 4,4 0,0 0)),((5 5,5 6,6 6,6 5,5 "
-                      "5))),LINESTRING (1 1,2 2))");
+    BOOST_CHECK_EQUAL(
+        Trax::to_ogr_geom(geom)->exportToWkt(),
+        "GEOMETRYCOLLECTION (MULTIPOLYGON (((0 0,0 4,4 4,4 0,0 0)),((5 5,5 6,6 6,6 5,5 "
+        "5))),LINESTRING (1 1,2 2))");
   }
 
   {
@@ -44,6 +45,7 @@ BOOST_AUTO_TEST_CASE(to_ogr_geom)
     BOOST_CHECK_EQUAL(Trax::to_ogr_geom(geom)->exportToWkt(), "LINESTRING (1 1,2 2)");
 
     geom.add(Trax::Polyline({5, 5, 6, 6}));
-    BOOST_CHECK_EQUAL(Trax::to_ogr_geom(geom)->exportToWkt(), "MULTILINESTRING ((1 1,2 2),(5 5,6 6))");
+    BOOST_CHECK_EQUAL(Trax::to_ogr_geom(geom)->exportToWkt(),
+                      "MULTILINESTRING ((1 1,2 2),(5 5,6 6))");
   }
 }
