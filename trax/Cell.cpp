@@ -1,5 +1,6 @@
 #include "Cell.h"
 #include <algorithm>  // std::minmax
+#include <cmath>
 
 namespace Trax
 {
