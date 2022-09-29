@@ -10,7 +10,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 22.8.4
+Version: 22.9.29
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -19,7 +19,7 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 22.6.16
+BuildRequires: smartmet-library-macgyver-devel >= 22.8.23
 %if %{defined el7}
 BuildRequires: devtoolset-7-gcc-c++
 #TestRequires: devtoolset-7-gcc-c++
@@ -29,7 +29,7 @@ BuildRequires: rpm-build
 BuildRequires: gdal34-devel
 BuildRequires: geos310-devel
 BuildRequires: fmt-devel
-Requires: smartmet-library-macgyver >= 22.6.16
+Requires: smartmet-library-macgyver >= 22.8.23
 Requires: gdal34
 Requires: geos310
 Requires: fmt
@@ -40,7 +40,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos310-devel
 #TestRequires: gdal34-devel
-#TestRequires: smartmet-library-macgyver-devel >= 22.6.16
+#TestRequires: smartmet-library-macgyver-devel >= 22.8.23
 
 %description
 Isoline/isoband calculation library.
@@ -84,6 +84,10 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Thu Sep 29 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.9.29-1.fmi
+- Fixed global wrapped data problems
+- Enabled signed grid coordinates to fix missing value contouring problems
+
 * Thu Aug  4 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.8.4-1.fmi
 - Bug fix to one 2x2 cell isoband case
 
