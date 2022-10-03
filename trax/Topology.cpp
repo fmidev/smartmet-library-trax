@@ -513,24 +513,24 @@ void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
     auto& hole = *it;  // shorthand variable
 
     if (hole.size() < 4)  // discard too small holes
-      continue;
-
-    auto candidates = possible_shells(rtree, hole);
-#if 0
-    std::cout << fmt::format("\t{} candidates for hole {}\n", candidates.size(), counter++);
-#endif
-    if (candidates.empty())
-    {
-      ++it;  // should be isolated hole when calculating isolines
-    }
+      ++it;
     else
     {
-      auto polygon = innermost_polygon(candidates);
+      auto candidates = possible_shells(rtree, hole);
 #if 0
-      std::cout << fmt::format("\tInnermost polygon: {}\n", polygon->wkt());
+      std::cout << fmt::format("\t{} candidates for hole {}\n", candidates.size(), counter++);
 #endif
-      polygon->hole(hole);
-      it = holes.erase(it);
+      if (candidates.empty())
+        ++it;  // should be isolated hole when calculating isolines
+      else
+      {
+        auto polygon = innermost_polygon(candidates);
+#if 0
+        std::cout << fmt::format("\tInnermost polygon: {}\n", polygon->wkt());
+#endif
+        polygon->hole(hole);
+        it = holes.erase(it);
+      }
     }
   }
 
