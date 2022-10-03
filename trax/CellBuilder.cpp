@@ -111,10 +111,12 @@ class JointBuilder
                   int di,
                   int dj,
                   Place c1,
+                  float z1,
                   int i1,
                   int j1,
                   const GridPoint& g1,
                   Place c2,
+                  float z2,
                   int i2,
                   int j2,
                   const GridPoint& g2);
@@ -1588,14 +1590,14 @@ void JointBuilder::build_linear(const Cell& c)
     {
       // clang-format off
       build_edge(VertexType::Horizontal_lo, 1, 0,
-                 c2, c.i, c.j + 1, c.p2,
-                 c3, c.i + 1, c.j + 1, c.p3);
+                 c2, c.p2.z, c.i, c.j + 1, c.p2,
+                 c3, c.p3.z, c.i + 1, c.j + 1, c.p3);
       build_edge(VertexType::Vertical_lo, 0, -1,
-                 c3, c.i + 1, c.j + 1, c.p3,
-                 c4, c.i + 1, c.j, c.p4);
+                 c3, c.p3.z, c.i + 1, c.j + 1, c.p3,
+                 c4, c.p4.z, c.i + 1, c.j, c.p4);
       build_edge(VertexType::Diagonal_lo, -1, 0,
-                 c4, c.i + 1, c.j, c.p4,
-                 c2, c.i, c.j + 1, c.p2);
+                 c4, c.p4.z, c.i + 1, c.j, c.p4,
+                 c2, c.p2.z, c.i, c.j + 1, c.p2);
       // clang-format on
       close();
       break;
@@ -1629,14 +1631,14 @@ void JointBuilder::build_linear(const Cell& c)
     {
       // clang-format off
       build_edge(VertexType::Diagonal_lo, 1, 1,
-                 c1, c.i, c.j, c.p1,
-                 c3, c.i + 1, c.j + 1, c.p3);
+                 c1, c.p1.z, c.i, c.j, c.p1,
+                 c3, c.p3.z, c.i + 1, c.j + 1, c.p3);
       build_edge(VertexType::Vertical_lo, 0, -1,
-                 c3, c.i + 1, c.j + 1, c.p3,
-                 c4, c.i + 1, c.j, c.p4);
+                 c3, c.p3.z, c.i + 1, c.j + 1, c.p3,
+                 c4, c.p4.z, c.i + 1, c.j, c.p4);
       build_edge(VertexType::Horizontal_lo, -1, 0,
-                 c4, c.i + 1, c.j, c.p4,
-                 c1, c.i, c.j, c.p1);
+                 c4, c.p4.z, c.i + 1, c.j, c.p4,
+                 c1, c.p1.z, c.i, c.j, c.p1);
       // clang-format on
       close();
       break;
@@ -1670,14 +1672,14 @@ void JointBuilder::build_linear(const Cell& c)
     {
       // clang-format off
       build_edge(VertexType::Vertical_lo, 0, 1,
-                 c1, c.i, c.j, c.p1,
-                 c2, c.i, c.j + 1, c.p2);
+                 c1, c.p1.z, c.i, c.j, c.p1,
+                 c2, c.p2.z, c.i, c.j + 1, c.p2);
       build_edge(VertexType::Diagonal_lo, 1, -1,
-                 c2, c.i, c.j + 1, c.p2,
-                 c4, c.i + 1, c.j, c.p4);
+                 c2, c.p2.z, c.i, c.j + 1, c.p2,
+                 c4, c.p4.z, c.i + 1, c.j, c.p4);
       build_edge(VertexType::Horizontal_lo, -1, 0,
-                 c4, c.i + 1, c.j, c.p4,
-                 c1, c.i, c.j, c.p1);
+                 c4, c.p4.z, c.i + 1, c.j, c.p4,
+                 c1, c.p1.z, c.i, c.j, c.p1);
       // clang-format on
       close();
       break;
@@ -1711,14 +1713,14 @@ void JointBuilder::build_linear(const Cell& c)
     {
       // clang-format off
       build_edge(VertexType::Vertical_lo, 0, 1,
-                 c1, c.i, c.j, c.p1,
-                 c2, c.i, c.j + 1, c.p2);
+                 c1, c.p1.z, c.i, c.j, c.p1,
+                 c2, c.p2.z, c.i, c.j + 1, c.p2);
       build_edge(VertexType::Horizontal_lo, 1, 0,
-                 c2, c.i, c.j + 1, c.p2,
-                 c3, c.i + 1, c.j + 1, c.p3);
+                 c2, c.p2.z, c.i, c.j + 1, c.p2,
+                 c3, c.p3.z, c.i + 1, c.j + 1, c.p3);
       build_edge(VertexType::Diagonal_lo, -1, -1,
-                 c3, c.i + 1, c.j + 1, c.p3,
-                 c1, c.i, c.j, c.p1);
+                 c3, c.p3.z, c.i + 1, c.j + 1, c.p3,
+                 c1, c.p1.z, c.i, c.j, c.p1);
       // clang-format on
       close();
       break;
@@ -1744,10 +1746,12 @@ void JointBuilder::build_edge(VertexType type,
                               int di,
                               int dj,
                               Place c1,
+                              float z1,
                               int i1,
                               int j1,
                               const GridPoint& g1,
                               Place c2,
+                              float z2,
                               int i2,
                               int j2,
                               const GridPoint& g2)
@@ -1761,8 +1765,11 @@ void JointBuilder::build_edge(VertexType type,
     }
     case TRAX_EDGE_HASH(Place::Below, Place::Inside):
     {
-      const auto p = intersect(g1, g2, di, dj, lo(type), m_range.lo());
-      add(std::min(i1, i2), std::min(j1, j2), p, m_range.lo());
+      if (z2 != m_range.lo())
+      {
+        const auto p = intersect(g1, g2, di, dj, lo(type), m_range.lo());
+        add(std::min(i1, i2), std::min(j1, j2), p, m_range.lo());
+      }
       break;
     }
     case TRAX_EDGE_HASH(Place::Below, Place::Above):
@@ -1776,9 +1783,12 @@ void JointBuilder::build_edge(VertexType type,
     }
     case TRAX_EDGE_HASH(Place::Inside, Place::Below):
     {
-      const auto p = intersect(g1, g2, di, dj, lo(type), m_range.lo());
-      add(i1, j1, VertexType::Corner, g1);
-      add(std::min(i1, i2), std::min(j1, j2), p, m_range.lo());
+      if (z1 != m_range.lo())
+      {
+        const auto p = intersect(g1, g2, di, dj, lo(type), m_range.lo());
+        add(i1, j1, VertexType::Corner, g1);
+        add(std::min(i1, i2), std::min(j1, j2), p, m_range.lo());
+      }
       break;
     }
     case TRAX_EDGE_HASH(Place::Inside, Place::Inside):

@@ -11,7 +11,7 @@
 Summary: Trax library
 Name: %{SPECNAME}
 Version: 22.10.3
-Release: 1%{?dist}.fmi
+Release: 2%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
 URL: https://github.com/fmidev/smartmet-library-trax
@@ -84,6 +84,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Mon Oct  3 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.10.3-2.fmi
+- Fixed bug in isoband calculation for cells with one missing value
+
 * Mon Oct  3 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.10.3-1.fmi
 - Fixed an eternal loop when encountering too small holes
 
