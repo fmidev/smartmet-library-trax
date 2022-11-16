@@ -448,6 +448,14 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
     // to the right. On the other hand, if the first vertex has duplicates, we are free to
     // choose any continuation we want, no need to select the rightmost turn.
 
+    // TODO: Perhaps we should collect a list of skipped joints and add a second loop after
+    // this one to make sure all joints have been processed? Pathological data might have
+    // a case where a polygon has alternative paths at all vertices. In fact, it may be
+    // possible that the list would have to be processed again and again until all joints
+    // have been used. To prevent an eternal loop we'd need a function called
+    // has_unused_duplicates. In fact, it would be better to have one right here too
+    // to simplify the logic, possibly at the other call site too.
+
     if (!has_duplicates(joint->next))
     {
       auto polylines = extract_right_turning_sequence(joint, strict);
