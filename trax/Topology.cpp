@@ -216,9 +216,11 @@ Polylines extract_right_turning_sequence(Joint* joint, bool strict)
 
     // Choose rightmost turn. If there are multiple connections, start a new polyline
     // so that we can choose the leftmost turns later on to separate holes touching
-    // the exerior.
+    // the exterior. Note that if we have only one vertex so far, we do not need to
+    // care about possible duplicates, since we can choose any continuation since
+    // there is no need to take the rightmost turn.
 
-    if (!has_duplicates(joint))
+    if (!has_duplicates(joint) || polyline.size() == 1)
     {
       // Trivial case of only one possible continuation
       if (joint->used)
@@ -244,7 +246,7 @@ Polylines extract_right_turning_sequence(Joint* joint, bool strict)
     }
     else
     {
-      // Start new polyline so we can extract holes later on unless the it contains
+      // Start new polyline so we can extract holes later on unless it contains the
       // current vertex only
       if (polyline.size() > 1)
       {
@@ -442,8 +444,11 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
                              joint->next->vertex.y);
 #endif
 
-    // Skip unused multijoints as start points since then we cannot calculate the polyline end angle
-    if (!has_duplicates(joint))
+    // If the next vertex has duplicates, we cannot calculate the angle from which to turn most
+    // to the right. On the other hand, if the first vertex has duplicates, we are free to
+    // choose any continuation we want, no need to select the rightmost turn.
+
+    if (!has_duplicates(joint->next))
     {
       auto polylines = extract_right_turning_sequence(joint, strict);
 

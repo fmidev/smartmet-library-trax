@@ -87,6 +87,9 @@ std::pair<double, double> Polyline::inside_point() const
 double Polyline::end_angle() const
 {
   const auto n = m_points.size() - 2;
+  if (n < 0)
+    throw Fmi::Exception(BCP, "Cannot calculate polyline end angle when size < 2");
+
   auto x1 = m_points[n].x;
   auto y1 = m_points[n].y;
   auto x2 = m_points[n + 1].x;
@@ -97,6 +100,9 @@ double Polyline::end_angle() const
 // Polyline start angle
 double Polyline::start_angle() const
 {
+  if (m_points.size() < 2)
+    throw Fmi::Exception(BCP, "Cannot calculate polyline start angle when size < 2");
+
   auto x1 = m_points[0].x;
   auto y1 = m_points[0].y;
   auto x2 = m_points[1].x;
