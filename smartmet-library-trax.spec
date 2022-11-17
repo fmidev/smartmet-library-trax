@@ -10,7 +10,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 22.11.16
+Version: 22.11.17
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -84,6 +84,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Thu Nov 17 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.11.17-1.fmi
+- Fixed polyline::end_angle error handling
+
 * Wed Nov 16 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.11.16-1.fmi
 - Fixed crash bug in isoband building
 
