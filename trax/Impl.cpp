@@ -201,12 +201,7 @@ void Contour::Impl::isoline(const Cell& c)
     // Process isolines/isobands min_index...max_index
 
     for (auto index = m_min_index; index <= m_max_index; ++index)
-    {
-      float limit = m_isoline_values[index];
-      auto& builder = m_builders[index];
-      auto& merger = builder.merger();
-      CellBuilder::isoline_linear(merger, c, limit);
-    }
+      isoline(index, c);
   }
 }
 
@@ -237,6 +232,28 @@ void Contour::Impl::isoband(int index, const Cell& c)
       break;
     case InterpolationType::Midpoint:
       CellBuilder::isoband_midpoint(merger, c, range);
+      break;
+    case InterpolationType::Logarithmic:
+      CellBuilder::isoband_logarithmic(merger, c, range);
+      break;
+  }
+}
+
+void Contour::Impl::isoline(int index, const Cell& c)
+{
+  auto& builder = m_builders[index];
+  auto& merger = builder.merger();
+  auto limit = m_isoline_values[index];
+
+  switch (m_itype)
+  {
+    case InterpolationType::Linear:
+      CellBuilder::isoline_linear(merger, c, limit);
+      break;
+    case InterpolationType::Logarithmic:
+      CellBuilder::isoline_logarithmic(merger, c, limit);
+      break;
+    case InterpolationType::Midpoint:
       break;
   }
 }

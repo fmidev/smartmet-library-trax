@@ -10,6 +10,8 @@ InterpolationType to_interpolation_type(const std::string& str)
     return InterpolationType::Linear;
   if (str == "nearest" || str == "discrete" || str == "midpoint")
     return InterpolationType::Midpoint;
+  if (str == "logarithmic")
+    return InterpolationType::Logarithmic;
   throw Fmi::Exception(BCP, "Unknown interpolation type '" + str + "'");
 }
 }  // namespace Trax

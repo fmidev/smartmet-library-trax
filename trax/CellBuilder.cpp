@@ -28,75 +28,6 @@ struct point
   int dj;
 };
 
-// Calculate intersection coordinates adjust to VertexType corner if necessary. di/dj are used only
-// when the intersection is at a corner. Note that value is converted to double for higher
-// precision intersection calculations.
-
-point intersect(
-    const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, double value)
-{
-#ifdef HANDLE_ROUNDING_ERRORS
-  // These equality tests are necessary for handling value==lolimit cases without any rounding
-  // errors! std::cout << fmt::format("{},{},{} - {},{},{} at {}\n", x1, y1, z1, x2, y2, z2, value);
-  if (p1.z == value)
-    return {p1.x, p1.y, VertexType::Corner, 0, 0};
-  if (p2.z == value)
-    return {p2.x, p2.y, VertexType::Corner, di, dj};
-#endif
-  if (p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y))  // lexicographic sorting to guarantee the same
-  {  // result even if input x1,y1 and x2,y2 are swapped
-    auto s = (value - p2.z) / (p1.z - p2.z);
-    auto x = p2.x + s * (p1.x - p2.x);
-    auto y = p2.y + s * (p1.y - p2.y);
-    if (x == p1.x && y == p1.y)
-      return {x, y, VertexType::Corner, 0, 0};
-    if (x == p2.x && y == p2.y)
-      return {x, y, VertexType::Corner, di, dj};
-    return {x, y, type, 0, 0};
-  }
-
-  auto s = (value - p1.z) / (p2.z - p1.z);
-  auto x = p1.x + s * (p2.x - p1.x);
-  auto y = p1.y + s * (p2.y - p1.y);
-  if (x == p1.x && y == p1.y)
-    return {x, y, VertexType::Corner, 0, 0};
-  if (x == p2.x && y == p2.y)
-    return {x, y, VertexType::Corner, di, dj};
-  return {x, y, type, 0, 0};
-}
-
-// Utilities to avoid highly likely typos in repetetive code. As luck would have it,
-// I managed to mess up all four the first time...
-point intersect_left(const Cell& c, VertexType type, const Range& range)
-{
-  const auto limit = (type == VertexType::Vertical_lo ? range.lo() : range.hi());
-  return intersect(c.p1, c.p2, 0, 1, type, limit);
-}
-
-point intersect_top(const Cell& c, VertexType type, const Range& range)
-{
-  const auto limit = (type == VertexType::Horizontal_lo ? range.lo() : range.hi());
-  return intersect(c.p2, c.p3, 1, 0, type, limit);
-}
-
-point intersect_right(const Cell& c, VertexType type, const Range& range)
-{
-  const auto limit = (type == VertexType::Vertical_lo ? range.lo() : range.hi());
-  return intersect(c.p4, c.p3, 0, 1, type, limit);
-}
-
-point intersect_bottom(const Cell& c, VertexType type, const Range& range)
-{
-  const auto limit = (type == VertexType::Horizontal_lo ? range.lo() : range.hi());
-  return intersect(c.p1, c.p4, 1, 0, type, limit);
-}
-
-Place center_place(const Cell& c, const Range& range)
-{
-  const auto z = (c.p1.z + c.p2.z + c.p3.z + c.p4.z) / 4;
-  return place(z, range);
-}
-
 /*
  * Private small builder class to connect the vertices properly in a single grid cell.
  */
@@ -104,11 +35,16 @@ Place center_place(const Cell& c, const Range& range)
 class JointBuilder
 {
  public:
-  JointBuilder(JointMerger& joints, const Range& range) : m_range(range), m_joints(joints) {}
+  JointBuilder(JointMerger& joints, const Range& range, bool logarithmic)
+      : m_range(range), m_joints(joints), m_logarithmic(logarithmic)
+  {
+  }
 
   void build_linear(const Cell& c);
   void build_missing(const Cell& c);  // with linear interpolation
   void build_midpoint(const Cell& c);
+
+ private:
   void build_edge(VertexType type,
                   int di,
                   int dj,
@@ -128,11 +64,93 @@ class JointBuilder
   void close();
   void finish_cell();
 
- private:
+  point intersect(
+      const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, double value);
+  point intersect_left(const Cell& c, VertexType type);
+  point intersect_top(const Cell& c, VertexType type);
+  point intersect_right(const Cell& c, VertexType type);
+  point intersect_bottom(const Cell& c, VertexType type);
+  Place center_place(const Cell& c);
+
   Range m_range;
   JointMerger& m_joints;
   Vertices m_vertices;
+  bool m_logarithmic;
 };
+
+point JointBuilder::intersect(
+    const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, double value)
+{
+#ifdef HANDLE_ROUNDING_ERRORS
+  // These equality tests are necessary for handling value==lolimit cases without any rounding
+  // errors! std::cout << fmt::format("{},{},{} - {},{},{} at {}\n", x1, y1, z1, x2, y2, z2, value);
+  if (p1.z == value)
+    return {p1.x, p1.y, VertexType::Corner, 0, 0};
+  if (p2.z == value)
+    return {p2.x, p2.y, VertexType::Corner, di, dj};
+#endif
+  if (p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y))  // lexicographic sorting to guarantee the same
+  {  // result even if input x1,y1 and x2,y2 are swapped
+    auto s = (!m_logarithmic ? (value - p2.z) / (p1.z - p2.z)
+                             : (log1p(value) - log1p(p2.z)) / (log1p(p1.z) - log1p(p2.z)));
+    auto x = p2.x + s * (p1.x - p2.x);
+    auto y = p2.y + s * (p1.y - p2.y);
+    if (x == p1.x && y == p1.y)
+      return {x, y, VertexType::Corner, 0, 0};
+    if (x == p2.x && y == p2.y)
+      return {x, y, VertexType::Corner, di, dj};
+    return {x, y, type, 0, 0};
+  }
+
+  auto s = (!m_logarithmic ? (value - p1.z) / (p2.z - p1.z)
+                           : (log1p(value) - log1p(p1.z)) / (log1p(p2.z) - log1p(p1.z)));
+
+  auto x = p1.x + s * (p2.x - p1.x);
+  auto y = p1.y + s * (p2.y - p1.y);
+  if (x == p1.x && y == p1.y)
+    return {x, y, VertexType::Corner, 0, 0};
+  if (x == p2.x && y == p2.y)
+    return {x, y, VertexType::Corner, di, dj};
+  return {x, y, type, 0, 0};
+}
+
+// Utilities to avoid highly likely typos in repetetive code. As luck would have it,
+// I managed to mess up all four the first time...
+point JointBuilder::intersect_left(const Cell& c, VertexType type)
+{
+  const auto limit = (type == VertexType::Vertical_lo ? m_range.lo() : m_range.hi());
+  return intersect(c.p1, c.p2, 0, 1, type, limit);
+}
+
+point JointBuilder::intersect_top(const Cell& c, VertexType type)
+{
+  const auto limit = (type == VertexType::Horizontal_lo ? m_range.lo() : m_range.hi());
+  return intersect(c.p2, c.p3, 1, 0, type, limit);
+}
+
+point JointBuilder::intersect_right(const Cell& c, VertexType type)
+{
+  const auto limit = (type == VertexType::Vertical_lo ? m_range.lo() : m_range.hi());
+  return intersect(c.p4, c.p3, 0, 1, type, limit);
+}
+
+point JointBuilder::intersect_bottom(const Cell& c, VertexType type)
+{
+  const auto limit = (type == VertexType::Horizontal_lo ? m_range.lo() : m_range.hi());
+  return intersect(c.p1, c.p4, 1, 0, type, limit);
+}
+
+Place JointBuilder::center_place(const Cell& c)
+{
+  if (!m_logarithmic)
+  {
+    const auto z = (c.p1.z + c.p2.z + c.p3.z + c.p4.z) / 4;
+    return place(z, m_range);
+  }
+
+  const auto z = expm1((log1p(c.p1.z) + log1p(c.p2.z) + log1p(c.p3.z) + log1p(c.p4.z)) / 4);
+  return place(z, m_range);
+}
 
 // Connect from previous to next by default, close() will fix the necessary prev/next indices
 // for the first and last vertices. Note that if we push the same coordinate twice in a row,
@@ -293,8 +311,8 @@ void JointBuilder::build_linear(const Cell& c)
     // Corner triangles
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Inside):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p2 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, p1, m_range.lo());              // B----B
       add(c.i + 1, c.j, p2, m_range.lo());          // |    |
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // |   /|
@@ -303,8 +321,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Below):
     {
-      const auto p1 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i, c.j + 1, p2, m_range.lo());              // B----I
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |  \*|
       add(c.i + 1, c.j, p1, m_range.lo());              // |   \|
@@ -313,8 +331,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());              // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |*/  |
       add(c.i, c.j + 1, p2, m_range.lo());          // |/   |
@@ -323,8 +341,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);  // B----B
       add(c.i, c.j, p1, m_range.lo());          // |    |
       add(c.i, c.j, p2, m_range.lo());          // |\   |
@@ -333,8 +351,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Above, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);  // A----A
       add(c.i, c.j, p1, m_range.hi());          // |    |
       add(c.i, c.j, p2, m_range.hi());          // |\   |
@@ -343,8 +361,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Above, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());              // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |*/  |
       add(c.i, c.j + 1, p2, m_range.hi());          // |/   |
@@ -353,8 +371,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Inside, Place::Above):
     {
-      const auto p1 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j + 1, p1, m_range.hi());              // A----I
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |  \*|
       add(c.i + 1, c.j, p2, m_range.hi());              // |   \|
@@ -363,8 +381,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Above, Place::Inside):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, p1, m_range.hi());              // A----A
       add(c.i + 1, c.j, p2, m_range.hi());          // |    |
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // |   /|
@@ -375,8 +393,8 @@ void JointBuilder::build_linear(const Cell& c)
     // Side rectangles
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Inside):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());                  // B----I
       add(c.i, c.j + 1, p2, m_range.lo());              // |  |*|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |  |*|
@@ -386,8 +404,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Inside, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, p1, m_range.lo());                  // I----I
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |----|
@@ -398,8 +416,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);      // B----B
       add(c.i, c.j, p1, m_range.lo());              // |    |
       add(c.i + 1, c.j, p2, m_range.lo());          // |----|
@@ -409,8 +427,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Below, Place::Below):
     {
-      const auto p1 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |*|  |
       add(c.i, c.j + 1, p1, m_range.lo());          // |*|  |
@@ -420,8 +438,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Above, Place::Above):
     {
-      const auto p1 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |*|  |
       add(c.i, c.j + 1, p1, m_range.hi());          // |*|  |
@@ -431,8 +449,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Above, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);      // A----A
       add(c.i, c.j, p1, m_range.hi());              // |    |
       add(c.i + 1, c.j, p2, m_range.hi());          // |----|
@@ -442,8 +460,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Inside, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, p1, m_range.hi());                  // I----I
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |----|
@@ -453,8 +471,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Inside, Place::Inside):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());                  // A----I
       add(c.i, c.j + 1, p2, m_range.hi());              // |  |*|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |  |*|
@@ -466,10 +484,10 @@ void JointBuilder::build_linear(const Cell& c)
       // Side stripes
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Above):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, p1, m_range.hi());      // B----B
       add(c.i, c.j, p2, m_range.lo());      // |    |
       add(c.i + 1, c.j, p3, m_range.lo());  // |   /|
@@ -479,10 +497,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Above, Place::Below):
     {
-      const auto p1 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i + 1, c.j, p1, m_range.lo());  // B----A
       add(c.i, c.j + 1, p2, m_range.lo());  // |  \\|
       add(c.i, c.j + 1, p3, m_range.hi());  // |   \|
@@ -492,10 +510,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Below, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());      // A----B
       add(c.i, c.j, p2, m_range.hi());      // |//  |
       add(c.i, c.j + 1, p3, m_range.hi());  // |/   |
@@ -505,10 +523,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Above, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());  // A----A
       add(c.i, c.j, p2, m_range.hi());  // |    |
       add(c.i, c.j, p3, m_range.hi());  // |\   |
@@ -518,10 +536,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Below, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());  // B----B
       add(c.i, c.j, p2, m_range.lo());  // |    |
       add(c.i, c.j, p3, m_range.lo());  // |\   |
@@ -531,10 +549,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Above, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());      // B----A
       add(c.i, c.j, p2, m_range.lo());      // |//  |
       add(c.i, c.j + 1, p3, m_range.lo());  // |/   |
@@ -544,10 +562,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Below, Place::Above):
     {
-      const auto p1 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i + 1, c.j, p1, m_range.hi());  // A----B
       add(c.i, c.j + 1, p2, m_range.hi());  // |  \\|
       add(c.i, c.j + 1, p3, m_range.lo());  // |   \|
@@ -557,10 +575,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Above, Place::Below):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.hi());      // A----A
       add(c.i + 1, c.j, p2, m_range.hi());  // |    |
       add(c.i + 1, c.j, p3, m_range.lo());  // |   /|
@@ -570,10 +588,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Above, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, p1, m_range.lo());      // A----A
       add(c.i, c.j, p2, m_range.hi());      // |    |
       add(c.i + 1, c.j, p3, m_range.hi());  // |====|
@@ -583,10 +601,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Below, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, p1, m_range.hi());      // B----B
       add(c.i, c.j, p2, m_range.lo());      // |    |
       add(c.i + 1, c.j, p3, m_range.lo());  // |====|
@@ -596,10 +614,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Below, Place::Below):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.hi());      // A----B
       add(c.i, c.j + 1, p2, m_range.hi());  // | || |
       add(c.i, c.j + 1, p3, m_range.lo());  // | || |
@@ -609,10 +627,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Above, Place::Above):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());      // B----A
       add(c.i, c.j, p2, m_range.lo());      // | || |
       add(c.i, c.j + 1, p3, m_range.lo());  // | || |
@@ -624,10 +642,10 @@ void JointBuilder::build_linear(const Cell& c)
     // Pentagons
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Above):
     {
-      const auto p1 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // B----I
       add(c.i + 1, c.j, p1, m_range.hi());              // | |**|
       add(c.i, c.j, p2, m_range.hi());                  // | |**|
@@ -638,10 +656,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Above, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, p1, m_range.lo());              // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p2, m_range.hi());          // |****|
@@ -652,10 +670,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Above, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());              // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**| |
       add(c.i, c.j + 1, p2, m_range.hi());          // |**| |
@@ -666,10 +684,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Inside, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, p1, m_range.lo());                  // A----I
       add(c.i, c.j, p2, m_range.hi());                  // |/***|
       add(c.i, c.j + 1, p3, m_range.hi());              // |****|
@@ -680,10 +698,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Above, Place::Inside):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // B----A
       add(c.i, c.j, p1, m_range.lo());              // | |\ |
       add(c.i, c.j + 1, p2, m_range.lo());          // | |*\|
@@ -694,8 +712,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Inside, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());                  // I----I
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\***|
@@ -706,10 +724,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Above, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());              // A----A
       add(c.i, c.j, p2, m_range.hi());              // |    |
       add(c.i + 1, c.j, p3, m_range.hi());          // |----|
@@ -720,10 +738,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);  // B----B
       add(c.i, c.j, p1, m_range.lo());          // |    |
       add(c.i + 1, c.j, p2, m_range.lo());      // |----|
@@ -734,8 +752,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
       add(c.i, c.j, p1, m_range.lo());                  // | /**|
       add(c.i, c.j + 1, p2, m_range.lo());              // |/***|
@@ -746,10 +764,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Above, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
       add(c.i, c.j, p1, m_range.lo());          // |/*| |
       add(c.i, c.j + 1, p2, m_range.lo());      // |**| |
@@ -760,8 +778,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Below, Place::Inside):
     {
-      const auto p1 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p2 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**\ |
       add(c.i, c.j + 1, p1, m_range.lo());          // |***\|
@@ -772,8 +790,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Below):
     {
-      const auto p1 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);          // I----I
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |***/|
@@ -784,8 +802,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Inside, Place::Above):
     {
-      const auto p1 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);          // I----I
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |***/|
@@ -796,8 +814,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Above, Place::Inside):
     {
-      const auto p1 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**\ |
       add(c.i, c.j + 1, p1, m_range.hi());          // |***\|
@@ -808,10 +826,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Below, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
       add(c.i, c.j, p1, m_range.hi());          // |/*| |
       add(c.i, c.j + 1, p2, m_range.hi());      // |**| |
@@ -822,8 +840,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Inside, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);          // A----I
       add(c.i, c.j, p1, m_range.hi());                  // |/***|
       add(c.i, c.j + 1, p2, m_range.hi());              // |****|
@@ -834,10 +852,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Above, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);  // A----A
       add(c.i, c.j, p1, m_range.hi());          // |----|
       add(c.i + 1, c.j, p2, m_range.hi());      // |****|
@@ -848,10 +866,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Below, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());              // B----B
       add(c.i, c.j, p2, m_range.lo());              // |    |
       add(c.i + 1, c.j, p3, m_range.lo());          // |----|
@@ -862,10 +880,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Inside, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, p1, m_range.hi());                  // B----I
       add(c.i, c.j, p2, m_range.lo());                  // |/***|
       add(c.i, c.j + 1, p3, m_range.lo());              // |----|
@@ -876,10 +894,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Below, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());              // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**| |
       add(c.i, c.j + 1, p2, m_range.lo());          // |**| |
@@ -890,10 +908,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Below, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, p1, m_range.hi());              // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p2, m_range.lo());          // |****|
@@ -904,8 +922,8 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Inside, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());                  // I----I
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |****|
@@ -916,10 +934,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Below, Place::Inside):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // A----B
       add(c.i, c.j, p1, m_range.hi());              // | |*\|
       add(c.i, c.j + 1, p2, m_range.hi());          // | |**|
@@ -930,10 +948,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Above, Place::Inside, Place::Below):
     {
-      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.hi());                  // A----I
       add(c.i, c.j + 1, p2, m_range.hi());              // | |**|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // | |**|
@@ -946,10 +964,10 @@ void JointBuilder::build_linear(const Cell& c)
     // Hexagons
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Below, Place::Above):
     {
-      const auto p1 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p2 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p1, m_range.lo());          // |****|
@@ -961,10 +979,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Inside, Place::Above, Place::Below):
     {
-      const auto p1 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p1, m_range.hi());          // |****|
@@ -976,10 +994,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Inside, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());                  // A----I
       add(c.i, c.j, p2, m_range.hi());                  // |/***|
       add(c.i, c.j + 1, p3, m_range.hi());              // |****|
@@ -991,10 +1009,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Inside, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());                  // B----I
       add(c.i, c.j, p2, m_range.lo());                  // |/***|
       add(c.i, c.j + 1, p3, m_range.lo());              // |****|
@@ -1006,10 +1024,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Inside, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());                  // I----I
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\***|
@@ -1021,10 +1039,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Inside, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());                  // I----I
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\***|
@@ -1036,10 +1054,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Above, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
       add(c.i, c.j, p1, m_range.lo());          // | /*\|
       add(c.i, c.j + 1, p2, m_range.lo());      // |/**\|
@@ -1051,10 +1069,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Below, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
       add(c.i, c.j, p1, m_range.hi());          // | /*\|
       add(c.i, c.j + 1, p2, m_range.hi());      // |/**\|
@@ -1067,10 +1085,10 @@ void JointBuilder::build_linear(const Cell& c)
 
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Above, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());              // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**\ |
       add(c.i, c.j + 1, p2, m_range.hi());          // |\**\|
@@ -1082,10 +1100,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Below, Place::Inside):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());              // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p2, m_range.lo());          // |****|
@@ -1097,10 +1115,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Inside, Place::Below):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.hi());                  // A----I
       add(c.i, c.j + 1, p2, m_range.hi());              // |/***|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |****|
@@ -1112,10 +1130,10 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Above):
     {
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
       add(c.i, c.j, p1, m_range.lo());                  // |/***|
       add(c.i, c.j + 1, p2, m_range.lo());              // |***/|
@@ -1130,11 +1148,11 @@ void JointBuilder::build_linear(const Cell& c)
     // grid cell.
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Above, Place::Inside):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());              // I----A   I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
       add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/|
@@ -1148,11 +1166,11 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Inside):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());              // I----B   I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
       add(c.i, c.j + 1, p2, m_range.lo());          // |**I*|   |/ B/|
@@ -1167,11 +1185,11 @@ void JointBuilder::build_linear(const Cell& c)
 
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Inside, Place::Above):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       if (cc == Place::Inside)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);          // A----I
@@ -1198,11 +1216,11 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Below):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       if (cc == Place::Inside)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
@@ -1229,13 +1247,13 @@ void JointBuilder::build_linear(const Cell& c)
 
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Above):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());              // I----B    I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|    |*/  |
       add(c.i, c.j + 1, p2, m_range.lo());          // |\*I*|    |/ X/|  X = A or B
@@ -1250,13 +1268,13 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Above, Place::Below):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());              // I----A   I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
       add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/| X = A or B
@@ -1271,13 +1289,13 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Below, Place::Inside):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p5 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p5 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());      // A----B    A----B
       add(c.i, c.j, p2, m_range.hi());      // |/**\|    |//  |
       add(c.i, c.j + 1, p3, m_range.hi());  // |**I*|    |/ X/| X = A or B
@@ -1292,13 +1310,13 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Above, Place::Inside):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p5 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p5 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());      // B----A    B----A
       add(c.i, c.j, p2, m_range.lo());      // |/**\|    |//  |
       add(c.i, c.j + 1, p3, m_range.lo());  // |**I*|    |/ X/| X = A or B
@@ -1313,13 +1331,13 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Above, Place::Below):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p5 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p5 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
       if (cc == Place::Inside)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
@@ -1347,13 +1365,13 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Below, Place::Above):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p5 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p5 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
       if (cc == Place::Inside)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
@@ -1381,13 +1399,13 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Inside, Place::Below):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
       if (cc == Place::Inside)
       {
         add(c.i, c.j, p1, m_range.hi());                  // B----I
@@ -1415,13 +1433,13 @@ void JointBuilder::build_linear(const Cell& c)
     }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Inside, Place::Above):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
       if (cc == Place::Inside)
       {
         add(c.i, c.j, p1, m_range.lo());                  // A----I
@@ -1450,15 +1468,15 @@ void JointBuilder::build_linear(const Cell& c)
 
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Below, Place::Above):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p5 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p6 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p7 = intersect_right(c, VertexType::Vertical_lo, m_range);
-      const auto p8 = intersect_right(c, VertexType::Vertical_hi, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p5 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p6 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p7 = intersect_right(c, VertexType::Vertical_lo);
+      const auto p8 = intersect_right(c, VertexType::Vertical_hi);
       if (cc == Place::Inside || (c.p2.z == m_range.hi() && c.p4.z == m_range.hi()))
       {
         add(c.i, c.j, p1, m_range.lo());      // A----B
@@ -1502,15 +1520,15 @@ void JointBuilder::build_linear(const Cell& c)
 
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Above, Place::Below):
     {
-      const auto cc = center_place(c, m_range);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi, m_range);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo, m_range);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo, m_range);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_hi, m_range);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo, m_range);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi, m_range);
-      const auto p7 = intersect_right(c, VertexType::Vertical_hi, m_range);
-      const auto p8 = intersect_right(c, VertexType::Vertical_lo, m_range);
+      const auto cc = center_place(c);
+      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+      const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
+      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
+      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const auto p7 = intersect_right(c, VertexType::Vertical_hi);
+      const auto p8 = intersect_right(c, VertexType::Vertical_lo);
       if (cc == Place::Inside)
       {
         add(c.i, c.j, p1, m_range.hi());      // B----A
@@ -2103,21 +2121,39 @@ namespace CellBuilder
 {
 void isoband_linear(JointMerger& joints, const Cell& c, const Range& range)
 {
-  JointBuilder b(joints, range);
+  bool logarithmic = false;
+  JointBuilder b(joints, range, logarithmic);
   b.build_linear(c);
 }
 
 void isoline_linear(JointMerger& joints, const Cell& c, float limit)
 {
+  bool logarithmic = false;
   Range range(limit, std::numeric_limits<float>::infinity());
-  JointBuilder b(joints, range);
+  JointBuilder b(joints, range, logarithmic);
   b.build_linear(c);
 }
 
 void isoband_midpoint(JointMerger& joints, const Cell& c, const Range& range)
 {
-  JointBuilder b(joints, range);
+  bool logarithmic = false;
+  JointBuilder b(joints, range, logarithmic);
   b.build_midpoint(c);
+}
+
+void isoband_logarithmic(JointMerger& joints, const Cell& c, const Range& range)
+{
+  bool logarithmic = true;
+  JointBuilder b(joints, range, logarithmic);
+  b.build_linear(c);
+}
+
+void isoline_logarithmic(JointMerger& joints, const Cell& c, float limit)
+{
+  bool logarithmic = true;
+  Range range(limit, std::numeric_limits<float>::infinity());
+  JointBuilder b(joints, range, logarithmic);
+  b.build_linear(c);
 }
 
 }  // namespace CellBuilder

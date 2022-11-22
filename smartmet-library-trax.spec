@@ -11,7 +11,7 @@
 Summary: Trax library
 Name: %{SPECNAME}
 Version: 22.11.22
-Release: 1%{?dist}.fmi
+Release: 2%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
 URL: https://github.com/fmidev/smartmet-library-trax
@@ -84,6 +84,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Tue Nov 22 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.11.22-2.fmi
+- Added logarithmic interpolation suitable for contouring radar data
+
 * Tue Nov 22 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.11.22-1.fmi
 - Use double for coordinates and intersection calculations to fix WMS topology errors due to lack of precision
 
