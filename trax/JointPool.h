@@ -84,7 +84,7 @@ class JointPool
   std::array<Joint*, 27UL> m_buffer;  // ... for a total of (5+27)*8 = 32*8 = 256 bytes
 };
 
-std::string to_string(JointPool& pool);
+std::string to_string(JointPool& pool, bool print_used = false);
 
 // It is important to inline below methods for speed
 

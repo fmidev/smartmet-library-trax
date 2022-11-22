@@ -16,7 +16,7 @@ enum class Place
 };
 
 // Isoband placement
-inline Place place(double value, const Range& range)
+inline Place place(float value, const Range& range)
 {
   if (value < range.lo())
     return Place::Below;
@@ -28,10 +28,10 @@ inline Place place(double value, const Range& range)
 }
 
 // Discrete placement is either below, inside or invalid
-Place discrete_place(double value, const Range& range);
+Place discrete_place(float value, const Range& range);
 
 // Isovalue placement
-Place place(double value, double limit);
+Place place(float value, float limit);
 
 // TODO: Need to test whether constexpr would work on RHEL7
 #define TRAX_RECT_HASH(c1, c2, c3, c4) \
@@ -58,13 +58,13 @@ inline int place_hash(Place c1, Place c2)
   return TRAX_EDGE_HASH(c1, c2);
 }
 
-inline int nan_hash(double z)
+inline int nan_hash(float z)
 {
   return static_cast<int>(std::isnan(z) ? Place::Inside : Place::Below);
 }
 
 // The hash value must match the rect hash above for Inside and Below, hence times 4 instead of 2
-inline int nan_hash(double z1, double z2, double z3, double z4)
+inline int nan_hash(float z1, float z2, float z3, float z4)
 {
   return nan_hash(z1) + 4 * (nan_hash(z2) + 4 * (nan_hash(z3) + 4 * nan_hash(z4)));
 }

@@ -2,7 +2,7 @@
 
 namespace Trax
 {
-Place discrete_place(double value, const Range& range)
+Place discrete_place(float value, const Range& range)
 {
   if (value < range.lo())
     return Place::Below;
@@ -15,7 +15,7 @@ Place discrete_place(double value, const Range& range)
   return Place::Below;
 }
 
-Place place(double value, double limit)
+Place place(float value, float limit)
 {
   if (value < limit)
     return Place::Below;

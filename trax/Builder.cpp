@@ -37,37 +37,51 @@ Builder::Builder(std::size_t /* width */, std::size_t /* height */) {}
 
 void Builder::finish_isolines(bool strict)
 {
-  Polylines shells;
-  Holes holes;
-  build_rings(shells, holes, m_merger.pool(), strict);
+  try
+  {
+    Polylines shells;
+    Holes holes;
+    build_rings(shells, holes, m_merger.pool(), strict);
 
-  // We do not build multipolygons out of the shells and holes since
-  // the algorithm does not guarantee there will not be nested shells
-  // which in turn could break geometry algorithms.
+    // We do not build multipolygons out of the shells and holes since
+    // the algorithm does not guarantee there will not be nested shells
+    // which in turn could break geometry algorithms.
 
-  Polylines lines;
-  remove_ghosts(shells, lines);
-  remove_ghosts(holes, lines);
+    Polylines lines;
+    remove_ghosts(shells, lines);
+    remove_ghosts(holes, lines);
 
-  for (auto&& shell : shells)
-    m_geom.add(std::move(shell));
-  for (auto&& hole : holes)
-    m_geom.add(std::move(hole));
-  for (auto&& line : lines)
-    m_geom.add(std::move(line));
+    for (auto&& shell : shells)
+      m_geom.add(std::move(shell));
+    for (auto&& hole : holes)
+      m_geom.add(std::move(hole));
+    for (auto&& line : lines)
+      m_geom.add(std::move(line));
+  }
+  catch (...)
+  {
+    throw Fmi::Exception::Trace(BCP, "Failed to finish isolines");
+  }
 }
 
 void Builder::finish_isobands(bool strict, bool missing)
 {
-  Polylines shells;
-  Holes holes;
-  build_rings(shells, holes, m_merger.pool(), strict);
+  try
+  {
+    Polylines shells;
+    Holes holes;
+    build_rings(shells, holes, m_merger.pool(), strict);
 
-  Polygons polygons;
-  build_polygons(polygons, shells, holes);
+    Polygons polygons;
+    build_polygons(polygons, shells, holes);
 
-  for (auto&& poly : polygons)
-    m_geom.add(std::move(poly));
+    for (auto&& poly : polygons)
+      m_geom.add(std::move(poly));
+  }
+  catch (...)
+  {
+    throw Fmi::Exception::Trace(BCP, "Failed to finish isobands");
+  }
 }
 
 void Builder::finish_row()

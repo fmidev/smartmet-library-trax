@@ -182,154 +182,182 @@ Joint* select_right_turn(const Vertex& vertex,
   return best;
 }
 
-Polylines extract_right_turning_sequence(Joint* joint, bool strict)
+Polylines extract_right_turning_sequence(Joint* joint, bool strict, bool verbose)
 {
   Polylines polylines;  // polylines extracted by taking right turns split at double joints
   Polyline polyline;    // grow a polyline until a double joint is encountered
-
+  try
+  {
 #if 0
   std::cout << "RIGHT\n";
 #endif
 
-  while (true)
-  {
-    const auto& vertex = joint->vertex;
+    while (true)
+    {
+      const auto& vertex = joint->vertex;
 
 #if 0
     std::cout << fmt::format("\t{},{}\n", vertex.x, vertex.y);
 #endif
 
-    polyline.append(vertex);
+      polyline.append(vertex);
 
-    // Stop when exterior (and holes attached to it) becomes closed
-    if (polylines.empty() && polyline.closed())
-    {
-      polylines.emplace_back(std::move(polyline));
-      return polylines;
-    }
-    if (!polylines.empty() && polylines.front().xbegin() == polyline.xend() &&
-        polylines.front().ybegin() == polyline.yend())
-    {
-      polylines.emplace_back(std::move(polyline));
-      return polylines;
-    }
-
-    // Choose rightmost turn. If there are multiple connections, start a new polyline
-    // so that we can choose the leftmost turns later on to separate holes touching
-    // the exterior. Note that if we have only one vertex so far, we do not need to
-    // care about possible duplicates, since we can choose any continuation since
-    // there is no need to take the rightmost turn.
-
-    if (!has_duplicates(joint) || polyline.size() == 1)
-    {
-      // Trivial case of only one possible continuation
-      if (joint->used)
-      {
-        if (polyline.size() == 1)  // collapsed to a corner point, just discard it
-          return polylines;
-        if (!strict)
-        {
-          // Ignore the built polyline and try to continue. This problem can happen
-          // near the poles when projected coordinates may be inaccurate.
-          polylines.clear();
-          return polylines;
-        }
-
-        throw Fmi::Exception(BCP,
-                             fmt::format("Only joint already used at {},{}", vertex.x, vertex.y))
-            .addParameter("Column", fmt::format("{}", vertex.column))
-            .addParameter("Row", fmt::format("{}", vertex.row))
-            .addParameter("Type", to_string(vertex.type));
-      }
-      joint->used = true;
-      joint = joint->next;
-    }
-    else
-    {
-      // Start new polyline so we can extract holes later on unless it contains the
-      // current vertex only
-      if (polyline.size() > 1)
+      // Stop when exterior (and holes attached to it) becomes closed
+      if (polylines.empty() && polyline.closed())
       {
         polylines.emplace_back(std::move(polyline));
-        polyline = Polyline{vertex.x, vertex.y};
+        return polylines;
+      }
+      if (!polylines.empty() && polylines.front().xbegin() == polyline.xend() &&
+          polylines.front().ybegin() == polyline.yend())
+      {
+        polylines.emplace_back(std::move(polyline));
+        return polylines;
       }
 
-      // Note that we do not remove the best joint from the sequence of alternatives
-      // since eventually we'd lose information on which vertices contain alternatives
-      // and hence would not know when to interrupt the right turning sequence. Instead,
-      // Joints::duplicates will return used joints too.
+      // Choose rightmost turn. If there are multiple connections, start a new polyline
+      // so that we can choose the leftmost turns later on to separate holes touching
+      // the exterior. Note that if we have only one vertex so far, we do not need to
+      // care about possible duplicates, since we can choose any continuation since
+      // there is no need to take the rightmost turn.
 
-      auto duplicates = get_duplicates(joint);
-      auto* best = select_right_turn(vertex, polylines, duplicates);
-      best->used = true;
-      joint = best->next;
+      if (!has_duplicates(joint) || polyline.size() == 1)
+      {
+        // Trivial case of only one possible continuation
+        if (joint->used)
+        {
+          if (polyline.size() == 1)  // collapsed to a corner point, just discard it
+            return polylines;
+          if (!strict)
+          {
+            // Ignore the built polyline and try to continue. This problem can happen
+            // near the poles when projected coordinates may be inaccurate.
+            polylines.clear();
+            return polylines;
+          }
+
+          throw Fmi::Exception(BCP,
+                               fmt::format("Only joint already used at {},{}", vertex.x, vertex.y))
+              .addParameter("Column", fmt::format("{}", vertex.column))
+              .addParameter("Row", fmt::format("{}", vertex.row))
+              .addParameter("Type", to_string(vertex.type));
+        }
+        joint->used = true;
+        joint = joint->next;
+      }
+      else
+      {
+        // Start new polyline so we can extract holes later on unless it contains the
+        // current vertex only
+        if (polyline.size() > 1)
+        {
+          polylines.emplace_back(std::move(polyline));
+          polyline = Polyline{vertex.x, vertex.y};
+        }
+
+        // Note that we do not remove the best joint from the sequence of alternatives
+        // since eventually we'd lose information on which vertices contain alternatives
+        // and hence would not know when to interrupt the right turning sequence. Instead,
+        // Joints::duplicates will return used joints too.
+
+        auto duplicates = get_duplicates(joint);
+        auto* best = select_right_turn(vertex, polylines, duplicates);
+        best->used = true;
+        joint = best->next;
+      }
     }
+  }
+  catch (...)
+  {
+    Fmi::Exception ex(BCP, "Failed to extract right turning sequence", nullptr);
+    if (verbose)
+    {
+      auto i = 0UL;
+      for (const auto& line : polylines)
+        ex.addParameter(fmt::format("Line {}", ++i).c_str(), line.wkt());
+      ex.addParameter("Current line", polyline.wkt());
+    }
+    throw ex;
   }
 }
 
 // Extract a polyline by always taking a left turn
 Polyline extract_left_turning_polyline(SortedPolylines& polylines)
 {
-  // Start from the first available polyline
-  auto it = polylines.begin();
-  Polyline result = std::move(it->second);
-  polylines.erase(it);
-
-  const bool turn_right = false;
-
-  // Note: The first selection may already be a closed hole
-  while (!result.closed())
+  try
   {
-    auto candidates = find_append_candidates(result, polylines);
-    if (candidates.empty())
-      return result;
+    // Start from the first available polyline
+    auto it = polylines.begin();
+    Polyline result = std::move(it->second);
+    polylines.erase(it);
 
-    auto candidate = select_turn(result, candidates, turn_right);
+    const bool turn_right = false;
 
-    result.append(candidate->second);
-    polylines.erase(candidate);
+    // Note: The first selection may already be a closed hole
+    while (!result.closed())
+    {
+      auto candidates = find_append_candidates(result, polylines);
+      if (candidates.empty())
+        return result;
+
+      auto candidate = select_turn(result, candidates, turn_right);
+
+      result.append(candidate->second);
+      polylines.erase(candidate);
+    }
+    return result;
   }
-  return result;
+  catch (...)
+  {
+    throw Fmi::Exception::Trace(BCP, "Failed to extract left turning polyline");
+  }
 }
 
 void extract_left_turning_sequence(Polylines& polylines, Polylines& shells, Holes& holes)
 {
-  // Quick exit if there is only one polyline
-  if (polylines.size() == 1)
+  try
   {
-    polylines.front().update_bbox();
-    if (polylines.front().clockwise())
-      shells.emplace_back(std::move(polylines.front()));
-    else
-      holes.emplace_back(std::move(polylines.front()));
-    return;
-  }
+    // Quick exit if there is only one polyline
+    if (polylines.size() == 1)
+    {
+      polylines.front().update_bbox();
+      if (polylines.front().clockwise())
+        shells.emplace_back(std::move(polylines.front()));
+      else
+        holes.emplace_back(std::move(polylines.front()));
+      return;
+    }
 
-  // Create a search structure for finding the left turns quickly
-  SortedPolylines sorted_polylines;
-  for (auto&& polyline : polylines)
-  {
-    JoinCoordinate xy{polyline.xbegin(), polyline.ybegin()};
-    sorted_polylines.insert(std::make_pair(xy, polyline));
-  }
-  polylines.clear();
+    // Create a search structure for finding the left turns quickly
+    SortedPolylines sorted_polylines;
+    for (auto&& polyline : polylines)
+    {
+      JoinCoordinate xy{polyline.xbegin(), polyline.ybegin()};
+      sorted_polylines.insert(std::make_pair(xy, polyline));
+    }
+    polylines.clear();
 
-  Polylines new_shells;
-  Holes new_holes;
+    Polylines new_shells;
+    Holes new_holes;
 
-  while (!sorted_polylines.empty())
-  {
-    auto polyline = extract_left_turning_polyline(sorted_polylines);
+    while (!sorted_polylines.empty())
+    {
+      auto polyline = extract_left_turning_polyline(sorted_polylines);
 
 #if 0
     std::cout << "Left turning polyline: " << polyline.wkt() << "\n";
 #endif
 
-    polyline.update_bbox();
-    if (polyline.clockwise())
-      shells.emplace_back(std::move(polyline));
-    else
-      holes.emplace_back(std::move(polyline));
+      polyline.update_bbox();
+      if (polyline.clockwise())
+        shells.emplace_back(std::move(polyline));
+      else
+        holes.emplace_back(std::move(polyline));
+    }
+  }
+  catch (...)
+  {
+    throw Fmi::Exception::Trace(BCP, "Failed to extract left turning sequence");
   }
 }
 
@@ -424,15 +452,18 @@ Polygons::iterator innermost_polygon(const std::list<Polygons::iterator>& polygo
 
 void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict)
 {
+  const bool verbose = (joints.size() < 256);
+  try
+  {
 #if 0
   std::cout << "Joint map at start:\n" << Trax::to_string(joints);
 #endif
 
-  for (auto* joint : joints)
-  {
-    // Skip fully used joints
-    if (joint->used)
-      continue;
+    for (auto* joint : joints)
+    {
+      // Skip fully used joints
+      if (joint->used)
+        continue;
 
 #if 0
     const auto& vertex = joint->vertex;
@@ -444,24 +475,24 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
                              joint->next->vertex.y);
 #endif
 
-    // If the next vertex has duplicates, we cannot calculate the angle from which to turn most
-    // to the right. On the other hand, if the first vertex has duplicates, we are free to
-    // choose any continuation we want, no need to select the rightmost turn.
+      // If the next vertex has duplicates, we cannot calculate the angle from which to turn most
+      // to the right. On the other hand, if the first vertex has duplicates, we are free to
+      // choose any continuation we want, no need to select the rightmost turn.
 
-    // TODO: Perhaps we should collect a list of skipped joints and add a second loop after
-    // this one to make sure all joints have been processed? Pathological data might have
-    // a case where a polygon has alternative paths at all vertices. In fact, it may be
-    // possible that the list would have to be processed again and again until all joints
-    // have been used. To prevent an eternal loop we'd need a function called
-    // has_unused_duplicates. In fact, it would be better to have one right here too
-    // to simplify the logic, possibly at the other call site too.
+      // TODO: Perhaps we should collect a list of skipped joints and add a second loop after
+      // this one to make sure all joints have been processed? Pathological data might have
+      // a case where a polygon has alternative paths at all vertices. In fact, it may be
+      // possible that the list would have to be processed again and again until all joints
+      // have been used. To prevent an eternal loop we'd need a function called
+      // has_unused_duplicates. In fact, it would be better to have one right here too
+      // to simplify the logic, possibly at the other call site too.
 
-    if (!has_duplicates(joint->next))
-    {
-      auto polylines = extract_right_turning_sequence(joint, strict);
-
-      if (!polylines.empty())  // the sequence may have been discarded due to a problem
+      if (!has_duplicates(joint->next))
       {
+        auto polylines = extract_right_turning_sequence(joint, strict, verbose);
+
+        if (!polylines.empty())  // the sequence may have been discarded due to a problem
+        {
 #if 0
         std::cout << "Extracted right turning sequence:\n";
         for (const auto& polyline : polylines)
@@ -470,14 +501,31 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
         std::cout << "Joint map now:\n" << Trax::to_string(joints);
 #endif
 
-        // Now extract a left turning sequence to separate holes touching the exterior
-        extract_left_turning_sequence(polylines, shells, holes);
+          // Now extract a left turning sequence to separate holes touching the exterior
+          extract_left_turning_sequence(polylines, shells, holes);
+        }
+      }
+      else
+      {
+        // std::cout << "Skipping duplicate start point. Duplicates: " << num_joints << "\n";
       }
     }
-    else
+  }
+  catch (...)
+  {
+    Fmi::Exception ex(BCP, "Failed to build rings", nullptr);
+    ex.addParameter("Number of joints", std::to_string(joints.size()));
+    if (verbose)
     {
-      // std::cout << "Skipping duplicate start point. Duplicates: " << num_joints << "\n";
+      ex.addParameter("Joints", "\n" + to_string(joints, true));
+      auto i = 0UL;
+      for (const auto& shell : shells)
+        ex.addParameter(fmt::format("Shell {}", ++i).c_str(), shell.wkt());
+      i = 0UL;
+      for (const auto& hole : holes)
+        ex.addParameter(fmt::format("Hole {}", ++i).c_str(), hole.wkt());
     }
+    throw ex;
   }
 }
 
@@ -491,6 +539,8 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
 
 void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
 {
+  try
+  {
 #if 0
   int counter = 0;
   std::cout << fmt::format(
@@ -506,53 +556,58 @@ void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
   counter = 0;
 #endif
 
-  for (auto&& shell : shells)
-  {
-    if (shell.size() >= 4)  // discard too small shells
-      polygons.emplace_back(shell);
-  }
-
-  if (holes.empty())
-    return;
-
-  // TODO: Should we optimize in case there is just one polygon?
-
-  // Build an R-tree of the polygon exterior bounding boxes for speed
-
-  auto rtree = build_rtree(polygons);
-
-  for (auto it = holes.begin(); it != holes.end();)
-  {
-    auto& hole = *it;  // shorthand variable
-
-    if (hole.size() < 4)  // discard too small holes
-      ++it;
-    else
+    for (auto&& shell : shells)
     {
-      auto candidates = possible_shells(rtree, hole);
+      if (shell.size() >= 4)  // discard too small shells
+        polygons.emplace_back(shell);
+    }
+
+    if (holes.empty())
+      return;
+
+    // TODO: Should we optimize in case there is just one polygon?
+
+    // Build an R-tree of the polygon exterior bounding boxes for speed
+
+    auto rtree = build_rtree(polygons);
+
+    for (auto it = holes.begin(); it != holes.end();)
+    {
+      auto& hole = *it;  // shorthand variable
+
+      if (hole.size() < 4)  // discard too small holes
+        ++it;
+      else
+      {
+        auto candidates = possible_shells(rtree, hole);
 #if 0
       std::cout << fmt::format("\t{} candidates for hole {}\n", candidates.size(), counter++);
 #endif
-      if (candidates.empty())
-        ++it;  // should be isolated hole when calculating isolines
-      else
-      {
-        auto polygon = innermost_polygon(candidates);
+        if (candidates.empty())
+          ++it;  // should be isolated hole when calculating isolines
+        else
+        {
+          auto polygon = innermost_polygon(candidates);
 #if 0
         std::cout << fmt::format("\tInnermost polygon: {}\n", polygon->wkt());
 #endif
-        polygon->hole(hole);
-        it = holes.erase(it);
+          polygon->hole(hole);
+          it = holes.erase(it);
+        }
       }
     }
-  }
 
-  // Convert any remaining holes to shells. This can happen when an exterior shell has
-  // been stripped of ghost lines when calculating isolines.
-  for (auto&& hole : holes)
+    // Convert any remaining holes to shells. This can happen when an exterior shell has
+    // been stripped of ghost lines when calculating isolines.
+    for (auto&& hole : holes)
+    {
+      hole.reverse();
+      polygons.emplace_back(std::move(hole));
+    }
+  }
+  catch (...)
   {
-    hole.reverse();
-    polygons.emplace_back(std::move(hole));
+    throw Fmi::Exception::Trace(BCP, "Failed to build polygons");
   }
 }
 

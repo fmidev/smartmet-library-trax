@@ -142,7 +142,7 @@ std::size_t resolve(JointPool& pool, Joint* joint)
   return 0xffffffff;
 }
 
-std::string to_string(JointPool& pool)
+std::string to_string(JointPool& pool, bool print_used)
 {
   std::string out;
   if (pool.size() == 0)
@@ -152,7 +152,7 @@ std::string to_string(JointPool& pool)
   for (auto it = pool.begin(), end = pool.end(); it != end; ++it)
   {
     auto* j = *it;
-    if (!j->used)
+    if (!j->used || print_used)
     {
       out += fmt::format("   {}\t{}\t{},{},{} : {},{},{}",
                          i,

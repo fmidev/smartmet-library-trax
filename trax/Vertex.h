@@ -14,8 +14,8 @@ struct Vertex
   }
   Vertex() = default;
 
-  float x = 0;  // using float instead of double gives another performance boost
-  float y = 0;
+  double x = 0;  // using float instead of double lack precision for WMS services
+  double y = 0;
   std::int32_t column = 0;               // we need column at the minimum for fast merge of rows
   std::int32_t row = 0;                  // but also use row for exact vertex comparisons.
   VertexType type = VertexType::Corner;  // intersection type

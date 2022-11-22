@@ -21,17 +21,19 @@ namespace
 {
 struct point
 {
-  float x;
-  float y;
+  double x;
+  double y;
   VertexType type;
   int di;
   int dj;
 };
 
 // Calculate intersection coordinates adjust to VertexType corner if necessary. di/dj are used only
-// when the intersection is at a corner
+// when the intersection is at a corner. Note that value is converted to double for higher
+// precision intersection calculations.
+
 point intersect(
-    const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, float value)
+    const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, double value)
 {
 #ifdef HANDLE_ROUNDING_ERRORS
   // These equality tests are necessary for handling value==lolimit cases without any rounding
@@ -122,7 +124,7 @@ class JointBuilder
                   const GridPoint& g2);
   void add(std::int32_t column, std::int32_t row, const point& p, float z);
   void add(std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p);
-  void add(std::int32_t column, std::int32_t row, VertexType vtype, float x, float y, float z);
+  void add(std::int32_t column, std::int32_t row, VertexType vtype, double x, double y, float z);
   void close();
   void finish_cell();
 
@@ -154,7 +156,7 @@ void JointBuilder::add(std::int32_t column, std::int32_t row, VertexType vtype, 
 }
 
 void JointBuilder::add(
-    std::int32_t column, std::int32_t row, VertexType vtype, float x, float y, float z)
+    std::int32_t column, std::int32_t row, VertexType vtype, double x, double y, float z)
 {
   const auto n = m_vertices.size();
   // Note that NaN is always marked a ghost as needed for midpoint algorithm
@@ -2105,9 +2107,9 @@ void isoband_linear(JointMerger& joints, const Cell& c, const Range& range)
   b.build_linear(c);
 }
 
-void isoline_linear(JointMerger& joints, const Cell& c, double limit)
+void isoline_linear(JointMerger& joints, const Cell& c, float limit)
 {
-  Range range(limit, std::numeric_limits<double>::infinity());
+  Range range(limit, std::numeric_limits<float>::infinity());
   JointBuilder b(joints, range);
   b.build_linear(c);
 }
