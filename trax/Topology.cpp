@@ -510,6 +510,19 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
         // std::cout << "Skipping duplicate start point. Duplicates: " << num_joints << "\n";
       }
     }
+
+    // Verify all joints were used
+#if 0    
+    std::size_t unused_count = 0;
+    for (auto* joint : joints)
+    {
+      if (!joint->used)
+        ++unused_count;
+    }
+    if (unused_count > 0)
+      throw Fmi::Exception(BCP, "Contouring left unused joints")
+          .addParameter("count", std::to_string(unused_count));
+#endif
   }
   catch (...)
   {
