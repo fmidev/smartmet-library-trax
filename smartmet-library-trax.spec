@@ -10,8 +10,8 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 22.11.22
-Release: 2%{?dist}.fmi
+Version: 22.11.25
+Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
 URL: https://github.com/fmidev/smartmet-library-trax
@@ -84,6 +84,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Fri Nov 25 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.11.25-1.fmi
+- Add a second ring building phase to make sure all vertices have been processed
+
 * Tue Nov 22 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.11.22-2.fmi
 - Added logarithmic interpolation suitable for contouring radar data
 

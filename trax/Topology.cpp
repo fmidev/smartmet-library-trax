@@ -65,7 +65,7 @@ inline bool has_duplicates(Joint* j)
   return (j->alt != nullptr);
 }
 
-// Find joints with the same vertex (including the joint itself)
+// Find unused joints with the same vertex (including the joint itself)
 Duplicates get_duplicates(Joint* j)
 {
   Duplicates ret;
@@ -73,7 +73,10 @@ Duplicates get_duplicates(Joint* j)
 
   auto* i = j;
   while ((i = i->alt) != j)  // push until reached j again
-    ret.push_back(i);
+  {
+    if (!i->used)
+      ret.push_back(i);
+  }
 
   return ret;
 }
@@ -153,6 +156,16 @@ Joint* select_right_turn(const Vertex& vertex,
                          const Polylines& polylines,
                          const Duplicates& duplicates)
 {
+  // Safety check
+  if (duplicates.empty())
+    throw Fmi::Exception(BCP, "No remaining alternative path for selecting a right turn");
+
+  // Avoid angle calculations if there is only one candidate. Removing this may also be
+  // unsafe since rings are built in two phases, skipped_joints in the second loop.
+
+  if (duplicates.size() == 1)
+    return duplicates[0];
+
   // Select free joint with the rightmost turn
 
   using boost::math::double_constants::radian;
@@ -459,70 +472,41 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
   std::cout << "Joint map at start:\n" << Trax::to_string(joints);
 #endif
 
+    // Some joints are bad first candidates since we cannot decide which path turns most to the left
+    // if there is no prior point.
+    std::list<Joint*> skipped_joints;
+
     for (auto* joint : joints)
     {
       // Skip fully used joints
       if (joint->used)
         continue;
 
-#if 0
-    const auto& vertex = joint->vertex;
-    std::cout << fmt::format("Start joint:\n\t{},{} --> {}:{},{}\n",
-                             vertex.x,
-                             vertex.y,
-                             joint->used,
-                             joint->next->vertex.x,
-                             joint->next->vertex.y);
-#endif
-
       // If the next vertex has duplicates, we cannot calculate the angle from which to turn most
       // to the right. On the other hand, if the first vertex has duplicates, we are free to
       // choose any continuation we want, no need to select the rightmost turn.
 
-      // TODO: Perhaps we should collect a list of skipped joints and add a second loop after
-      // this one to make sure all joints have been processed? Pathological data might have
-      // a case where a polygon has alternative paths at all vertices. In fact, it may be
-      // possible that the list would have to be processed again and again until all joints
-      // have been used. To prevent an eternal loop we'd need a function called
-      // has_unused_duplicates. In fact, it would be better to have one right here too
-      // to simplify the logic, possibly at the other call site too.
-
-      if (!has_duplicates(joint->next))
+      if (has_duplicates(joint->next))
+        skipped_joints.push_back(joint);
+      else
       {
         auto polylines = extract_right_turning_sequence(joint, strict, verbose);
 
         if (!polylines.empty())  // the sequence may have been discarded due to a problem
-        {
-#if 0
-        std::cout << "Extracted right turning sequence:\n";
-        for (const auto& polyline : polylines)
-          std::cout << fmt::format("\t{}\n", polyline.wkt());
-
-        std::cout << "Joint map now:\n" << Trax::to_string(joints);
-#endif
-
-          // Now extract a left turning sequence to separate holes touching the exterior
-          extract_left_turning_sequence(polylines, shells, holes);
-        }
-      }
-      else
-      {
-        // std::cout << "Skipping duplicate start point. Duplicates: " << num_joints << "\n";
+          extract_left_turning_sequence(polylines, shells, holes);  // separate holes touching shell
       }
     }
 
-    // Verify all joints were used
-#if 0    
-    std::size_t unused_count = 0;
-    for (auto* joint : joints)
+    // Make sure skipped joints were processed
+    for (auto* joint : skipped_joints)
     {
       if (!joint->used)
-        ++unused_count;
+      {
+        auto polylines = extract_right_turning_sequence(joint, strict, verbose);
+        if (!polylines.empty())
+          extract_left_turning_sequence(polylines, shells, holes);
+      }
     }
-    if (unused_count > 0)
-      throw Fmi::Exception(BCP, "Contouring left unused joints")
-          .addParameter("count", std::to_string(unused_count));
-#endif
   }
   catch (...)
   {
