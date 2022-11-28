@@ -99,8 +99,7 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
     else
     {
       auto* geoms = new std::vector<geos::geom::Geometry*>;
-      for (auto* line : *lines)
-        geoms->push_back(line);
+      std::copy(lines->begin(), lines->end(), std::back_inserter(*geoms));
       linegeoms = factory->createMultiLineString(geoms);
     }
   }
@@ -117,8 +116,7 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
     else
     {
       auto* geoms = new std::vector<geos::geom::Geometry*>;
-      for (auto* poly : *polys)
-        geoms->push_back(poly);
+      std::copy(polys->begin(), polys->end(), std::back_inserter(*geoms));
       polygeoms = factory->createMultiPolygon(geoms);
     }
   }

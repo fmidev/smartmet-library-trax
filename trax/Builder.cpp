@@ -28,9 +28,8 @@ void remove_ghosts(Polylines& rings, Polylines& lines)
 }  // namespace
 
 Builder::Builder(Builder&& other) noexcept
+    : m_geom(std::move(other.m_geom)), m_merger(std::move(other.m_merger))
 {
-  m_geom = std::move(other.m_geom);
-  m_merger = std::move(other.m_merger);
 }
 
 Builder::Builder(std::size_t /* width */, std::size_t /* height */) {}
@@ -64,7 +63,7 @@ void Builder::finish_isolines(bool strict)
   }
 }
 
-void Builder::finish_isobands(bool strict, bool missing)
+void Builder::finish_isobands(bool strict)
 {
   try
   {

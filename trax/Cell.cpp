@@ -39,7 +39,7 @@ inline MinMax minmax(float z1, float z2)
 {
   if (z1 <= z2)
     return MinMax(z1, z2);  // z1,z2 neither is NaN
-  if (z2 < z1)
+  if (z2 < z1)              // NOLINT - linters do not realize we're using NaN properties
     return MinMax(z2, z1);  // z2,z1 neither is NaN
   if (std::isnan(z1))
     return MinMax(z2, z2);  // z2,z2 which could be NaN,NaN

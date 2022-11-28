@@ -33,7 +33,7 @@ class JointPool
     friend class JointPool;
 
    public:
-    iterator(JointPool* p) : pool(p) {}
+    explicit iterator(JointPool* p) : pool(p) {}
 
     Joint* operator*();
     iterator& operator++();
@@ -56,7 +56,7 @@ class JointPool
   ~JointPool();
 
   JointPool(std::size_t start_size = 16384) : m_start_size(start_size) {}
-  JointPool& operator=(JointPool&& other) noexcept;
+  JointPool(JointPool&& other) noexcept;
 
   Joint* create(const Vertex& vertex);
 
@@ -65,8 +65,8 @@ class JointPool
 
   // No copying allowed
   JointPool(const JointPool&) = delete;
-  JointPool(JointPool&&) = delete;
   JointPool& operator=(const JointPool&) = delete;
+  JointPool& operator=(JointPool&&) = delete;
 
  private:
   Joint* create_slow(const Vertex& vertex);

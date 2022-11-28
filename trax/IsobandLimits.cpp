@@ -28,8 +28,7 @@ void IsobandLimits::add(float lo, float hi)
 // Add multiple isobands
 void IsobandLimits::add(const std::vector<Range>& limits)
 {
-  for (const auto& range : limits)
-    m_limits.push_back(range);
+  std::copy(limits.begin(), limits.end(), std::back_inserter(m_limits));
 }
 
 // The given limits are valid if they are lexiographically sorted

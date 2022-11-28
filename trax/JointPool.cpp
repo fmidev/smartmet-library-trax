@@ -59,19 +59,15 @@ JointPool::~JointPool()
     free(m_buffer[i]);
 }
 
-JointPool& JointPool::operator=(JointPool&& other) noexcept
+JointPool::JointPool(JointPool&& other) noexcept
+    : m_start_size(other.m_start_size),
+      m_size(other.m_size),
+      m_capacity(other.m_capacity),
+      m_blocks(other.m_blocks),
+      m_block(other.m_block),
+      m_next(other.m_next),
+      m_buffer(other.m_buffer)
 {
-  if (this != &other)
-  {
-    m_start_size = other.m_start_size;
-    m_size = other.m_size;
-    m_capacity = other.m_capacity;
-    m_blocks = other.m_blocks;
-    m_block = other.m_block;
-    m_next = other.m_next;
-    m_buffer = other.m_buffer;
-  }
-  return *this;
 }
 
 // Return Nth element or nullptr
@@ -133,7 +129,7 @@ Joint* JointPool::create_slow(const Vertex& vertex)
 }
 
 // For debugging only
-std::size_t resolve(JointPool& pool, Joint* joint)
+std::size_t resolve(JointPool& pool, const Joint* joint)
 {
   auto i = 0UL;
   for (auto it = pool.begin(), end = pool.end(); it != end; ++it, ++i)

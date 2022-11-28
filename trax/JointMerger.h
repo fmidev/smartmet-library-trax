@@ -22,7 +22,6 @@ class JointMerger
  public:
   JointMerger() = default;
   JointMerger(JointMerger&& other) noexcept;
-  JointMerger& operator=(JointMerger&& other) noexcept;
 
   // Create a new joint from the pool
   Joint* create(const Vertex& vertex) { return m_pool.create(vertex); }

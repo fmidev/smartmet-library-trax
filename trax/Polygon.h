@@ -17,7 +17,7 @@ class Polygon
 {
  public:
   Polygon() = delete;
-  Polygon(Polyline exterior);
+  explicit Polygon(Polyline exterior);
   Polygon(std::initializer_list<std::initializer_list<double>> init_list);
 
   void hole(Polyline hole);

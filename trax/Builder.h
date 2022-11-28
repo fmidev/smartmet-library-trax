@@ -15,9 +15,14 @@ class Range;
 class Builder
 {
  public:
+  Builder(std::size_t width, std::size_t height);
   Builder(Builder&& other) noexcept;
 
-  Builder(std::size_t width, std::size_t height);
+  ~Builder() = default;
+  Builder() = delete;
+  Builder(const Builder& other) = delete;
+  Builder& operator=(const Builder& other) = delete;
+  Builder& operator=(Builder&& other) = delete;
 
   // Get the final result
   GeometryCollection result();
@@ -28,7 +33,7 @@ class Builder
   // Finalize (partial) results
   void finish_row();
   void finish_isolines(bool strict);
-  void finish_isobands(bool strict, bool missing);
+  void finish_isobands(bool strict);
 
   JointMerger& merger() { return m_merger; }
 

@@ -97,7 +97,7 @@ void Contour::Impl::finish_isobands()
   {
     try
     {
-      m_builders[i].finish_isobands(m_strict, m_isoband_limits[i].missing());
+      m_builders[i].finish_isobands(m_strict);
     }
     catch (...)
     {

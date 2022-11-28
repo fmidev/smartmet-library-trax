@@ -13,7 +13,9 @@ namespace Trax
 namespace
 {
 // Find match for joint from the end of the current row
-Joint* find_match(const Vertex& vertex, JointPool::iterator& begin, JointPool::iterator& end)
+Joint* find_match(const Vertex& vertex,
+                  const JointPool::iterator& begin,
+                  const JointPool::iterator& end)
 {
   auto it = end;
 
@@ -82,7 +84,7 @@ void remove_alt(Joint* joint)
 
 // See if two joints belong to the same path of alternatives. This is true
 // if the the match is found in the ring for the given joint.
-bool is_alt_merged(Joint* match, Joint* joint)
+bool is_alt_merged(const Joint* match, Joint* joint)
 {
   auto* j = joint;
   while (j->alt != match)  // terminate search if the match is found
@@ -197,25 +199,13 @@ void merge_joint(Joint* joint, Joint* match)
 }  // namespace
 
 JointMerger::JointMerger(JointMerger&& other) noexcept
-{
-  m_pool = std::move(other.m_pool);
-  m_row_start = other.m_row_start;
-  m_row_end = other.m_row_end;
-  m_cell_merge_end = other.m_cell_merge_end;
-  m_maxrow = other.m_maxrow;
-}
+    : m_pool(std::move(other.m_pool)),
+      m_row_start(other.m_row_start),
+      m_row_end(other.m_row_end),
+      m_cell_merge_end(other.m_cell_merge_end),
+      m_maxrow(other.m_maxrow)
 
-JointMerger& JointMerger::operator=(JointMerger&& other) noexcept
 {
-  if (this != &other)
-  {
-    m_pool = std::move(other.m_pool);
-    m_row_start = other.m_row_start;
-    m_row_end = other.m_row_end;
-    m_cell_merge_end = other.m_cell_merge_end;
-    m_maxrow = other.m_maxrow;
-  }
-  return *this;
 }
 
 // Merge vertices from a grid cell to the end of the row. Note that we do not
@@ -325,10 +315,10 @@ void JointMerger::merge_cell()
                                  reinterpret_cast<void*>(*m_last_cell_start),
                                  reinterpret_cast<void*>(*m_cell_merge_end));
 #endif
-        auto* match = find_match(vertex, m_last_cell_start, m_cell_merge_end);
-        if (match != nullptr)
+        auto* vertex_match = find_match(vertex, m_last_cell_start, m_cell_merge_end);
+        if (vertex_match != nullptr)
         {
-          merge_joint(joint, match);
+          merge_joint(joint, vertex_match);
 #if 0
           std::cout << "      after joint " << vertex.x << "," << vertex.y << ":\n"
                     << to_string(m_pool) << "\n";

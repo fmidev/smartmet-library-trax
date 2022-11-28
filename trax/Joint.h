@@ -6,7 +6,7 @@ namespace Trax
 {
 struct Joint
 {
-  Joint(const Vertex& v) : vertex(v) {}
+  explicit Joint(const Vertex& v) : vertex(v) {}
   Joint() = default;
 
   // Note the placement of Vertex for optimal alignment
