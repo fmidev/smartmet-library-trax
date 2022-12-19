@@ -16,6 +16,7 @@ class Contour::Impl
   void closed_range(bool flag) { m_closed_range = flag; }
   void strict(bool flag) { m_strict = flag; }
   void validate(bool flag) { m_validate = flag; }
+  void shell(double value) { m_shell = value; }
 
   // Calculate full set of contours
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -73,6 +74,9 @@ class Contour::Impl
   // Requested isobands
   IsobandLimits m_isoband_limits;
   bool m_contour_missing = false;
+
+  // Extra shell extent or NaN if there is none
+  double m_shell;
 
   // Unfinished geometries, one for each contour
   using Builders = std::vector<Builder>;

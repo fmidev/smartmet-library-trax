@@ -1,4 +1,6 @@
 #include "Grid.h"
+#include <limits>
+
 namespace Trax
 {
 Grid::~Grid() = default;
@@ -6,6 +8,12 @@ Grid::~Grid() = default;
 std::size_t Grid::shift() const
 {
   return 0UL;
+}
+
+double Grid::shell() const
+{
+  // No shell around the grid by default
+  return std::numeric_limits<double>::quiet_NaN();
 }
 
 // For a 2x2 grid we can iterate only through cell at coordinate 0,0

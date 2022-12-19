@@ -42,7 +42,7 @@ class JointBuilder
 
   void build_linear(const Cell& c);
   void build_missing(const Cell& c);  // with linear interpolation
-  void build_midpoint(const Cell& c);
+  void build_midpoint(const Cell& c, double shell);
 
  private:
   void build_edge(VertexType type,
@@ -1946,16 +1946,23 @@ void JointBuilder::build_missing(const Cell& c)
   finish_cell();
 }
 
-void JointBuilder::build_midpoint(const Cell& c)
+void JointBuilder::build_midpoint(const Cell& c, double shell)
 {
-  const auto xa = (c.p4.x + c.p1.x) / 2;  // bottom center
-  const auto ya = (c.p4.y + c.p1.y) / 2;
-  const auto xb = (c.p1.x + c.p2.x) / 2;  // left center
-  const auto yb = (c.p1.y + c.p2.y) / 2;
-  const auto xc = (c.p2.x + c.p3.x) / 2;  // top center
-  const auto yc = (c.p2.y + c.p3.y) / 2;
-  const auto xd = (c.p3.x + c.p4.x) / 2;  // right center
-  const auto yd = (c.p3.y + c.p4.y) / 2;
+  // Abort if not contouring missing values and in the shell regions. Note that if there is no
+  // shell, the value is NaN, and hence all comparisons will fail.
+  if (!m_range.missing())
+    if (c.p1.x == -shell || c.p1.y == -shell || c.p2.x == -shell || c.p2.y == +shell ||
+        c.p3.x == +shell || c.p3.y == +shell || c.p4.x == +shell || c.p4.y == -shell)
+      return;
+
+  auto xa = (c.p4.x + c.p1.x) / 2;  // bottom center
+  auto ya = (c.p4.y + c.p1.y) / 2;
+  auto xb = (c.p1.x + c.p2.x) / 2;  // left center
+  auto yb = (c.p1.y + c.p2.y) / 2;
+  auto xc = (c.p2.x + c.p3.x) / 2;  // top center
+  auto yc = (c.p2.y + c.p3.y) / 2;
+  auto xd = (c.p3.x + c.p4.x) / 2;  // right center
+  auto yd = (c.p3.y + c.p4.y) / 2;
 
   std::size_t hash = 0;
   if (m_range.missing())
@@ -2141,13 +2148,6 @@ void isoline_linear(JointMerger& joints, const Cell& c, float limit)
   b.build_linear(c);
 }
 
-void isoband_midpoint(JointMerger& joints, const Cell& c, const Range& range)
-{
-  bool logarithmic = false;
-  JointBuilder b(joints, range, logarithmic);
-  b.build_midpoint(c);
-}
-
 void isoband_logarithmic(JointMerger& joints, const Cell& c, const Range& range)
 {
   bool logarithmic = true;
@@ -2161,6 +2161,13 @@ void isoline_logarithmic(JointMerger& joints, const Cell& c, float limit)
   Range range(limit, std::numeric_limits<float>::infinity());
   JointBuilder b(joints, range, logarithmic);
   b.build_linear(c);
+}
+
+void isoband_midpoint(JointMerger& joints, const Cell& c, const Range& range, double shell)
+{
+  bool logarithmic = false;
+  JointBuilder b(joints, range, logarithmic);
+  b.build_midpoint(c, shell);
 }
 
 }  // namespace CellBuilder

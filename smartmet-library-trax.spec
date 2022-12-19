@@ -10,7 +10,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 22.11.28
+Version: 22.12.19
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -19,7 +19,7 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 22.10.20
+BuildRequires: smartmet-library-macgyver-devel >= 22.12.16
 %if %{defined el7}
 BuildRequires: devtoolset-7-gcc-c++
 #TestRequires: devtoolset-7-gcc-c++
@@ -29,7 +29,7 @@ BuildRequires: rpm-build
 BuildRequires: gdal34-devel
 BuildRequires: geos310-devel
 BuildRequires: fmt-devel
-Requires: smartmet-library-macgyver >= 22.10.20
+Requires: smartmet-library-macgyver >= 22.12.16
 Requires: gdal34
 Requires: geos310
 Requires: fmt
@@ -40,7 +40,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos310-devel
 #TestRequires: gdal34-devel
-#TestRequires: smartmet-library-macgyver-devel >= 22.10.20
+#TestRequires: smartmet-library-macgyver-devel >= 22.12.16
 
 %description
 Isoline/isoband calculation library.
@@ -84,6 +84,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Mon Dec 19 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.12.19-1.fmi
+- Added a shell size setting to let midpoint interpolation know when not to extrapolate outside the grid
+
 * Mon Nov 28 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.11.28-1.fmi
 - Silenced compiler warnings
 

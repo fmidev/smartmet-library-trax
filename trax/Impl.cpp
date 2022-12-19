@@ -231,7 +231,7 @@ void Contour::Impl::isoband(int index, const Cell& c)
       CellBuilder::isoband_linear(merger, c, range);
       break;
     case InterpolationType::Midpoint:
-      CellBuilder::isoband_midpoint(merger, c, range);
+      CellBuilder::isoband_midpoint(merger, c, range, m_shell);
       break;
     case InterpolationType::Logarithmic:
       CellBuilder::isoband_logarithmic(merger, c, range);
@@ -275,6 +275,8 @@ void fill_buffers(const Grid& grid,
 // Contour full grid
 GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimits& limits)
 {
+  shell(grid.shell());
+
   const auto bbox = grid.bbox();
   const auto imin = bbox[0];
   const auto jmin = bbox[1];
@@ -383,6 +385,8 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 // Contour full grid for isolines
 GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValues& limits)
 {
+  shell(grid.shell());
+
   auto bbox = grid.bbox();
   auto imin = bbox[0];
   auto jmin = bbox[1];

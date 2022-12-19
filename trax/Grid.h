@@ -21,6 +21,7 @@ class Grid
   virtual std::size_t height() const = 0;
   virtual std::size_t shift() const;
   virtual std::array<long, 4> bbox() const;
+  virtual double shell() const;
 };
 
 }  // namespace Trax
