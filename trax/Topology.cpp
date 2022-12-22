@@ -376,7 +376,7 @@ void extract_left_turning_sequence(Polylines& polylines, Polylines& shells, Hole
 
 bg_box make_bg_box(const BBox& bbox)
 {
-  return bg_box(bg_point(bbox.xmin(), bbox.ymin()), bg_point(bbox.xmax(), bbox.ymax()));
+  return {bg_point(bbox.xmin(), bbox.ymin()), bg_point(bbox.xmax(), bbox.ymax())};
 }
 
 bg_rtree build_rtree(Polygons& polygons)

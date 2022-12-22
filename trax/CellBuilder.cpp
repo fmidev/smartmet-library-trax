@@ -189,7 +189,7 @@ void JointBuilder::add(
   Vertex vertex(column, row, vtype, x, y, ghost);
 
   if (n == 0)
-    m_vertices.push_back(vertex);
+    m_vertices.push_back(vertex);        // NOLINT(bugprone-branch-clone)
   else if (m_vertices.back() == vertex)  // avoid consecutive duplicates
   {
   }

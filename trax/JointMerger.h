@@ -23,6 +23,10 @@ class JointMerger
   JointMerger() = default;
   JointMerger(JointMerger&& other) noexcept;
 
+  JointMerger(const JointMerger& other) = delete;
+  JointMerger& operator=(const JointMerger& other) = delete;
+  JointMerger& operator=(JointMerger&& other) = delete;
+
   // Create a new joint from the pool
   Joint* create(const Vertex& vertex) { return m_pool.create(vertex); }
 

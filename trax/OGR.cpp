@@ -13,7 +13,7 @@ OGRLineString* to_ogr_linestring(const Polyline& line)
   auto xcoords = line.xcoordinates();
   auto ycoords = line.ycoordinates();
 
-  ogrline->setPoints(n, &xcoords[0], &ycoords[0]);
+  ogrline->setPoints(n, xcoords.data(), ycoords.data());
 
   return ogrline;
 }
@@ -27,7 +27,7 @@ OGRLinearRing* to_ogr_linearring(const Polyline& ring)
   auto xcoords = ring.xcoordinates();
   auto ycoords = ring.ycoordinates();
 
-  ogrring->setPoints(n, &xcoords[0], &ycoords[0]);
+  ogrring->setPoints(n, xcoords.data(), ycoords.data());
 
   return ogrring;
 }

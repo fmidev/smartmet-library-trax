@@ -5,6 +5,54 @@
 
 namespace Trax
 {
+namespace
+{
+std::string get_wkt(const std::vector<Polyline> &polylines)
+{
+  std::string wkt;
+  if (!polylines.empty())
+  {
+    if (polylines.size() == 1)
+      wkt = polylines[0].wkt();
+    else
+    {
+      wkt = "MULTILINESTRING (";
+      for (auto i = 0UL; i < polylines.size(); i++)
+      {
+        if (i > 0)
+          wkt += ',';
+        wkt += polylines[i].wkt_body();
+      }
+      wkt += ')';
+    }
+  }
+  return wkt;
+}
+
+std::string get_wkt(const std::vector<Polygon> &polygons)
+{
+  std::string wkt;
+  if (!polygons.empty())
+  {
+    if (polygons.size() == 1)
+      wkt = polygons[0].wkt();
+    else
+    {
+      wkt = "MULTIPOLYGON (";
+      for (auto i = 0UL; i < polygons.size(); i++)
+      {
+        if (i > 0)
+          wkt += ',';
+        wkt += polygons[i].wkt_body();
+      }
+      wkt += ')';
+    }
+  }
+  return wkt;
+}
+
+}  // namespace
+
 const std::vector<Polygon> &GeometryCollection::polygons() const
 {
   return m_polygons;
@@ -27,45 +75,9 @@ void GeometryCollection::add(Polygon &&polygon)
 
 std::string GeometryCollection::wkt() const
 {
-  // Process the linestring part first
-  std::string linewkt;
-  if (!m_polylines.empty())
-  {
-    if (m_polylines.size() == 1)
-      linewkt = m_polylines[0].wkt();
-    else
-    {
-      linewkt = "MULTILINESTRING (";
-      for (auto i = 0UL; i < m_polylines.size(); i++)
-      {
-        if (i > 0)
-          linewkt += ',';
-        linewkt += m_polylines[i].wkt_body();
-      }
-      linewkt += ')';
-    }
-  }
+  std::string linewkt = get_wkt(m_polylines);
+  std::string polywkt = get_wkt(m_polygons);
 
-  // Then the polygon part
-  std::string polywkt;
-  if (!m_polygons.empty())
-  {
-    if (m_polygons.size() == 1)
-      polywkt = m_polygons[0].wkt();
-    else
-    {
-      polywkt = "MULTIPOLYGON (";
-      for (auto i = 0UL; i < m_polygons.size(); i++)
-      {
-        if (i > 0)
-          polywkt += ',';
-        polywkt += m_polygons[i].wkt_body();
-      }
-      polywkt += ')';
-    }
-  }
-
-  // And merge the results
   if (linewkt.empty())
   {
     if (polywkt.empty())

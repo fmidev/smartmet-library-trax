@@ -2,10 +2,8 @@
 #include <fmt/format.h>
 #include <smartmet/macgyver/Exception.h>
 #include <cmath>
-#include <stdexcept>
-
-#include <fmt/format.h>
 #include <iostream>
+#include <stdexcept>
 
 namespace Trax
 {

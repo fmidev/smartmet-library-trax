@@ -38,12 +38,12 @@ bool first_diagonal_larger(const Cell& cell)
 inline MinMax minmax(float z1, float z2)
 {
   if (z1 <= z2)
-    return MinMax(z1, z2);  // z1,z2 neither is NaN
-  if (z2 < z1)              // NOLINT - linters do not realize we're using NaN properties
-    return MinMax(z2, z1);  // z2,z1 neither is NaN
+    return {z1, z2};  // z1,z2 neither is NaN
+  if (z2 < z1)        // NOLINT - linters do not realize we're using NaN properties
+    return {z2, z1};  // z2,z1 neither is NaN
   if (std::isnan(z1))
-    return MinMax(z2, z2);  // z2,z2 which could be NaN,NaN
-  return MinMax(z1, z1);    // z1,z1 which cannot be NaN,NaN
+    return {z2, z2};  // z2,z2 which could be NaN,NaN
+  return {z1, z1};    // z1,z1 which cannot be NaN,NaN
 }
 
 MinMax minmax(const Cell& cell)
@@ -52,7 +52,7 @@ MinMax minmax(const Cell& cell)
   auto tmp2 = minmax(cell.p3.z, cell.p4.z);
   auto tmp3 = minmax(tmp1.first, tmp2.first);
   auto tmp4 = minmax(tmp1.second, tmp2.second);
-  return MinMax(tmp3.first, tmp4.second);
+  return {tmp3.first, tmp4.second};
 }
 
 }  // namespace Trax
