@@ -195,23 +195,38 @@ Joint* select_right_turn(const Vertex& vertex,
   return best;
 }
 
+Polylines handle_trivial_right_turn(const Polyline& polyline,
+				    Polylines& polylines,
+				    bool strict,
+				    const Vertex& vertex)
+  
+{
+  if (polyline.size() == 1)  // collapsed to a corner point, just discard it
+    return polylines;
+  if (!strict)
+    {
+      // Ignore the built polyline and try to continue. This problem can happen
+      // near the poles when projected coordinates may be inaccurate.
+      polylines.clear();
+      return polylines;
+    }
+  
+  throw Fmi::Exception(BCP,
+		       fmt::format("Only joint already used at {},{}", vertex.x, vertex.y))
+    .addParameter("Column", fmt::format("{}", vertex.column))
+    .addParameter("Row", fmt::format("{}", vertex.row))
+    .addParameter("Type", to_string(vertex.type));
+}
+
 Polylines extract_right_turning_sequence(Joint* joint, bool strict, bool verbose)
 {
   Polylines polylines;  // polylines extracted by taking right turns split at double joints
   Polyline polyline;    // grow a polyline until a double joint is encountered
   try
   {
-#if 0
-  std::cout << "RIGHT\n";
-#endif
-
     while (true)
     {
       const auto& vertex = joint->vertex;
-
-#if 0
-    std::cout << fmt::format("\t{},{}\n", vertex.x, vertex.y);
-#endif
 
       polyline.append(vertex);
 
@@ -236,25 +251,9 @@ Polylines extract_right_turning_sequence(Joint* joint, bool strict, bool verbose
 
       if (!has_duplicates(joint) || polyline.size() == 1)
       {
-        // Trivial case of only one possible continuation
         if (joint->used)
-        {
-          if (polyline.size() == 1)  // collapsed to a corner point, just discard it
-            return polylines;
-          if (!strict)
-          {
-            // Ignore the built polyline and try to continue. This problem can happen
-            // near the poles when projected coordinates may be inaccurate.
-            polylines.clear();
-            return polylines;
-          }
+	  return handle_trivial_right_turn(polyline, polylines, strict, vertex);
 
-          throw Fmi::Exception(BCP,
-                               fmt::format("Only joint already used at {},{}", vertex.x, vertex.y))
-              .addParameter("Column", fmt::format("{}", vertex.column))
-              .addParameter("Row", fmt::format("{}", vertex.row))
-              .addParameter("Type", to_string(vertex.type));
-        }
         joint->used = true;
         joint = joint->next;
       }

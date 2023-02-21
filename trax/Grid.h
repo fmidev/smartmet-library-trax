@@ -11,6 +11,11 @@ class Grid
 {
  public:
   virtual ~Grid();
+  Grid() = default;
+  Grid(const Grid& other) = default;
+  Grid(Grid&& other) = default;
+  Grid& operator=(const Grid& other) = default;
+  Grid& operator=(Grid&& other) = default;
 
   virtual double x(long i, long j) const = 0;
   virtual double y(long i, long j) const = 0;

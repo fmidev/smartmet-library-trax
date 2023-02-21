@@ -1,3 +1,4 @@
+
 #include "Impl.h"
 #include "Geos.h"
 #include "GridPoint.h"
@@ -353,6 +354,8 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   }
   catch (...)
   {
+    Fmi::Exception ex(BCP, "Contouring failed!", nullptr);
+#if 0    
     // Try to provide some info into the logs
     std::string details;
     if (nx < 10 && ny < 10)
@@ -372,11 +375,11 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
         details += "\n";
       }
     }
-    Fmi::Exception ex(BCP, "Contouring failed!", nullptr);
     ex.addParameter("nx", Fmi::to_string(nx));
     ex.addParameter("ny", Fmi::to_string(ny));
     if (!details.empty())
       ex.addParameter("details", details);
+#endif    
     throw ex;
   }
 
