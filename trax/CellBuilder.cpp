@@ -5,9 +5,8 @@
 #include "Place.h"
 #include "Range.h"
 #include "Vertex.h"
-#include <limits>
-
 #include <fmt/format.h>
+#include <limits>
 
 #if 0
 #include <fmt/format.h>
@@ -35,14 +34,14 @@ struct point
 class JointBuilder
 {
  public:
-  JointBuilder(JointMerger& joints, const Range& range, bool logarithmic)
-      : m_range(range), m_joints(joints), m_logarithmic(logarithmic)
-  {
-  }
+  JointBuilder(JointMerger& joints, const Range& range) : m_range(range), m_joints(joints) {}
 
   void build_linear(const Cell& c);
-  void build_missing(const Cell& c);  // with linear interpolation
   void build_midpoint(const Cell& c, double shell);
+  void build_missing(const Cell& c);  // with linear interpolation
+
+  void set_logarithmic_mode() { m_logarithmic = true; }
+  void set_isoline_mode() { m_isoline = true; }
 
  private:
   void build_edge(VertexType type,
@@ -60,7 +59,15 @@ class JointBuilder
                   const GridPoint& g2);
   void add(std::int32_t column, std::int32_t row, const point& p, float z);
   void add(std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p);
+  void add(std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p, bool ghost);
   void add(std::int32_t column, std::int32_t row, VertexType vtype, double x, double y, float z);
+  void add(std::int32_t column,
+           std::int32_t row,
+           VertexType vtype,
+           double x,
+           double y,
+           float z,
+           bool ghost);
   void close();
   void finish_cell();
 
@@ -79,7 +86,8 @@ class JointBuilder
   Range m_range;
   JointMerger& m_joints;
   Vertices m_vertices;
-  bool m_logarithmic;
+  bool m_logarithmic = false;
+  bool m_isoline = false;
 };
 
 point JointBuilder::intersect(
@@ -181,13 +189,30 @@ void JointBuilder::add(std::int32_t column, std::int32_t row, VertexType vtype, 
 }
 
 void JointBuilder::add(
+    std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p, bool ghost)
+{
+  add(column, row, vtype, p.x, p.y, p.z, ghost);
+}
+
+void JointBuilder::add(
     std::int32_t column, std::int32_t row, VertexType vtype, double x, double y, float z)
 {
-  const auto n = m_vertices.size();
   // Note that NaN is always marked a ghost as needed for midpoint algorithm
   const bool ghost = z != m_range.lo();
+  add(column, row, vtype, x, y, z, ghost);
+}
+
+void JointBuilder::add(std::int32_t column,
+                       std::int32_t row,
+                       VertexType vtype,
+                       double x,
+                       double y,
+                       float z,
+                       bool ghost)
+{
   Vertex vertex(column, row, vtype, x, y, ghost);
 
+  const auto n = m_vertices.size();
   if (n == 0)
     m_vertices.push_back(vertex);        // NOLINT(bugprone-branch-clone)
   else if (m_vertices.back() == vertex)  // avoid consecutive duplicates
@@ -219,8 +244,14 @@ void JointBuilder::close()
     for (auto i = 0UL; i < m_vertices.size(); i++)
     {
       const auto& v = m_vertices[i];
-      std::cout << fmt::format(
-          "\t{}:\t{},{}\t{},{}\t{}\n", i, v.x, v.y, v.column, v.row, to_string(v.type));
+      std::cout << fmt::format("\t{}:\t{},{}\t{},{}\t{}\t{}\n",
+                               i,
+                               v.x,
+                               v.y,
+                               v.column,
+                               v.row,
+                               v.ghost ? "G" : "-",
+                               to_string(v.type));
     }
   }
 #endif
@@ -1870,75 +1901,49 @@ void JointBuilder::build_missing(const Cell& c)
 {
   auto hash = nan_hash(c.p1.z, c.p2.z, c.p3.z, c.p4.z);
 
-#if 0
-  print_it = true;
-  if (print_it)
-  {
-    std::cout << fmt::format(
-        "\n{},{}\t{} {}\t\t{},{}\t{},{}\n\t{} {}\t\t{},{}\t{},{}\t\trange={}...{}\n",
-        c.i,
-        c.j,
-        c.p2.z,
-        c.p3.z,
-        c.p2.x,
-        c.p2.y,
-        c.p3.x,
-        c.p3.y,
-
-        c.p1.z,
-        c.p4.z,
-        c.p1.x,
-        c.p1.y,
-        c.p4.x,
-        c.p4.y,
-
-        m_range.lo(),
-        m_range.hi());
-  }
-#endif
   switch (hash)
   {
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Below):
       break;
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Below, Place::Inside):
     {
-      add(c.i, c.j, VertexType::Corner, c.p1);          // B--B
-      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // | /|
-      add(c.i + 1, c.j, VertexType::Corner, c.p4);      // B--I
+      add(c.i, c.j, VertexType::Corner, c.p1, !m_isoline);          // B--B
+      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3, !m_isoline);  // | /|
+      add(c.i + 1, c.j, VertexType::Corner, c.p4, true);            // B--I
       close();
       break;
     }
     case TRAX_RECT_HASH(Place::Below, Place::Below, Place::Inside, Place::Below):
     {
-      add(c.i, c.j + 1, VertexType::Corner, c.p2);      // B--I
-      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // | \|
-      add(c.i + 1, c.j, VertexType::Corner, c.p4);      // B--B
+      add(c.i, c.j + 1, VertexType::Corner, c.p2, !m_isoline);  // B--I
+      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3, true);    // | \|
+      add(c.i + 1, c.j, VertexType::Corner, c.p4, !m_isoline);  // B--B
       close();
       break;
     }
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Below):
     {
-      add(c.i, c.j, VertexType::Corner, c.p1);          // I--B
-      add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |/ |
-      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // B--B
+      add(c.i, c.j, VertexType::Corner, c.p1, !m_isoline);          // I--B
+      add(c.i, c.j + 1, VertexType::Corner, c.p2, true);            // |/ |
+      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3, !m_isoline);  // B--B
       close();
       break;
     }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Below, Place::Below):
     {
-      add(c.i, c.j, VertexType::Corner, c.p1);      // B--B
-      add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |\ |
-      add(c.i + 1, c.j, VertexType::Corner, c.p4);  // I--B
+      add(c.i, c.j, VertexType::Corner, c.p1, true);            // B--B
+      add(c.i, c.j + 1, VertexType::Corner, c.p2, !m_isoline);  // |\ |
+      add(c.i + 1, c.j, VertexType::Corner, c.p4, !m_isoline);  // I--B
       close();
       break;
     }
     default:
     {
       // at least two missing values, hence full cell is missing
-      add(c.i, c.j, VertexType::Corner, c.p1);
-      add(c.i, c.j + 1, VertexType::Corner, c.p2);
-      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
-      add(c.i + 1, c.j, VertexType::Corner, c.p4);
+      add(c.i, c.j, VertexType::Corner, c.p1, true);
+      add(c.i, c.j + 1, VertexType::Corner, c.p2, true);
+      add(c.i + 1, c.j + 1, VertexType::Corner, c.p3, true);
+      add(c.i + 1, c.j, VertexType::Corner, c.p4, true);
       close();
       break;
     }
@@ -2135,38 +2140,39 @@ namespace CellBuilder
 {
 void isoband_linear(JointMerger& joints, const Cell& c, const Range& range)
 {
-  bool logarithmic = false;
-  JointBuilder b(joints, range, logarithmic);
+  JointBuilder b(joints, range);
   b.build_linear(c);
 }
 
 void isoline_linear(JointMerger& joints, const Cell& c, float limit)
 {
-  bool logarithmic = false;
-  Range range(limit, std::numeric_limits<float>::infinity());
-  JointBuilder b(joints, range, logarithmic);
+  auto hilimit = (std::isnan(limit) ? limit : std::numeric_limits<float>::infinity());
+  Range range(limit, hilimit);
+  JointBuilder b(joints, range);
+  b.set_isoline_mode();
   b.build_linear(c);
 }
 
 void isoband_logarithmic(JointMerger& joints, const Cell& c, const Range& range)
 {
-  bool logarithmic = true;
-  JointBuilder b(joints, range, logarithmic);
+  JointBuilder b(joints, range);
+  b.set_logarithmic_mode();
   b.build_linear(c);
 }
 
 void isoline_logarithmic(JointMerger& joints, const Cell& c, float limit)
 {
-  bool logarithmic = true;
-  Range range(limit, std::numeric_limits<float>::infinity());
-  JointBuilder b(joints, range, logarithmic);
+  auto hilimit = (std::isnan(limit) ? limit : std::numeric_limits<float>::infinity());
+  Range range(limit, hilimit);
+  JointBuilder b(joints, range);
+  b.set_isoline_mode();
+  b.set_logarithmic_mode();
   b.build_linear(c);
 }
 
 void isoband_midpoint(JointMerger& joints, const Cell& c, const Range& range, double shell)
 {
-  bool logarithmic = false;
-  JointBuilder b(joints, range, logarithmic);
+  JointBuilder b(joints, range);
   b.build_midpoint(c, shell);
 }
 

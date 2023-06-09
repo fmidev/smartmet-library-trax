@@ -5,6 +5,31 @@
 
 namespace Trax
 {
+namespace
+{
+// We want NaN to be the first element. NaN breaks std::sort for not satisfying the ordering
+// requirements
+auto isovalue_cmp = [](float a, float b)
+{
+  if (std::isnan(a))
+    return true;
+  if (std::isnan(b))
+    return false;
+  return a < b;
+};
+
+bool both_nan(float a, float b)
+{
+  return std::isnan(a) && std::isnan(b);
+}
+
+bool same(float a, float b)
+{
+  return (a == b || both_nan(a, b));
+}
+
+}  // namespace
+
 // Add a single isoline value
 void IsolineValues::add(float value)
 {
@@ -21,20 +46,20 @@ void IsolineValues::add(const std::vector<float> &values)
 // process the possible isolines for a single grid cell.
 bool IsolineValues::valid() const
 {
-  return std::is_sorted(m_values.begin(), m_values.end());
+  return std::is_sorted(m_values.begin(), m_values.end(), isovalue_cmp);
 }
 
 void IsolineValues::sort()
 {
   auto input_values = m_values;
-  std::sort(m_values.begin(), m_values.end());
+  std::sort(m_values.begin(), m_values.end(), isovalue_cmp);
 
   for (auto value : m_values)
   {
     bool ok = false;
     for (auto j = 0UL; j < input_values.size() && !ok; j++)
     {
-      if (input_values[j] == value)
+      if (same(input_values[j], value))
       {
         m_positions.push_back(j);
         ok = true;

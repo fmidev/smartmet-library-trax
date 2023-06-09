@@ -36,7 +36,8 @@ Range::Range(float lo, float hi) : m_lo(lo), m_hi(hi)
   else if (std::isnan(lo) || std::isnan(hi))
   {
     if (!std::isnan(lo) || !std::isnan(hi))
-      throw Fmi::Exception(BCP, "Isoband limits must both be NaN, not just one");
+      throw Fmi::Exception(
+          BCP, fmt::format("Isoband limits {} and {} must both be NaN, not just one", lo, hi));
   }
   else if (lo >= hi)
     throw Fmi::Exception(

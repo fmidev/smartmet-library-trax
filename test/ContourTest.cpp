@@ -190,8 +190,10 @@ void run_file_tests(const std::string& filename)
     }
     else if (command == "isoline")
     {
-      double value;
-      in >> value;
+      std::string svalue;
+      in >> svalue;
+      auto value = parse_value(svalue);
+
       Trax::IsolineValues values;
       values.add(value);
 
@@ -307,6 +309,12 @@ BOOST_AUTO_TEST_CASE(isoline_2x2)
 {
   BOOST_TEST_MESSAGE("+ [Trax::Builder::isoline 2x2]");
   run_file_tests("data/isoline_2x2.txt");
+}
+
+BOOST_AUTO_TEST_CASE(isoline_2x2_missing)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Builder::isoline 2x2 missing data]");
+  run_file_tests("data/isoline_2x2_missing.txt");
 }
 
 BOOST_AUTO_TEST_CASE(isoline_3x3)

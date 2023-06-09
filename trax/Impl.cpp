@@ -45,12 +45,15 @@ void Contour::Impl::init(const IsolineValues& values, std::size_t width, std::si
     throw Fmi::Exception(BCP, "Isoline values not valid")
         .addParameter("Limits", m_isoline_values.dump());
 
+  // Flag whether we should contour all valid values for later inversion to missing values
+  // Sorting forces this case to be the first one in the list of isolines.
+  if (!m_isoline_values.empty())
+    m_contour_missing = std::isnan(m_isoline_values[0]);
+
   m_builders.clear();
   m_builders.reserve(m_isoline_values.size());
   for (auto i = 0UL; i < m_isoline_values.size(); i++)
     m_builders.emplace_back(width, height);
-
-  // m_builders.resize(m_isoline_values.size(), Builder(width, height));
 }
 
 // Prepare for isoband calculations
@@ -73,7 +76,6 @@ void Contour::Impl::init(const IsobandLimits& limits, std::size_t width, std::si
   m_builders.reserve(m_isoband_limits.size());
   for (auto i = 0UL; i < m_isoband_limits.size(); i++)
     m_builders.emplace_back(width, height);
-  // m_builders.resize(m_isoband_limits.size(), Builder(width, height));
 }
 
 // Finish building a row
@@ -125,13 +127,18 @@ GeometryCollections Contour::Impl::result()
 
 bool Contour::Impl::update_isolines_to_check(const MinMax& minmax)
 {
+  // Only contouring missing values? Exit now to make later logic easier
+  if (m_contour_missing && m_isoline_values.size() == 1)
+    return false;
+
   float minvalue = minmax.first;
   float maxvalue = minmax.second;
 
   auto n = m_isoline_values.size();
+  auto n0 = (m_contour_missing ? 1UL : 0UL);
 
-  m_min_index = std::max(m_min_index, 0UL);
-  m_max_index = std::max(m_max_index, 0UL);
+  m_min_index = std::max(m_min_index, n0);
+  m_max_index = std::max(m_max_index, n0);
 
   while (m_min_index > 0 && minvalue <= m_isoline_values[m_min_index - 1])
     --m_min_index;
@@ -140,7 +147,7 @@ bool Contour::Impl::update_isolines_to_check(const MinMax& minmax)
 
   m_max_index = std::max(m_max_index, m_min_index);
 
-  while (m_max_index > 0 && maxvalue < m_isoline_values[m_max_index])
+  while (m_max_index > n0 && maxvalue < m_isoline_values[m_max_index])
     --m_max_index;
   while (m_max_index < n - 1 && maxvalue >= m_isoline_values[m_max_index + 1])
     ++m_max_index;
@@ -161,8 +168,10 @@ bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
   float minvalue = minmax.first;
   float maxvalue = minmax.second;
 
+#if 0  
   if (std::isnan(minvalue))
     return false;
+#endif
 
   auto n = m_isoband_limits.size();
 
@@ -193,9 +202,6 @@ bool Contour::Impl::update_isobands_to_check(const MinMax& minmax)
 
 void Contour::Impl::isoline(const Cell& c)
 {
-  if (std::isnan(c.p1.z) || std::isnan(c.p2.z) || std::isnan(c.p3.z) || std::isnan(c.p4.z))
-    return;
-
   if (update_isolines_to_check(minmax(c)))
   {
     // Process isolines/isobands min_index...max_index
@@ -203,6 +209,10 @@ void Contour::Impl::isoline(const Cell& c)
     for (auto index = m_min_index; index <= m_max_index; ++index)
       isoline(index, c);
   }
+
+  // Contour valid values if not handled above for later inversion to missing values
+  if (m_contour_missing)
+    isoline(0, c);
 }
 
 void Contour::Impl::isoband(const Cell& c)
