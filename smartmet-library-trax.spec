@@ -10,7 +10,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 23.6.9
+Version: 23.7.10
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -84,6 +84,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Mon Jul 10 2023 Andris Pavēnis <andris.pavenis@fmi.fi> 23.7.10-1.fmi
+- Use postgresql 15, gdal 3.5, geos 3.11 and proj-9.0
+
 * Fri Jun  9 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.6.9-1.fmi
 - Enabled calculating the line between missing data and valid data
 
