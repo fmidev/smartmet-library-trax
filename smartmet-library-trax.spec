@@ -26,20 +26,20 @@ BuildRequires: devtoolset-7-gcc-c++
 %endif
 BuildRequires: make
 BuildRequires: rpm-build
-BuildRequires: gdal34-devel
-BuildRequires: geos310-devel
+BuildRequires: gdal35-devel
+BuildRequires: geos311-devel
 BuildRequires: fmt-devel
 Requires: smartmet-library-macgyver >= 22.12.16
-Requires: gdal34
-Requires: geos310
+Requires: gdal35
+Requires: geos311
 Requires: fmt
 Provides: %{LIBNAME}
 #TestRequires: %{smartmet_boost}-devel
 #TestRequires: gcc-c++
 #TestRequires: make
 #TestRequires: fmt-devel
-#TestRequires: geos310-devel
-#TestRequires: gdal34-devel
+#TestRequires: geos311-devel
+#TestRequires: gdal35-devel
 #TestRequires: smartmet-library-macgyver-devel >= 22.12.16
 
 %description
