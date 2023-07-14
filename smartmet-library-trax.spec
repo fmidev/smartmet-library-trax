@@ -10,7 +10,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 23.7.10
+Version: 23.7.14
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -19,7 +19,7 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 22.12.16
+BuildRequires: smartmet-library-macgyver-devel >= 23.7.10
 %if %{defined el7}
 BuildRequires: devtoolset-7-gcc-c++
 #TestRequires: devtoolset-7-gcc-c++
@@ -30,7 +30,7 @@ BuildRequires: gdal35-devel
 BuildRequires: geos311-devel
 BuildRequires: fmt-devel
 BuildRequires: libcurl-devel >= 7.61.0
-Requires: smartmet-library-macgyver >= 22.12.16
+Requires: smartmet-library-macgyver >= 23.7.10
 Requires: gdal35
 Requires: geos311
 Requires: fmt
@@ -42,7 +42,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos311-devel
 #TestRequires: gdal35-devel
-#TestRequires: smartmet-library-macgyver-devel >= 22.12.16
+#TestRequires: smartmet-library-macgyver-devel >= 23.7.10
 
 %description
 Isoline/isoband calculation library.
@@ -86,6 +86,10 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Fri Jul 14 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.7.14-1.fmi
+- Improved error handling and reporting
+- Silenced compiler warnings
+
 * Mon Jul 10 2023 Andris Pavēnis <andris.pavenis@fmi.fi> 23.7.10-1.fmi
 - Use postgresql 15, gdal 3.5, geos 3.11 and proj-9.0
 
