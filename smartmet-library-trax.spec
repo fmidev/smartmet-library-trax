@@ -29,10 +29,12 @@ BuildRequires: rpm-build
 BuildRequires: gdal35-devel
 BuildRequires: geos311-devel
 BuildRequires: fmt-devel
+BuildRequires: libcurl-devel >= 7.61.0
 Requires: smartmet-library-macgyver >= 22.12.16
 Requires: gdal35
 Requires: geos311
 Requires: fmt
+Requires: libcurl >= 7.61.0
 Provides: %{LIBNAME}
 #TestRequires: %{smartmet_boost}-devel
 #TestRequires: gcc-c++
