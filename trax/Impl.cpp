@@ -104,8 +104,8 @@ void Contour::Impl::finish_isobands()
     catch (...)
     {
       Fmi::Exception ex(BCP, "Failed to finish isoband", nullptr);
-      ex.addParameter("lolimit", Fmi::to_string(m_isoband_limits[i].lo()));
-      ex.addParameter("hilimit", Fmi::to_string(m_isoband_limits[i].hi()));
+      ex.addParameter("lolimit", fmt::format("{}", m_isoband_limits[i].lo()));
+      ex.addParameter("hilimit", fmt::format("{}", m_isoband_limits[i].hi()));
       throw ex;
     }
   }
@@ -285,6 +285,9 @@ void fill_buffers(const Grid& grid,
 // Contour full grid
 GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimits& limits)
 {
+  if (limits.empty())
+    return {};
+
   shell(grid.shell());
 
   const auto bbox = grid.bbox();
@@ -350,14 +353,29 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
       return result();
 
     auto res = result();
+
+    std::list<std::string> details;
     for (auto i = 0UL; i < res.size(); i++)
     {
       const auto& tmp = res[i];
       auto err = validate_geom(tmp);
       if (!err.empty())
-        std::cerr << "Isoband error: " << err << "\n"
-                  << "Limits: " << limits[i].lo() << "..." << limits[i].hi() << "\n"
-                  << "WKT: " << tmp.wkt() << "\n";
+      {
+        details.emplace_back("Isoband error: " + err);
+        details.emplace_back(fmt::format("Limits: {}...{}", limits[i].lo(), limits[i].hi()));
+        details.emplace_back("WKT: " + tmp.wkt());
+      }
+    }
+    if (!details.empty())
+    {
+      if (m_strict)
+        throw Fmi::Exception(BCP, "Isoband validation failed").addDetails(details);
+      else
+      {
+        for (const auto& row : details)
+          std::cerr << row << '\n';
+        std::cerr << std::flush;
+      }
     }
     return res;
   }
@@ -389,12 +407,14 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
       ex.addParameter("details", details);
     throw ex;
   }
-
-}  // namespace Trax
+}
 
 // Contour full grid for isolines
 GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValues& limits)
 {
+  if (limits.empty())
+    return {};
+
   shell(grid.shell());
 
   auto bbox = grid.bbox();
@@ -411,61 +431,107 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
 
   auto nx = imax - imin + 2;
   auto ny = jmax - jmin + 2;
-  init(limits, nx, ny);
 
-  // Determine whether we need to split rows into two parts due to shifted global data. Otherwise
-  // we'd need special code to handle joining the first and last cells.
-
-  long shift = grid.shift();
-  const auto imid = shift - imin;
-  const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
-
-  // Accessing data through grid is sometimes slow, so we buffer the values into vectors
-  // and just swap them after each row to avoid unnecessary copying.
-  std::vector<GridPoint> row1(nx);
-  std::vector<GridPoint> row2(nx);
-  fill_buffers(grid, bbox, jmin, row1);
-
-  std::vector<long> loop_limits;
-  if (!needs_two_passes)
-    loop_limits = {0, nx - 1};
-  else
-    loop_limits = {imid, nx - 1, 0, imid - 1};
-
-  for (auto j = jmin; j <= jmax; j++)
+  try
   {
-    fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
+    init(limits, nx, ny);
 
-    // Keep Cell i,j coordinates continuous by applying a shift in the second loop
-    auto ishift = 0;
-    for (auto k = 0UL; k < loop_limits.size(); k += 2)
+    // Determine whether we need to split rows into two parts due to shifted global data. Otherwise
+    // we'd need special code to handle joining the first and last cells.
+
+    long shift = grid.shift();
+    const auto imid = shift - imin;
+    const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
+
+    // Accessing data through grid is sometimes slow, so we buffer the values into vectors
+    // and just swap them after each row to avoid unnecessary copying.
+    std::vector<GridPoint> row1(nx);
+    std::vector<GridPoint> row2(nx);
+    fill_buffers(grid, bbox, jmin, row1);
+
+    std::vector<long> loop_limits;
+    if (!needs_two_passes)
+      loop_limits = {0, nx - 1};
+    else
+      loop_limits = {imid, nx - 1, 0, imid - 1};
+
+    for (auto j = jmin; j <= jmax; j++)
     {
-      for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
-        if (grid.valid(imin + i, j))
-          isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
-      ishift = loop_limits[k + 1];
+      fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
+
+      // Keep Cell i,j coordinates continuous by applying a shift in the second loop
+      auto ishift = 0;
+      for (auto k = 0UL; k < loop_limits.size(); k += 2)
+      {
+        for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
+          if (grid.valid(imin + i, j))
+            isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
+        ishift = loop_limits[k + 1];
+      }
+      finish_row();
+      std::swap(row1, row2);  // roll down the coordinates to the bottom row
     }
-    finish_row();
-    std::swap(row1, row2);  // roll down the coordinates to the bottom row
+
+    finish_isolines();
+
+    if (!m_validate)
+      return result();
+
+    auto res = result();
+
+    std::list<std::string> details;
+    for (auto i = 0UL; i < res.size(); i++)
+    {
+      const auto& tmp = res[i];
+      auto err = validate_geom(tmp);
+      if (!err.empty())
+      {
+        details.emplace_back("Isoline error: " + err);
+        details.emplace_back("Isovalue: " + fmt::format("{}", limits[i]));
+        details.emplace_back("WKT: " + tmp.wkt());
+      }
+    }
+    if (!details.empty())
+    {
+      if (m_strict)
+        throw Fmi::Exception(BCP, "Isoband validation failed").addDetails(details);
+      else
+      {
+        for (const auto& row : details)
+          std::cerr << row << '\n';
+        std::cerr << std::flush;
+      }
+    }
+    return res;
   }
-
-  finish_isolines();
-
-  if (!m_validate)
-    return result();
-
-  auto res = result();
-  for (auto i = 0UL; i < res.size(); i++)
+  catch (...)
   {
-    const auto& tmp = res[i];
-    auto err = validate_geom(tmp);
-    if (!err.empty())
-      std::cerr << "Isoline error: " << err << "\n"
-                << "Isovalue: " << limits[i] << "\n"
-                << "WKT:\n"
-                << tmp.wkt() << "\n";
+    // Try to provide some info into the logs
+    std::string details;
+    if (nx < 10 && ny < 10)
+    {
+      details += "\nValues:\n";
+      for (int j = jmax + 1; j >= jmin; --j)
+      {
+        for (int i = imin; i <= imax + 1; ++i)
+          details += fmt::format("{}\t", grid(i, j));
+        details += "\n";
+      }
+      details += "Coords:\n";
+      for (int j = jmax + 1; j >= jmin; --j)
+      {
+        for (int i = imin; i <= imax + 1; ++i)
+          details += fmt::format("{},{}\t", grid.x(i, j), grid.y(i, j));
+        details += "\n";
+      }
+    }
+    Fmi::Exception ex(BCP, "Contouring failed!", nullptr);
+    ex.addParameter("nx", Fmi::to_string(nx));
+    ex.addParameter("ny", Fmi::to_string(ny));
+    if (!details.empty())
+      ex.addParameter("details", details);
+    throw ex;
   }
-  return res;
-}  // namespace Trax
+}
 
 }  // namespace Trax
