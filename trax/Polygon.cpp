@@ -1,4 +1,5 @@
 #include "Polygon.h"
+#include "Endian.h"
 #include <smartmet/macgyver/Exception.h>
 #include <algorithm>
 
@@ -54,10 +55,10 @@ std::string Polygon::wkt_body() const
   std::string ret = "(";
   ret += m_exterior.wkt_body();
 
-  for (const auto& hole : m_holes)
+  for (const auto& h : m_holes)
   {
     ret += ',';
-    ret += hole.wkt_body();
+    ret += h.wkt_body();
   }
   ret += ')';
   return ret;
@@ -65,12 +66,7 @@ std::string Polygon::wkt_body() const
 
 void Polygon::wkb(std::ostringstream& out) const
 {
-  unsigned char byteOrder = 1;
-  int n = 1;
-  if (*(char*)&n == 0)
-    byteOrder = 0;
-
-  out.write((const char*)&byteOrder, sizeof(byteOrder));
+  out.put(byteorder());
   uint type = 3;  // polygon
   out.write((const char*)&type, sizeof(type));
   wkb_body(out);
@@ -83,9 +79,9 @@ void Polygon::wkb_body(std::ostringstream& out) const
 
   m_exterior.wkb_body(out);
 
-  for (const auto& hole : m_holes)
+  for (const auto& h : m_holes)
   {
-    hole.wkb_body(out);
+    h.wkb_body(out);
   }
 }
 
@@ -93,8 +89,8 @@ void Polygon::wkb_body(std::ostringstream& out) const
 Polygon& Polygon::normalize()
 {
   m_exterior.normalize();
-  for (auto& hole : m_holes)
-    hole.normalize();
+  for (auto& h : m_holes)
+    h.normalize();
 
   std::sort(m_holes.begin(), m_holes.end());
 

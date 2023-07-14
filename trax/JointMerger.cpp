@@ -303,7 +303,7 @@ void JointMerger::merge_cell()
     for (auto it = m_cell_merge_end, end = m_pool.end(); it != end; ++it)
     {
       auto* joint = *it;
-      auto& vertex = joint->vertex;
+      const auto& vertex = joint->vertex;
 
       // Only corners and verticals at the left edge can merge
       if (!joint->used && !is_horizontal(vertex.type))
@@ -381,7 +381,7 @@ void JointMerger::merge_row()
   for (auto it = m_row_end, end = m_pool.end(); it != end; ++it)
   {
     auto* joint = *it;
-    auto& vertex = joint->vertex;
+    const auto& vertex = joint->vertex;
 
     new_maxrow = std::max(new_maxrow, vertex.row);
 

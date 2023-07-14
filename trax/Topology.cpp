@@ -121,7 +121,7 @@ JoinCandidate select_turn(const Polyline& polyline, JoinCandidates& candidates, 
   std::cout << "Polyline : " << polyline.wkt() << " angle = " << end_angle << "\n";
 #endif
 
-  for (auto& candidate : candidates)
+  for (const auto& candidate : candidates)
   {
     const auto start_angle = candidate->second.start_angle();
 

@@ -1,4 +1,5 @@
 #include "Polyline.h"
+#include "Endian.h"
 #include "Vertex.h"
 #include <boost/math/constants/constants.hpp>
 #include <boost/optional.hpp>
@@ -225,12 +226,7 @@ std::string Polyline::wkt_body() const
 
 void Polyline::wkb(std::ostringstream& out) const
 {
-  unsigned char byteOrder = 1;
-  int n = 1;
-  if (*(char*)&n == 0)
-    byteOrder = 0;
-
-  out.write((const char*)&byteOrder, sizeof(byteOrder));
+  out.put(byteorder());
   uint type = 2;  // Line
   out.write((const char*)&type, sizeof(type));
   wkb_body(out);

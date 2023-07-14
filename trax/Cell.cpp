@@ -37,9 +37,10 @@ bool first_diagonal_larger(const Cell& cell)
 
 inline MinMax minmax(float z1, float z2)
 {
+  // Note: linters do not realize we're using NaN properties (comparisons always fail)
   if (z1 <= z2)
     return {z1, z2};  // z1,z2 neither is NaN
-  if (z2 < z1)        // NOLINT - linters do not realize we're using NaN properties
+  if (z2 < z1)        // NOLINT cppcheck-suppress knownConditionTrueFalse
     return {z2, z1};  // z2,z1 neither is NaN
   if (std::isnan(z1))
     return {z2, z2};  // z2,z2 which could be NaN,NaN

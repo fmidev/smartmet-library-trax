@@ -76,7 +76,7 @@ class Contour::Impl
   bool m_contour_missing = false;
 
   // Extra shell extent or NaN if there is none
-  double m_shell;
+  double m_shell = 0;
 
   // Unfinished geometries, one for each contour
   using Builders = std::vector<Builder>;

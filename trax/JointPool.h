@@ -55,7 +55,7 @@ class JointPool
 
   ~JointPool();
 
-  JointPool(std::size_t start_size = 16384) : m_start_size(start_size) {}
+  explicit JointPool(std::size_t start_size = 16384) : m_start_size(start_size) {}
   JointPool(JointPool&& other) noexcept;
 
   Joint* create(const Vertex& vertex);
