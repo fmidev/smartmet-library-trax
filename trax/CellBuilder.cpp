@@ -71,12 +71,8 @@ class JointBuilder
   void close();
   void finish_cell();
 
-  point intersect(const GridPoint& p1,
-                  const GridPoint& p2,
-                  int di,
-                  int dj,
-                  VertexType type,
-                  double value) const;
+  point intersect(
+      const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, float value) const;
   point intersect_left(const Cell& c, VertexType type) const;
   point intersect_top(const Cell& c, VertexType type) const;
   point intersect_right(const Cell& c, VertexType type) const;
@@ -91,7 +87,7 @@ class JointBuilder
 };
 
 point JointBuilder::intersect(
-    const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, double value) const
+    const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, float value) const
 {
 #ifdef HANDLE_ROUNDING_ERRORS
   // These equality tests are necessary for handling value==lolimit cases without any rounding
@@ -101,11 +97,23 @@ point JointBuilder::intersect(
   if (p2.z == value)
     return {p2.x, p2.y, VertexType::Corner, di, dj};
 #endif
+
+  // Note: If we do not convert value to double, we get a bit less accurate results in tests.
+  //       If we do convert to doublen we'll have to clamp s to range [0...1]
+  double z = value;
+
   if (p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y))  // lexicographic sorting to guarantee the same
   {  // result even if input x1,y1 and x2,y2 are swapped
     auto s = (!m_logarithmic
-                  ? (value - p2.z) / (p1.z - p2.z)
-                  : (std::log1p(value) - std::log1p(p2.z)) / (std::log1p(p1.z) - std::log1p(p2.z)));
+                  ? (z - p2.z) / (p1.z - p2.z)
+                  : (std::log1p(z) - std::log1p(p2.z)) / (std::log1p(p1.z) - std::log1p(p2.z)));
+
+    // std::clamp in C++17
+    if (s < 0)
+      s = 0;
+    else if (s > 1)
+      s = 1;
+
     auto x = p2.x + s * (p1.x - p2.x);
     auto y = p2.y + s * (p1.y - p2.y);
     if (x == p1.x && y == p1.y)
@@ -115,9 +123,15 @@ point JointBuilder::intersect(
     return {x, y, type, 0, 0};
   }
 
-  auto s = (!m_logarithmic
-                ? (value - p1.z) / (p2.z - p1.z)
-                : (std::log1p(value) - std::log1p(p1.z)) / (std::log1p(p2.z) - std::log1p(p1.z)));
+  auto s =
+      (!m_logarithmic ? (z - p1.z) / (p2.z - p1.z)
+                      : (std::log1p(z) - std::log1p(p1.z)) / (std::log1p(p2.z) - std::log1p(p1.z)));
+
+  // std::clamp in C++17
+  if (s < 0)
+    s = 0;
+  else if (s > 1)
+    s = 1;
 
   auto x = p1.x + s * (p2.x - p1.x);
   auto y = p1.y + s * (p2.y - p1.y);
