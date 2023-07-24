@@ -37,7 +37,7 @@ class MirrorMatrix
   MirrorMatrix(const T& theMatrix) : M(theMatrix), W(theMatrix.width()), H(theMatrix.height()) {}
   std::size_t width() const { return W; }
   std::size_t height() const { return H; }
-  double operator()(long i, long j) const
+  float operator()(long i, long j) const
   {
     // Simple reflection does not work out of these bounds
     assert(i > -W);

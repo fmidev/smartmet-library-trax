@@ -490,7 +490,7 @@ bool Polyline::desliver()
   // Now we can have due to our padding at the end either a padded polyline A-B-...-X-A-B
   // or one that has been modified
 
-#if 0  
+#if 0
   std::cout << "\nMiddle:\n";
   for (auto i = 0UL; i < m_points.size(); i++)
     std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);
@@ -498,20 +498,24 @@ bool Polyline::desliver()
 
   if (m_points[1] == m_points.back())
   {
-    m_points.pop_back();                 // Remove B from end
+    m_points.pop_back();                 // A-B-C-X-A-B ==> A-B-C-X-A
     if (m_points[0] != m_points.back())  // Was A deleted from the end?
     {
-      m_points.erase(m_points.begin());      // Then delete it from the start too
-      m_points.push_back(m_points.front());  // And close with with B
+      m_points.erase(m_points.begin());      // B-C-X-A ==> B-C-X
+      m_points.push_back(m_points.front());  //         ==> B-C-X-B
     }
+  }
+  else if (m_points.front() == m_points[n - 2])
+  {
+    m_points.pop_back();  // A-B-C-X-A-B ==> A-X-A-B ==> A-X-A
   }
   else
   {
-    m_points.erase(m_points.begin());  // A-B-...-X ==> X-...-X
+    m_points.erase(m_points.begin());  // A-B-C-X-A-B ==> X-...-X
     m_points[0] = m_points.back();
   }
 
-#if 0  
+#if 0
   std::cout << "\nAfter:\n";
   for (auto i = 0UL; i < m_points.size(); i++)
     std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);

@@ -32,16 +32,16 @@ std::string validate(const Trax::GeometryCollection& geom)
   return validator.getValidationError()->toString();
 }
 
-double parse_value(const std::string& str)
+float parse_value(const std::string& str)
 try
 {
   if (str == "-")
-    return std::numeric_limits<double>::quiet_NaN();
+    return std::numeric_limits<float>::quiet_NaN();
   if (str == "-inf")
-    return -std::numeric_limits<double>::infinity();
+    return -std::numeric_limits<float>::infinity();
   if (str == "inf")
-    return std::numeric_limits<double>::infinity();
-  return std::stod(str);
+    return std::numeric_limits<float>::infinity();
+  return std::stof(str);
 }
 catch (std::exception& e)
 {
@@ -81,6 +81,11 @@ void run_file_tests(const std::string& filename)
       in >> command;
       contourer.interpolation(Trax::to_interpolation_type(command));
       script += "interpolation " + command + "\n";
+    }
+    else if (command == "desliver")
+    {
+      in >> command;
+      contourer.desliver(parse_value(command) != 0);
     }
     else if (command == "bbox")
     {

@@ -4,6 +4,7 @@
 #include "SavitzkyGolay2DCoefficients.h"
 #include <cmath>
 #include <stdexcept>
+#include <vector>
 
 namespace Trax
 {
@@ -40,7 +41,7 @@ void smooth(Grid& input, std::size_t length, std::size_t degree)
   const auto ny = input.height();
 
   // Holder for temporary results
-  std::vector<double> sums;
+  std::vector<float> sums;
   sums.reserve(nx * ny);
 
   int denom = SavitzkyGolay2DCoefficients::denoms[length - 1][degree - 1];
@@ -49,7 +50,7 @@ void smooth(Grid& input, std::size_t length, std::size_t degree)
   for (std::size_t jj = 0; jj < ny; ++jj)
     for (std::size_t ii = 0; ii < nx; ++ii)
     {
-      double sum = 0;
+      float sum = 0;
       int k = 0;
       for (int j = 0; j < n; j++)
         for (int i = 0; i < n; i++)

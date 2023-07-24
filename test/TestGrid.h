@@ -35,10 +35,10 @@ class TestGrid : public Grid
 
   double x(long i, long j) const override { return m_x[i + m_nx * j]; }
   double y(long i, long j) const override { return m_y[i + m_nx * j]; }
-  double operator()(long i, long j) const override { return m_values[i + m_nx * j]; }
-  double get(long i, long j) const { return m_values[i + m_nx * j]; }
+  float operator()(long i, long j) const override { return m_values[i + m_nx * j]; }
+  float get(long i, long j) const { return m_values[i + m_nx * j]; }
 
-  void set(long i, long j, double z) override { m_values[i + m_nx * j] = z; }
+  void set(long i, long j, float z) override { m_values[i + m_nx * j] = z; }
 
   void set(long i, long j, double x, double y)
   {
@@ -89,7 +89,7 @@ class TestGrid : public Grid
   const double m_y1;
   const double m_x2;
   const double m_y2;
-  std::vector<double> m_values;
+  std::vector<float> m_values;
   std::vector<double> m_x;
   std::vector<double> m_y;
 };  // namespace Trax
