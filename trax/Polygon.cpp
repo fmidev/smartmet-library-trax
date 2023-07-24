@@ -118,16 +118,16 @@ bool Polygon::desliver()
   }
 
   bool emptied = false;
-  for (auto& hole : m_holes)
-    emptied |= hole.desliver();
+  for (auto& h : m_holes)
+    emptied |= h.desliver();
 
   // Avoid unnecessary work if no holes disappeared
   if (emptied)
   {
     std::vector<Polyline> new_holes;
-    for (auto& hole : m_holes)
-      if (!hole.empty())
-        new_holes.emplace_back(hole);
+    for (auto& h : m_holes)
+      if (!h.empty())
+        new_holes.emplace_back(h);
     std::swap(m_holes, new_holes);
   }
 

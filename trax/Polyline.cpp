@@ -12,6 +12,101 @@ using boost::math::double_constants::radian;
 
 namespace Trax
 {
+namespace
+{
+void add_padding(Points& points, bool was_closed)
+{
+  if (was_closed)
+    points.push_back(points[1]);  // A-B-C-...-X-A ==> A-B-C-...-X-A-B
+}
+
+void remove_padding(Points& points)
+{
+  // A closed polygon must be A-B-C-A, and since we added one to get A-B-C-A-B
+  // and the size is less than that, a silved polygon was found which must be fully erased.
+
+  auto n = points.size();
+  if (n < 5)
+  {
+    points.clear();
+    return;
+  }
+
+  // Now we can have due to our padding at the end either a padded polyline A-B-...-X-A-B
+  // or one that has been modified
+
+  if (points[1] == points.back())
+  {
+    points.pop_back();               // A-B-C-X-A-B ==> A-B-C-X-A
+    if (points[0] != points.back())  // Was A deleted from the end?
+    {
+      points.erase(points.begin());      // B-C-X-A ==> B-C-X
+      points.push_back(points.front());  //         ==> B-C-X-B
+    }
+  }
+  else if (points.front() == points[n - 2])
+  {
+    points.pop_back();  // A-B-C-X-A-B ==> A-X-A-B ==> A-X-A
+  }
+  else
+  {
+    points.erase(points.begin());  // A-B-C-X-A-B ==> X-...-X
+    points[0] = points.back();
+  }
+}
+
+void remove_sliver(Points& points, bool& found_sliver, std::size_t pos, std::size_t& out_pos)
+{
+  // We avoid using std::sqrt/std::hypot for speed. 1e-7 is approx float precision
+  const auto squared_mindistance = 1e-6 * 1e-6;
+
+  const auto& a = points[out_pos - 2];
+  const auto& b = points[out_pos - 1];
+  const auto& c = points[pos];
+
+  const auto ac = squared_distance(a, c);
+  const auto ab = squared_distance(a, b);
+  const auto bc = squared_distance(b, c);
+
+  if (ac / ab <= squared_mindistance)
+  {
+    found_sliver = true;
+    if (a < c)
+    {
+      --out_pos;  // a-b-c  ==> a
+    }
+    else
+    {
+      out_pos -= 2;
+      points[out_pos++] = c;  // a-b-c ==> c
+    }
+  }
+  else if (bc / ab <= squared_mindistance)
+  {
+    found_sliver = true;
+    if (b < c)
+    {
+      // a-b-c ==> a-b
+    }
+    else
+    {
+      // a-b-c ==> a-c
+      --out_pos;
+      points[out_pos++] = c;
+    }
+  }
+
+  else
+  {
+    if (found_sliver)
+      points[out_pos] = points[pos];
+
+    ++out_pos;
+  }
+}
+
+}  // namespace
+
 // Begin a new polyline
 Polyline::Polyline(std::initializer_list<double> init_list)
 {
@@ -401,9 +496,6 @@ bool Polyline::desliver()
   bool found_sliver = false;
   auto out_pos = 2UL;
 
-  // We avoid using std::sqrt/std::hypot for speed. 1e-7 is approx float precision
-  const auto squared_mindistance = 1e-6 * 1e-6;
-
   const bool was_closed = closed();
 
   // To simplify handling if the polyline is closed we duplicate the start of the polyline at the
@@ -415,57 +507,12 @@ bool Polyline::desliver()
     std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);
 #endif
 
-  if (was_closed)
-    m_points.push_back(m_points[1]);  // A-B-C-...-X-A ==> A-B-C-...-X-A-B
+  add_padding(m_points, was_closed);  // A-B-X-A ==> A-B-X-A-B
 
   auto n = m_points.size();
 
   for (auto pos = 2UL; pos < n; ++pos)
-  {
-    const auto& a = m_points[out_pos - 2];
-    const auto& b = m_points[out_pos - 1];
-    const auto& c = m_points[pos];
-
-    const auto ac = squared_distance(a, c);
-    const auto ab = squared_distance(a, b);
-    const auto bc = squared_distance(b, c);
-
-    if (ac / ab <= squared_mindistance)
-    {
-      found_sliver = true;
-      if (a < c)
-      {
-        --out_pos;  // a-b-c  ==> a
-      }
-      else
-      {
-        out_pos -= 2;
-        m_points[out_pos++] = c;  // a-b-c ==> c
-      }
-    }
-    else if (bc / ab <= squared_mindistance)
-    {
-      found_sliver = true;
-      if (b < c)
-      {
-        // a-b-c ==> a-b
-      }
-      else
-      {
-        // a-b-c ==> a-c
-        --out_pos;
-        m_points[out_pos++] = c;
-      }
-    }
-
-    else
-    {
-      if (found_sliver)
-        m_points[out_pos] = m_points[pos];
-
-      ++out_pos;
-    }
-  }
+    remove_sliver(m_points, found_sliver, pos, out_pos);
 
   // We never increase the size but the compiler does not know it and hence
   // requires a default constructor for Point. We avoid the error by providing
@@ -477,43 +524,7 @@ bool Polyline::desliver()
   if (!was_closed)
     return empty();
 
-  // A closed polygon must be A-B-C-A, and since we added one to get A-B-C-A-B
-  // and the size is less than that, a silved polygon was found which must be fully erased.
-
-  n = m_points.size();
-  if (n < 5)
-  {
-    m_points.clear();
-    return true;
-  }
-
-  // Now we can have due to our padding at the end either a padded polyline A-B-...-X-A-B
-  // or one that has been modified
-
-#if 0
-  std::cout << "\nMiddle:\n";
-  for (auto i = 0UL; i < m_points.size(); i++)
-    std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);
-#endif
-
-  if (m_points[1] == m_points.back())
-  {
-    m_points.pop_back();                 // A-B-C-X-A-B ==> A-B-C-X-A
-    if (m_points[0] != m_points.back())  // Was A deleted from the end?
-    {
-      m_points.erase(m_points.begin());      // B-C-X-A ==> B-C-X
-      m_points.push_back(m_points.front());  //         ==> B-C-X-B
-    }
-  }
-  else if (m_points.front() == m_points[n - 2])
-  {
-    m_points.pop_back();  // A-B-C-X-A-B ==> A-X-A-B ==> A-X-A
-  }
-  else
-  {
-    m_points.erase(m_points.begin());  // A-B-C-X-A-B ==> X-...-X
-    m_points[0] = m_points.back();
-  }
+  remove_padding(m_points);
 
 #if 0
   std::cout << "\nAfter:\n";
@@ -521,8 +532,11 @@ bool Polyline::desliver()
     std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);
 #endif
 
+  if (m_points.empty())
+    return true;
+
   // Necessary to keep the geometry valid for clipping or we may run into an eternal loop
-  if (was_closed && !closed())
+  if (!closed())
     throw Fmi::Exception(BCP, "Failed to close polygon properly");
 
   // In case there was only a sliver to not leave a single vertex

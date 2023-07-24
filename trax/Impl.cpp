@@ -38,6 +38,79 @@ void desliver_geoms(std::vector<GeometryCollection>& geoms)
     geom.desliver();
 }
 
+std::list<std::string> validate_isobands(const GeometryCollections& geoms,
+                                         const IsobandLimits& limits)
+{
+  std::list<std::string> details;
+  for (auto i = 0UL; i < geoms.size(); i++)
+  {
+    const auto& tmp = geoms[i];
+    std::string err;
+    try
+    {
+      err = validate_geom(tmp);
+    }
+    catch (const std::exception& e)
+    {
+      err = e.what();
+    }
+    if (!err.empty())
+    {
+      details.emplace_back("Isoband error: " + err);
+      details.emplace_back(fmt::format("Limits: {}...{}", limits[i].lo(), limits[i].hi()));
+      details.emplace_back("WKT: " + tmp.wkt());
+    }
+  }
+  return details;
+}
+
+std::list<std::string> validate_isolines(const GeometryCollections& geoms,
+                                         const IsolineValues& limits)
+{
+  std::list<std::string> details;
+  for (auto i = 0UL; i < geoms.size(); i++)
+  {
+    const auto& tmp = geoms[i];
+    auto err = validate_geom(tmp);
+    if (!err.empty())
+    {
+      details.emplace_back("Isoline error: " + err);
+      details.emplace_back("Isovalue: " + fmt::format("{}", limits[i]));
+      details.emplace_back("WKT: " + tmp.wkt());
+    }
+  }
+  return details;
+}
+
+void throw_with_details(
+    const Grid& grid, long imin, long imax, long jmin, long jmax, long nx, long ny)
+{
+  std::string details;
+  if (nx < 10 && ny < 10)
+  {
+    details += "\nValues:\n";
+    for (int j = jmax + 1; j >= jmin; --j)
+    {
+      for (int i = imin; i <= imax + 1; ++i)
+        details += fmt::format("{}\t", grid(i, j));
+      details += "\n";
+    }
+    details += "Coords:\n";
+    for (int j = jmax + 1; j >= jmin; --j)
+    {
+      for (int i = imin; i <= imax + 1; ++i)
+        details += fmt::format("{},{}\t", grid.x(i, j), grid.y(i, j));
+      details += "\n";
+    }
+  }
+  Fmi::Exception ex(BCP, "Contouring failed!", nullptr);
+  ex.addParameter("nx", Fmi::to_string(nx));
+  ex.addParameter("ny", Fmi::to_string(ny));
+  if (!details.empty())
+    ex.addParameter("details", details);
+  throw ex;
+}
+
 }  // namespace
 
 // Prepare for isoline calculations
@@ -363,66 +436,24 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
     if (!m_validate)
       return res;
 
-    std::list<std::string> details;
-    for (auto i = 0UL; i < res.size(); i++)
-    {
-      const auto& tmp = res[i];
-      std::string err;
-      try
-      {
-        err = validate_geom(tmp);
-      }
-      catch (const std::exception& e)
-      {
-        err = e.what();
-      }
-      if (!err.empty())
-      {
-        details.emplace_back("Isoband error: " + err);
-        details.emplace_back(fmt::format("Limits: {}...{}", limits[i].lo(), limits[i].hi()));
-        details.emplace_back("WKT: " + tmp.wkt());
-      }
-    }
+    auto details = validate_isobands(res, limits);
+
     if (!details.empty())
     {
       if (m_strict)
         throw Fmi::Exception(BCP, "Isoband validation failed").addDetails(details);
-      else
-      {
-        for (const auto& row : details)
-          std::cerr << row << '\n';
-        std::cerr << std::flush;
-      }
+
+      for (const auto& row : details)
+        std::cerr << row << '\n';
+      std::cerr << std::flush;
     }
     return res;
   }
   catch (...)
   {
     // Try to provide some info into the logs
-    std::string details;
-    if (nx < 10 && ny < 10)
-    {
-      details += "\nValues:\n";
-      for (int j = jmax + 1; j >= jmin; --j)
-      {
-        for (int i = imin; i <= imax + 1; ++i)
-          details += fmt::format("{}\t", grid(i, j));
-        details += "\n";
-      }
-      details += "Coords:\n";
-      for (int j = jmax + 1; j >= jmin; --j)
-      {
-        for (int i = imin; i <= imax + 1; ++i)
-          details += fmt::format("{},{}\t", grid.x(i, j), grid.y(i, j));
-        details += "\n";
-      }
-    }
-    Fmi::Exception ex(BCP, "Contouring failed!", nullptr);
-    ex.addParameter("nx", Fmi::to_string(nx));
-    ex.addParameter("ny", Fmi::to_string(ny));
-    if (!details.empty())
-      ex.addParameter("details", details);
-    throw ex;
+    throw_with_details(grid, imin, imax, jmin, jmax, nx, ny);
+    return {};  // NOTREACHED
   }
 }
 
@@ -499,58 +530,25 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
     if (!m_validate)
       return res;
 
-    std::list<std::string> details;
-    for (auto i = 0UL; i < res.size(); i++)
-    {
-      const auto& tmp = res[i];
-      auto err = validate_geom(tmp);
-      if (!err.empty())
-      {
-        details.emplace_back("Isoline error: " + err);
-        details.emplace_back("Isovalue: " + fmt::format("{}", limits[i]));
-        details.emplace_back("WKT: " + tmp.wkt());
-      }
-    }
+    auto details = validate_isolines(res, limits);
+
     if (!details.empty())
     {
       if (m_strict)
         throw Fmi::Exception(BCP, "Isoband validation failed").addDetails(details);
-      else
-      {
-        for (const auto& row : details)
-          std::cerr << row << '\n';
-        std::cerr << std::flush;
-      }
+
+      for (const auto& row : details)
+        std::cerr << row << '\n';
+      std::cerr << std::flush;
     }
     return res;
   }
   catch (...)
   {
     // Try to provide some info into the logs
-    std::string details;
-    if (nx < 10 && ny < 10)
-    {
-      details += "\nValues:\n";
-      for (int j = jmax + 1; j >= jmin; --j)
-      {
-        for (int i = imin; i <= imax + 1; ++i)
-          details += fmt::format("{}\t", grid(i, j));
-        details += "\n";
-      }
-      details += "Coords:\n";
-      for (int j = jmax + 1; j >= jmin; --j)
-      {
-        for (int i = imin; i <= imax + 1; ++i)
-          details += fmt::format("{},{}\t", grid.x(i, j), grid.y(i, j));
-        details += "\n";
-      }
-    }
-    Fmi::Exception ex(BCP, "Contouring failed!", nullptr);
-    ex.addParameter("nx", Fmi::to_string(nx));
-    ex.addParameter("ny", Fmi::to_string(ny));
-    if (!details.empty())
-      ex.addParameter("details", details);
-    throw ex;
+    // Try to provide some info into the logs
+    throw_with_details(grid, imin, imax, jmin, jmax, nx, ny);
+    return {};  // NOTREACHED
   }
 }
 

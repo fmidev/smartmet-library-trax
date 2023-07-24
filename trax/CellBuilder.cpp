@@ -61,13 +61,7 @@ class JointBuilder
   void add(std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p);
   void add(std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p, bool ghost);
   void add(std::int32_t column, std::int32_t row, VertexType vtype, double x, double y, float z);
-  void add(std::int32_t column,
-           std::int32_t row,
-           VertexType vtype,
-           double x,
-           double y,
-           float z,
-           bool ghost);
+  void add(std::int32_t column, std::int32_t row, VertexType vtype, double x, double y, bool ghost);
   void close();
   void finish_cell();
 
@@ -205,7 +199,7 @@ void JointBuilder::add(std::int32_t column, std::int32_t row, VertexType vtype, 
 void JointBuilder::add(
     std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p, bool ghost)
 {
-  add(column, row, vtype, p.x, p.y, p.z, ghost);
+  add(column, row, vtype, p.x, p.y, ghost);
 }
 
 void JointBuilder::add(
@@ -213,16 +207,11 @@ void JointBuilder::add(
 {
   // Note that NaN is always marked a ghost as needed for midpoint algorithm
   const bool ghost = z != m_range.lo();
-  add(column, row, vtype, x, y, z, ghost);
+  add(column, row, vtype, x, y, ghost);
 }
 
-void JointBuilder::add(std::int32_t column,
-                       std::int32_t row,
-                       VertexType vtype,
-                       double x,
-                       double y,
-                       float z,
-                       bool ghost)
+void JointBuilder::add(
+    std::int32_t column, std::int32_t row, VertexType vtype, double x, double y, bool ghost)
 {
   Vertex vertex(column, row, vtype, x, y, ghost);
 

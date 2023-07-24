@@ -49,6 +49,20 @@ using JoinCandidates = std::list<JoinCandidate>;
 
 namespace
 {
+void add_exception_details(Fmi::Exception& ex,
+                           bool verbose,
+                           const Polylines& polylines,
+                           const Polyline& polyline)
+{
+  if (verbose)
+  {
+    auto i = 0UL;
+    for (const auto& line : polylines)
+      ex.addParameter(fmt::format("Line {}", ++i).c_str(), line.wkt());
+    ex.addParameter("Current line", polyline.wkt());
+  }
+}
+
 double turn_angle(double angle1, double angle2)
 {
   // max turn left > -180 and max turn right < 180
@@ -195,6 +209,22 @@ Joint* select_right_turn(const Vertex& vertex,
   return best;
 }
 
+bool finish_right_turning_sequence(Polylines& polylines, Polyline& polyline)
+{
+  if (polylines.empty() && polyline.closed())
+  {
+    polylines.emplace_back(std::move(polyline));
+    return true;
+  }
+  if (!polylines.empty() && polylines.front().xbegin() == polyline.xend() &&
+      polylines.front().ybegin() == polyline.yend())
+  {
+    polylines.emplace_back(std::move(polyline));
+    return true;
+  }
+  return false;
+}
+
 Polylines extract_right_turning_sequence(Joint* joint, bool strict, bool verbose)
 {
   Polylines polylines;  // polylines extracted by taking right turns split at double joints
@@ -216,17 +246,8 @@ Polylines extract_right_turning_sequence(Joint* joint, bool strict, bool verbose
       polyline.append(vertex);
 
       // Stop when exterior (and holes attached to it) becomes closed
-      if (polylines.empty() && polyline.closed())
-      {
-        polylines.emplace_back(std::move(polyline));
+      if (finish_right_turning_sequence(polylines, polyline))
         return polylines;
-      }
-      if (!polylines.empty() && polylines.front().xbegin() == polyline.xend() &&
-          polylines.front().ybegin() == polyline.yend())
-      {
-        polylines.emplace_back(std::move(polyline));
-        return polylines;
-      }
 
       // Choose rightmost turn. If there are multiple connections, start a new polyline
       // so that we can choose the leftmost turns later on to separate holes touching
@@ -283,13 +304,7 @@ Polylines extract_right_turning_sequence(Joint* joint, bool strict, bool verbose
   catch (...)
   {
     Fmi::Exception ex(BCP, "Failed to extract right turning sequence", nullptr);
-    if (verbose)
-    {
-      auto i = 0UL;
-      for (const auto& line : polylines)
-        ex.addParameter(fmt::format("Line {}", ++i).c_str(), line.wkt());
-      ex.addParameter("Current line", polyline.wkt());
-    }
+    add_exception_details(ex, verbose, polylines, polyline);
     throw ex;
   }
 }

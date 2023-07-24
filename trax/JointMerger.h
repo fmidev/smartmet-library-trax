@@ -21,6 +21,7 @@ class JointMerger
 {
  public:
   JointMerger() = default;
+  ~JointMerger() = default;
   JointMerger(JointMerger&& other) noexcept;
 
   JointMerger(const JointMerger& other) = delete;
