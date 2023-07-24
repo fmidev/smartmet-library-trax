@@ -22,6 +22,7 @@ class Polyline
   Polyline() = default;
   Polyline(std::initializer_list<double> init_list);
 
+  bool empty() const { return m_points.empty(); }
   std::size_t size() const { return m_points.size(); }
 
   double xbegin() const { return m_points[0].x; }
@@ -45,6 +46,9 @@ class Polyline
   std::vector<double> ycoordinates() const;
 
   Polyline& normalize();
+
+  bool desliver();
+
   bool operator<(const Polyline& other) const;
 
   std::string wkt() const;

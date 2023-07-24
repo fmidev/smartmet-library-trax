@@ -20,6 +20,8 @@ class Polygon
   explicit Polygon(Polyline exterior);
   Polygon(std::initializer_list<std::initializer_list<double>> init_list);
 
+  bool empty() const { return m_exterior.empty(); }
+
   void hole(Polyline hole);
   bool bbox_contains(const Polyline& hole) const;
   bool contains(const Polyline& hole) const;
@@ -28,6 +30,9 @@ class Polygon
   const std::vector<Polyline>& holes() const;
 
   Polygon& normalize();
+
+  bool desliver();
+
   bool operator<(const Polygon& other) const;
 
   std::string wkt() const;

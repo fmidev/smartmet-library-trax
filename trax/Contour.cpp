@@ -33,6 +33,12 @@ void Contour::validate(bool flag)
   impl->validate(flag);
 }
 
+// Enable/disable removing slivers
+void Contour::desliver(bool flag)
+{
+  impl->desliver(flag);
+}
+
 // Contour full grid
 GeometryCollections Contour::isobands(const Grid& grid, const IsobandLimits& limits)
 {

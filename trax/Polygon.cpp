@@ -107,4 +107,31 @@ bool Polygon::operator<(const Polygon& other) const
   return m_exterior < other.m_exterior;
 }
 
+// Remove slivers
+bool Polygon::desliver()
+{
+  // If exterior disappears, the polygon vanishes
+  if (m_exterior.desliver())
+  {
+    m_holes.clear();
+    return true;
+  }
+
+  bool emptied = false;
+  for (auto& hole : m_holes)
+    emptied |= hole.desliver();
+
+  // Avoid unnecessary work if no holes disappeared
+  if (emptied)
+  {
+    std::vector<Polyline> new_holes;
+    for (auto& hole : m_holes)
+      if (!hole.empty())
+        new_holes.emplace_back(hole);
+    std::swap(m_holes, new_holes);
+  }
+
+  return false;  // since the exterior remains
+}
+
 }  // namespace Trax

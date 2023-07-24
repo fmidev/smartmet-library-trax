@@ -16,6 +16,8 @@
 #include <iostream>
 #endif
 
+namespace Trax
+{
 namespace
 {
 std::string validate_geom(const Trax::GeometryCollection& geom)
@@ -30,10 +32,14 @@ std::string validate_geom(const Trax::GeometryCollection& geom)
   return validator.getValidationError()->toString();
 }
 
+void desliver_geoms(std::vector<GeometryCollection>& geoms)
+{
+  for (auto& geom : geoms)
+    geom.desliver();
+}
+
 }  // namespace
 
-namespace Trax
-{
 // Prepare for isoline calculations
 void Contour::Impl::init(const IsolineValues& values, std::size_t width, std::size_t height)
 {
@@ -349,16 +355,27 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 
     finish_isobands();
 
-    if (!m_validate)
-      return result();
-
     auto res = result();
+
+    if (m_desliver)
+      desliver_geoms(res);
+
+    if (!m_validate)
+      return res;
 
     std::list<std::string> details;
     for (auto i = 0UL; i < res.size(); i++)
     {
       const auto& tmp = res[i];
-      auto err = validate_geom(tmp);
+      std::string err;
+      try
+      {
+        err = validate_geom(tmp);
+      }
+      catch (const std::exception& e)
+      {
+        err = e.what();
+      }
       if (!err.empty())
       {
         details.emplace_back("Isoband error: " + err);
@@ -474,10 +491,13 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
 
     finish_isolines();
 
-    if (!m_validate)
-      return result();
-
     auto res = result();
+
+    if (m_desliver)
+      desliver_geoms(res);
+
+    if (!m_validate)
+      return res;
 
     std::list<std::string> details;
     for (auto i = 0UL; i < res.size(); i++)

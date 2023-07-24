@@ -151,4 +151,29 @@ GeometryCollection &GeometryCollection::normalize()
   return *this;
 }
 
+template <typename T>
+void desliver_container(T &container)
+{
+  bool emptied = false;
+  for (auto &obj : container)
+    emptied |= obj.desliver();
+
+  // Should be very rare
+  if (emptied)
+  {
+    T new_container;
+    for (auto &obj : container)
+      if (!obj.empty())
+        new_container.emplace_back(obj);
+    std::swap(container, new_container);
+  }
+}
+
+// Remove slivers
+void GeometryCollection::desliver()
+{
+  desliver_container(m_polygons);
+  desliver_container(m_polylines);
+}
+
 }  // namespace Trax

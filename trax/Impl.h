@@ -16,6 +16,7 @@ class Contour::Impl
   void closed_range(bool flag) { m_closed_range = flag; }
   void strict(bool flag) { m_strict = flag; }
   void validate(bool flag) { m_validate = flag; }
+  void desliver(bool flag) { m_desliver = flag; }
   void shell(double value) { m_shell = value; }
 
   // Calculate full set of contours
@@ -67,6 +68,9 @@ class Contour::Impl
 
   // Perform geometry validation with GEOS. This can be very slow.
   bool m_validate = false;
+
+  // Remove slivers
+  bool m_desliver = true;
 
   // Requested isolines
   IsolineValues m_isoline_values;

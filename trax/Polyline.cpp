@@ -383,4 +383,149 @@ void Polyline::remove_ghosts(Polylines& new_polylines)
   }
 }
 
+// Remove slivers, return true if no vertices remain (should be extremely rare)
+bool Polyline::desliver()
+{
+  if (empty())
+    return true;
+
+  // Look for a sequence of points p1-p2-p3 where p1 and p3 are extremely close. When found, keep
+  // only p1 or p3 based on lexicographic sort of coordinates so that the selection does not depend
+  // on the order of the vertices, and hence exteriors and holes will be handled identically. This
+  // is relevant since the exterior of any isoband is likely to be a hole hole in another isoband.
+  //
+  // If we have a sequence a-b-c-d where c is a sliver point, we may end up with a-b or a-d
+  // Since the number of points can only decrease, we to sliver removal in place, and just shrink
+  // the vector at the end if necessary.
+
+  bool found_sliver = false;
+  auto out_pos = 2UL;
+
+  // We avoid using std::sqrt/std::hypot for speed. 1e-7 is approx float precision
+  const auto squared_mindistance = 1e-6 * 1e-6;
+
+  const bool was_closed = closed();
+
+  // To simplify handling if the polyline is closed we duplicate the start of the polyline at the
+  // end and then just fix things if something was removed. This is easier than doing modular
+  // indexing or having more elaborate special code after the main loop
+
+#if 0
+  for (auto i = 0UL; i < m_points.size(); i++)
+    std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);
+#endif
+
+  if (was_closed)
+    m_points.push_back(m_points[1]);  // A-B-C-...-X-A ==> A-B-C-...-X-A-B
+
+  auto n = m_points.size();
+
+  for (auto pos = 2UL; pos < n; ++pos)
+  {
+    const auto& a = m_points[out_pos - 2];
+    const auto& b = m_points[out_pos - 1];
+    const auto& c = m_points[pos];
+
+    const auto ac = squared_distance(a, c);
+    const auto ab = squared_distance(a, b);
+    const auto bc = squared_distance(b, c);
+
+    if (ac / ab <= squared_mindistance)
+    {
+      found_sliver = true;
+      if (a < c)
+      {
+        --out_pos;  // a-b-c  ==> a
+      }
+      else
+      {
+        out_pos -= 2;
+        m_points[out_pos++] = c;  // a-b-c ==> c
+      }
+    }
+    else if (bc / ab <= squared_mindistance)
+    {
+      found_sliver = true;
+      if (b < c)
+      {
+        // a-b-c ==> a-b
+      }
+      else
+      {
+        // a-b-c ==> a-c
+        --out_pos;
+        m_points[out_pos++] = c;
+      }
+    }
+
+    else
+    {
+      if (found_sliver)
+        m_points[out_pos] = m_points[pos];
+
+      ++out_pos;
+    }
+  }
+
+  // We never increase the size but the compiler does not know it and hence
+  // requires a default constructor for Point. We avoid the error by providing
+  // a useless dummy point for resize(n,point);
+
+  if (found_sliver)
+    m_points.resize(out_pos, Point(0, 0, false));
+
+  if (!was_closed)
+    return empty();
+
+  // A closed polygon must be A-B-C-A, and since we added one to get A-B-C-A-B
+  // and the size is less than that, a silved polygon was found which must be fully erased.
+
+  n = m_points.size();
+  if (n < 5)
+  {
+    m_points.clear();
+    return true;
+  }
+
+  // Now we can have due to our padding at the end either a padded polyline A-B-...-X-A-B
+  // or one that has been modified
+
+#if 0  
+  std::cout << "\nMiddle:\n";
+  for (auto i = 0UL; i < m_points.size(); i++)
+    std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);
+#endif
+
+  if (m_points[1] == m_points.back())
+  {
+    m_points.pop_back();                 // Remove B from end
+    if (m_points[0] != m_points.back())  // Was A deleted from the end?
+    {
+      m_points.erase(m_points.begin());      // Then delete it from the start too
+      m_points.push_back(m_points.front());  // And close with with B
+    }
+  }
+  else
+  {
+    m_points.erase(m_points.begin());  // A-B-...-X ==> X-...-X
+    m_points[0] = m_points.back();
+  }
+
+#if 0  
+  std::cout << "\nAfter:\n";
+  for (auto i = 0UL; i < m_points.size(); i++)
+    std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);
+#endif
+
+  // Necessary to keep the geometry valid for clipping or we may run into an eternal loop
+  if (was_closed && !closed())
+    throw Fmi::Exception(BCP, "Failed to close polygon properly");
+
+  // In case there was only a sliver to not leave a single vertex
+  if (m_points.size() < 2)
+    m_points.clear();
+
+  return empty();
+}
+
 }  // namespace Trax

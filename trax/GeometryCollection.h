@@ -20,6 +20,7 @@ class GeometryCollection
   const std::vector<Polyline>& polylines() const;
 
   GeometryCollection& normalize();
+  void desliver();
 
  private:
   uint writeData(unsigned char* pos, unsigned char* endBuf, void* data, uint dataSize) const;
