@@ -10,8 +10,8 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 23.7.24
-Release: 2%{?dist}.fmi
+Version: 23.7.25
+Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
 URL: https://github.com/fmidev/smartmet-library-trax
@@ -86,6 +86,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Tue Jul 25 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.7.25-1.fmi
+- Changed sliver removal to be off by default for backward compatibility
+
 * Mon Jul 24 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.7.24-2.fmi
 - Silenced compiler warnings
 
