@@ -70,7 +70,7 @@ class Contour::Impl
   bool m_validate = false;
 
   // Remove slivers
-  bool m_desliver = true;
+  bool m_desliver = false;
 
   // Requested isolines
   IsolineValues m_isoline_values;
