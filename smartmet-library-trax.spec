@@ -89,6 +89,9 @@ Trax isoline/isoband calculation library development files
 * Thu Aug  3 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.8.3-1.fmi
 - Improved handling of rounding errors (BRAINSTORM-2679)
 
+* Fri Jul 28 2023 Andris Pavēnis <andris.pavenis@fmi.fi> 23.7.28-1.fmi
+- Repackage due to bulk ABI changes in macgyver/newbase/spine
+
 * Tue Jul 25 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.7.25-1.fmi
 - Changed sliver removal to be off by default for backward compatibility
 
