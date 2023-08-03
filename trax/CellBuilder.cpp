@@ -83,14 +83,14 @@ class JointBuilder
 point JointBuilder::intersect(
     const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, float value) const
 {
-#ifdef HANDLE_ROUNDING_ERRORS
   // These equality tests are necessary for handling value==lolimit cases without any rounding
   // errors! std::cout << fmt::format("{},{},{} - {},{},{} at {}\n", x1, y1, z1, x2, y2, z2, value);
+  // This can happen for example when contouring MEPS forecasts where precipation is stored at
+  // one decimal precision and the isoband range is for example 0.1...0.2.
   if (p1.z == value)
     return {p1.x, p1.y, VertexType::Corner, 0, 0};
   if (p2.z == value)
     return {p2.x, p2.y, VertexType::Corner, di, dj};
-#endif
 
   // Note: If we do not convert value to double, we get a bit less accurate results in tests.
   //       If we do convert to doublen we'll have to clamp s to range [0...1]

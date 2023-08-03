@@ -1,8 +1,3 @@
-# Isoband tests for problems which had to be debugged separately,
-# saved in order not to repeat the same bugs.
-
-interpolation linear
-
 # Sliver
 desliver 1
 grid 3 3

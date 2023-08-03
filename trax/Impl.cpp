@@ -99,7 +99,7 @@ void throw_with_details(
     for (int j = jmax + 1; j >= jmin; --j)
     {
       for (int i = imin; i <= imax + 1; ++i)
-        details += fmt::format("{},{}\t", grid.x(i, j), grid.y(i, j));
+        details += fmt::format("{} {}\t", grid.x(i, j), grid.y(i, j));
       details += "\n";
     }
   }
