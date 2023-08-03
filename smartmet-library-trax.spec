@@ -10,7 +10,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 23.7.25
+Version: 23.8.3
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -19,7 +19,7 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 23.7.10
+BuildRequires: smartmet-library-macgyver-devel >= 23.7.28
 %if %{defined el7}
 BuildRequires: devtoolset-7-gcc-c++
 #TestRequires: devtoolset-7-gcc-c++
@@ -30,7 +30,7 @@ BuildRequires: gdal35-devel
 BuildRequires: geos311-devel
 BuildRequires: fmt-devel
 BuildRequires: libcurl-devel >= 7.61.0
-Requires: smartmet-library-macgyver >= 23.7.10
+Requires: smartmet-library-macgyver >= 23.7.28
 Requires: gdal35
 Requires: geos311
 Requires: fmt
@@ -42,7 +42,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos311-devel
 #TestRequires: gdal35-devel
-#TestRequires: smartmet-library-macgyver-devel >= 23.7.10
+#TestRequires: smartmet-library-macgyver-devel >= 23.7.28
 
 %description
 Isoline/isoband calculation library.
@@ -86,6 +86,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Thu Aug  3 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.8.3-1.fmi
+- Improved handling of rounding errors (BRAINSTORM-2679)
+
 * Tue Jul 25 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.7.25-1.fmi
 - Changed sliver removal to be off by default for backward compatibility
 
