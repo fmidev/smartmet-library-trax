@@ -10,7 +10,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 23.8.3
+Version: 23.8.17
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -86,6 +86,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Thu Aug 17 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.8.17-1.fmi
+- Moved Savitzky-Golay smoothing to Contour-engine
+
 * Thu Aug  3 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.8.3-1.fmi
 - Improved handling of rounding errors (BRAINSTORM-2679)
 

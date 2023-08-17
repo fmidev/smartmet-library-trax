@@ -51,9 +51,7 @@ HDRS =	$(SUBNAME)/BBox.h \
 	$(SUBNAME)/Point.h \
 	$(SUBNAME)/Polygon.h \
 	$(SUBNAME)/Polyline.h \
-	$(SUBNAME)/Range.h \
-	$(SUBNAME)/SavitzkyGolay2D.h \
-	$(SUBNAME)/SavitzkyGolay2DCoefficients.h
+	$(SUBNAME)/Range.h
 
 .PHONY: test rpm
 
