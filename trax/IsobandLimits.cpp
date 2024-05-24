@@ -22,7 +22,7 @@ void adjust_last_finite_isoband(std::vector<Range>& limits)
 // Add a single isoband
 void IsobandLimits::add(float lo, float hi)
 {
-  m_limits.emplace_back(Range(lo, hi));
+  m_limits.emplace_back(lo, hi);
 }
 
 // Add multiple isobands

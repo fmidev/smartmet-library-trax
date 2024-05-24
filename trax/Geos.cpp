@@ -1,7 +1,7 @@
 #include "Geos.h"
 #include <geos/version.h>
 
-#define GEOS_VERSION_ID (100*GEOS_VERSION_MAJOR + GEOS_VERSION_MINOR)
+#define GEOS_VERSION_ID (100 * GEOS_VERSION_MAJOR + GEOS_VERSION_MINOR)
 
 #include <geos/geom/Coordinate.h>
 #include <geos/geom/CoordinateSequence.h>
@@ -26,7 +26,8 @@ namespace Trax
 
 namespace
 {
-std::unique_ptr<gg::LineString> to_geos_linestring(const Polyline& line, const gg::GeometryFactory::Ptr& factory)
+std::unique_ptr<gg::LineString> to_geos_linestring(const Polyline& line,
+                                                   const gg::GeometryFactory::Ptr& factory)
 {
   const auto n = line.size();
   std::vector<gg::Coordinate> points;
@@ -36,7 +37,7 @@ std::unique_ptr<gg::LineString> to_geos_linestring(const Polyline& line, const g
   auto ycoords = line.ycoordinates();
 
   for (auto i = 0UL; i < n; i++)
-    points.emplace_back(gg::Coordinate(xcoords[i], ycoords[i]));
+    points.emplace_back(xcoords[i], ycoords[i]);
 
   gg::CoordinateSequence* coords = new gg::CoordinateArraySequence();
   coords->setPoints(points);
@@ -44,7 +45,8 @@ std::unique_ptr<gg::LineString> to_geos_linestring(const Polyline& line, const g
   return std::unique_ptr<gg::LineString>(factory->createLineString(coords));
 }
 
-std::unique_ptr<gg::LinearRing> to_geos_linearring(const Polyline& ring, const gg::GeometryFactory::Ptr& factory)
+std::unique_ptr<gg::LinearRing> to_geos_linearring(const Polyline& ring,
+                                                   const gg::GeometryFactory::Ptr& factory)
 {
   const auto n = ring.size();
 
@@ -59,7 +61,7 @@ std::unique_ptr<gg::LinearRing> to_geos_linearring(const Polyline& ring, const g
   auto ycoords = ring.ycoordinates();
 
   for (auto i = 0UL; i < n; i++)
-    points.emplace_back(gg::Coordinate(xcoords[i], ycoords[i]));
+    points.emplace_back(xcoords[i], ycoords[i]);
 
   gg::CoordinateSequence* coords = new gg::CoordinateArraySequence();
   coords->setPoints(points);
@@ -75,10 +77,10 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
     return factory->createEmptyGeometry();
 
   // Built geos linestrings
-  auto* lines = new std::vector<gg::LineString *>;
+  auto* lines = new std::vector<gg::LineString*>;
 
   for (const auto& line : geom.polylines())
-      lines->push_back(to_geos_linestring(line, factory).release());
+    lines->push_back(to_geos_linestring(line, factory).release());
 
   // Built geos polygons
 
@@ -86,7 +88,7 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
 
   for (const auto& poly : geom.polygons())
   {
-      auto* exterior = to_geos_linearring(poly.exterior(), factory).release();
+    auto* exterior = to_geos_linearring(poly.exterior(), factory).release();
 
     const auto& holes = poly.holes();
     if (holes.empty())
@@ -95,7 +97,7 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
     {
       auto* holerings = new std::vector<gg::LinearRing*>;
       for (const auto& hole : holes)
-          holerings->push_back(to_geos_linearring(hole, factory).release());
+        holerings->push_back(to_geos_linearring(hole, factory).release());
       auto&& result = factory->createPolygon(exterior, holerings);
       polys->push_back(result);
     }
@@ -156,7 +158,8 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
 
 namespace
 {
-std::unique_ptr<gg::LineString> to_geos_linestring(const Polyline& line, const gg::GeometryFactory::Ptr& factory)
+std::unique_ptr<gg::LineString> to_geos_linestring(const Polyline& line,
+                                                   const gg::GeometryFactory::Ptr& factory)
 {
   const auto n = line.size();
   std::vector<gg::Coordinate> points;
@@ -174,7 +177,8 @@ std::unique_ptr<gg::LineString> to_geos_linestring(const Polyline& line, const g
   return factory->createLineString(std::move(coords));
 }
 
-std::unique_ptr<gg::LinearRing> to_geos_linearring(const Polyline& ring, const gg::GeometryFactory::Ptr& factory)
+std::unique_ptr<gg::LinearRing> to_geos_linearring(const Polyline& ring,
+                                                   const gg::GeometryFactory::Ptr& factory)
 {
   const auto n = ring.size();
 
@@ -208,7 +212,7 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
   std::vector<std::unique_ptr<gg::LineString> > lines;
 
   for (const auto& line : geom.polylines())
-      lines.emplace_back(to_geos_linestring(line, factory));
+    lines.emplace_back(to_geos_linestring(line, factory));
 
   // Built geos polygons
 
@@ -217,11 +221,11 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
   for (const auto& poly : geom.polygons())
   {
     auto exterior = to_geos_linearring(poly.exterior(), factory);
-    std::vector<std::unique_ptr<gg::LinearRing>> holerings;
+    std::vector<std::unique_ptr<gg::LinearRing> > holerings;
     const auto& holes = poly.holes();
 
     for (const auto& hole : holes)
-        holerings.emplace_back(to_geos_linearring(hole, factory).release());
+      holerings.emplace_back(to_geos_linearring(hole, factory).release());
     auto&& result = factory->createPolygon(std::move(exterior), std::move(holerings));
     polys.emplace_back(std::move(result));
   }
@@ -252,7 +256,7 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
   if (!polys.empty())
   {
     if (polys.size() == 1)
-        polygeoms = std::move(polys[0]);
+      polygeoms = std::move(polys[0]);
     else
     {
       std::vector<std::unique_ptr<geos::geom::Geometry> > geoms;
@@ -275,6 +279,6 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
   return factory->createGeometryCollection(std::move(parts));
 }
 
-#endif //  ↑↑↑↑↑↑↑↑↑↑↑↑  GEOS-3.12+  ↑↑↑↑↑↑↑↑↑↑↑↑↑
+#endif  //  ↑↑↑↑↑↑↑↑↑↑↑↑  GEOS-3.12+  ↑↑↑↑↑↑↑↑↑↑↑↑↑
 
 }  // namespace Trax
