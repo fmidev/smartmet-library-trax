@@ -26,13 +26,13 @@ BuildRequires: devtoolset-7-gcc-c++
 %endif
 BuildRequires: make
 BuildRequires: rpm-build
-BuildRequires: gdal35-devel
-BuildRequires: geos311-devel
+BuildRequires: gdal38-devel
+BuildRequires: geos312-devel
 BuildRequires: fmt-devel
 BuildRequires: libcurl-devel >= 7.61.0
 Requires: smartmet-library-macgyver >= 24.5.16
 Requires: gdal35
-Requires: geos311
+Requires: geos312
 Requires: fmt
 Requires: libcurl >= 7.61.0
 Provides: %{LIBNAME}
@@ -40,8 +40,8 @@ Provides: %{LIBNAME}
 #TestRequires: gcc-c++
 #TestRequires: make
 #TestRequires: fmt-devel
-#TestRequires: geos311-devel
-#TestRequires: gdal35-devel
+#TestRequires: geos312-devel
+#TestRequires: gdal38-devel
 #TestRequires: smartmet-library-macgyver-devel >= 24.5.16
 
 %description
