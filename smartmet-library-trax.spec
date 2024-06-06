@@ -20,10 +20,6 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
 BuildRequires: smartmet-library-macgyver-devel >= 24.5.16
-%if %{defined el7}
-BuildRequires: devtoolset-7-gcc-c++
-#TestRequires: devtoolset-7-gcc-c++
-%endif
 BuildRequires: make
 BuildRequires: rpm-build
 BuildRequires: gdal38-devel
