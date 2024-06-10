@@ -27,7 +27,7 @@ BuildRequires: geos312-devel
 BuildRequires: fmt-devel
 BuildRequires: libcurl-devel >= 7.61.0
 Requires: smartmet-library-macgyver >= 24.5.16
-Requires: gdal38
+Requires: gdal38-libs
 Requires: geos312
 Requires: fmt
 Requires: libcurl >= 7.61.0
