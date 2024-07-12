@@ -10,7 +10,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 24.5.24
+Version: 24.7.12
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -86,6 +86,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Fri Jul 12 2024 Andris Pavēnis <andris.pavenis@fmi.fi> 24.7.12-1.fmi
+- Replace many boost library types with C++ standard library ones
+
 * Fri May 24 2024 Mika Heiskanen <mika.heiskanen@fmi.fi> - 24.5.24-1.fmi
 - Speed improvements
 
