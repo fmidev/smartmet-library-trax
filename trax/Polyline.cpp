@@ -2,10 +2,10 @@
 #include "Endian.h"
 #include "Vertex.h"
 #include <boost/math/constants/constants.hpp>
-#include <boost/optional.hpp>
 #include <fmt/format.h>
 #include <smartmet/macgyver/Exception.h>
 #include <algorithm>
+#include <optional>
 #include <stdexcept>
 
 using boost::math::double_constants::radian;
@@ -413,7 +413,7 @@ struct ValidRange
   std::size_t end;
 };
 
-boost::optional<ValidRange> find_valid_range(const Points& points, std::size_t startpos)
+std::optional<ValidRange> find_valid_range(const Points& points, std::size_t startpos)
 {
   const auto n = points.size();
   while (startpos < n && points[startpos].ghost)
