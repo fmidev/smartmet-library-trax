@@ -18,7 +18,7 @@ DEFINES = -DUNIX -D_REENTRANT -DUSE_UNSTABLE_GEOS_CPP_API
 LIBS +=	\
 	-lsmartmet-macgyver \
 	$(REQUIRED_LIBS) \
-	-L$(libdir)
+	$(PREFIX_LDFLAGS)
 
 # What to install
 
