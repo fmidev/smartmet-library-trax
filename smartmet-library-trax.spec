@@ -10,7 +10,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 24.5.24
+Version: 24.7.12
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -19,17 +19,17 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 24.5.16
+BuildRequires: smartmet-library-macgyver-devel >= 24.7.12
 BuildRequires: make
 BuildRequires: rpm-build
 BuildRequires: gdal38-devel
 BuildRequires: geos312-devel
 BuildRequires: fmt-devel
 BuildRequires: libcurl-devel >= 7.61.0
-Requires: smartmet-library-macgyver >= 24.5.16
-Requires: gdal38-libs
+Requires: smartmet-library-macgyver >= 24.7.12
+Requires: gdal38
 Requires: geos312
-Requires: fmt
+Requires: fmt-libs
 Requires: libcurl >= 7.61.0
 Provides: %{LIBNAME}
 #TestRequires: %{smartmet_boost}-devel
@@ -38,7 +38,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos312-devel
 #TestRequires: gdal38-devel
-#TestRequires: smartmet-library-macgyver-devel >= 24.5.16
+#TestRequires: smartmet-library-macgyver-devel >= 24.7.12
 
 %description
 Isoline/isoband calculation library.
@@ -82,6 +82,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Fri Jul 12 2024 Andris Pavēnis <andris.pavenis@fmi.fi> 24.7.12-1.fmi
+- Replace many boost library types with C++ standard library ones
+
 * Fri May 24 2024 Mika Heiskanen <mika.heiskanen@fmi.fi> - 24.5.24-1.fmi
 - Speed improvements
 

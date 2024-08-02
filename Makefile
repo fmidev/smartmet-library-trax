@@ -15,9 +15,10 @@ DEFINES = -DUNIX -D_REENTRANT -DUSE_UNSTABLE_GEOS_CPP_API
 
 # Common library compiling template
 
-LIBS +=	-L$(libdir) \
+LIBS +=	\
 	-lsmartmet-macgyver \
-	$(REQUIRED_LIBS)
+	$(REQUIRED_LIBS) \
+	$(PREFIX_LDFLAGS)
 
 # What to install
 

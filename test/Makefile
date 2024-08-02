@@ -18,7 +18,9 @@ CFLAGS = -DUNIX -O0 -g $(FLAGS)
 
 INCLUDES += -I../trax
 
-LIBS += ../libsmartmet-trax.so $(REQUIRED_LIBS)
+LIBS += ../libsmartmet-trax.so \
+	$(REQUIRED_LIBS) \
+	$(PREFIX_LDFLAGS)
 
 all: $(PROG)
 clean:
