@@ -22,13 +22,13 @@ BuildRequires: gcc-c++
 BuildRequires: smartmet-library-macgyver-devel >= 24.8.7
 BuildRequires: make
 BuildRequires: rpm-build
-BuildRequires: gdal38-devel
-BuildRequires: geos312-devel
+BuildRequires: gdal310-devel
+BuildRequires: geos313-devel
 BuildRequires: fmt-devel
 BuildRequires: libcurl-devel >= 7.61.0
 Requires: smartmet-library-macgyver >= 24.8.7
-Requires: gdal38
-Requires: geos312
+Requires: gdal310
+Requires: geos313
 Requires: fmt-libs
 Requires: libcurl >= 7.61.0
 Provides: %{LIBNAME}
@@ -36,8 +36,8 @@ Provides: %{LIBNAME}
 #TestRequires: gcc-c++
 #TestRequires: make
 #TestRequires: fmt-devel
-#TestRequires: geos312-devel
-#TestRequires: gdal38-devel
+#TestRequires: geos313-devel
+#TestRequires: gdal310-devel
 #TestRequires: smartmet-library-macgyver-devel >= 24.8.7
 
 %description
