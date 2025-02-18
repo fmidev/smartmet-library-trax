@@ -19,14 +19,14 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 24.8.7
+BuildRequires: smartmet-library-macgyver-devel >= 25.2.18
 BuildRequires: make
 BuildRequires: rpm-build
 BuildRequires: gdal310-devel
 BuildRequires: geos313-devel
 BuildRequires: fmt-devel
 BuildRequires: libcurl-devel >= 7.68.0
-Requires: smartmet-library-macgyver >= 24.8.7
+Requires: smartmet-library-macgyver >= 25.2.18
 Requires: gdal310
 Requires: geos313
 Requires: fmt-libs
@@ -38,7 +38,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos313-devel
 #TestRequires: gdal310-devel
-#TestRequires: smartmet-library-macgyver-devel >= 24.8.7
+#TestRequires: smartmet-library-macgyver-devel >= 25.2.18
 
 %description
 Isoline/isoband calculation library.
