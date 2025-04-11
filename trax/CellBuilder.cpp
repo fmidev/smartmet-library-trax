@@ -1194,10 +1194,12 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
       const auto p3 = intersect_right(c, VertexType::Vertical_hi);
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
+
       add(c.i, c.j, p1, m_range.hi());              // I----A   I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
       add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/|
-      if (cc != Place::Inside)                      // |\***|   |  /*|
+      if (cc != Place::Inside && !melt)             // |\***|   |  /*|
         close();                                    // A----I   A----I
       add(c.i + 1, c.j, p3, m_range.hi());
       add(c.i + 1, c.j, VertexType::Corner, c.p4);
@@ -1231,7 +1233,8 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
       const auto p3 = intersect_right(c, VertexType::Vertical_hi);
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
-      if (cc == Place::Inside)
+      const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
+      if (cc == Place::Inside || melt)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);          // A----I
         add(c.i, c.j, p1, m_range.hi());                  // |/***|
@@ -1243,12 +1246,11 @@ void JointBuilder::build_linear(const Cell& c)
       }
       else
       {
-        add(c.i, c.j, VertexType::Corner, c.p1);  // A----I  top A could be H!
+        add(c.i, c.j, VertexType::Corner, c.p1);  // A----I
         add(c.i, c.j, p1, m_range.hi());          // |  \*|
         add(c.i, c.j, p4, m_range.hi());          // |\ A\|
         close();                                  // |*\  |
-        // must be this order, possible corner touch!         // I----A
-        add(c.i, c.j + 1, p2, m_range.hi());
+        add(c.i, c.j + 1, p2, m_range.hi());      // I----A
         add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
         add(c.i + 1, c.j, p3, m_range.hi());
         close();
@@ -1316,10 +1318,11 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
       add(c.i, c.j, p1, m_range.hi());              // I----A   I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
       add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/| X = A or B
-      if (cc != Place::Inside)                      // |\**/|   |  //|
+      if (cc != Place::Inside && !melt)             // |\**/|   |  //|
         close();                                    // A----B   A----B
       add(c.i + 1, c.j, p3, m_range.hi());
       add(c.i + 1, c.j, p4, m_range.lo());
@@ -1358,11 +1361,12 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
       const auto p5 = intersect_right(c, VertexType::Vertical_hi);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
+      const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
       add(c.i, c.j, p1, m_range.hi());      // B----A    B----A
       add(c.i, c.j, p2, m_range.lo());      // |/**\|    |//  |
       add(c.i, c.j + 1, p3, m_range.lo());  // |**I*|    |/ X/| X = A or B
       add(c.i, c.j + 1, p4, m_range.hi());  // |\***|    |  /*|
-      if (cc != Place::Inside)              // A----I    A----I
+      if (cc != Place::Inside && !melt)     // A----I    A----I
         close();
       add(c.i + 1, c.j, p5, m_range.hi());
       add(c.i + 1, c.j, VertexType::Corner, c.p4);
@@ -1413,7 +1417,8 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       const auto p5 = intersect_right(c, VertexType::Vertical_hi);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
-      if (cc == Place::Inside)
+      const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
+      if (cc == Place::Inside || melt)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
         add(c.i, c.j, p1, m_range.hi());          // |/**\|
@@ -1481,7 +1486,8 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi);
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
-      if (cc == Place::Inside)
+      const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
+      if (cc == Place::Inside || melt)
       {
         add(c.i, c.j, p1, m_range.lo());                  // A----I
         add(c.i, c.j, p2, m_range.hi());                  // |/***|
@@ -1518,7 +1524,8 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p6 = intersect_top(c, VertexType::Horizontal_lo);
       const auto p7 = intersect_right(c, VertexType::Vertical_lo);
       const auto p8 = intersect_right(c, VertexType::Vertical_hi);
-      if (cc == Place::Inside || (c.p2.z == m_range.hi() && c.p4.z == m_range.hi()))
+      const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
+      if (cc == Place::Inside || melt)
       {
         add(c.i, c.j, p1, m_range.lo());      // A----B
         add(c.i, c.j, p2, m_range.hi());      // |***\|
@@ -1570,6 +1577,7 @@ void JointBuilder::build_linear(const Cell& c)
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
       const auto p7 = intersect_right(c, VertexType::Vertical_hi);
       const auto p8 = intersect_right(c, VertexType::Vertical_lo);
+      const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
       if (cc == Place::Inside)
       {
         add(c.i, c.j, p1, m_range.hi());      // B----A
@@ -1597,11 +1605,11 @@ void JointBuilder::build_linear(const Cell& c)
       }
       else
       {
-        add(c.i, c.j, p1, m_range.hi());                       // B----A
-        add(c.i, c.j, p2, m_range.lo());                       // |//  |
-        add(c.i, c.j + 1, p3, m_range.lo());                   // |/ A/|
-        add(c.i, c.j + 1, p4, m_range.hi());                   // |  //|
-        if (c.p1.z != m_range.hi() || c.p3.z != m_range.hi())  // A----B
+        add(c.i, c.j, p1, m_range.hi());      // B----A
+        add(c.i, c.j, p2, m_range.lo());      // |//  |
+        add(c.i, c.j + 1, p3, m_range.lo());  // |/ A/|
+        add(c.i, c.j + 1, p4, m_range.hi());  // |  //|
+        if (!melt)                            // A----B
           close();
         add(c.i + 1, c.j, p7, m_range.hi());
         add(c.i + 1, c.j, p8, m_range.lo());
