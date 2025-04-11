@@ -40,7 +40,7 @@ inline MinMax minmax(float z1, float z2)
   if (z1 <= z2)
     return {z1, z2};  // z1,z2 neither is NaN
   // codechecker_false_positive [knownConditionTrueFalse]
-  if (z2 < z1)        
+  if (z2 < z1)
     return {z2, z1};  // z2,z1 neither is NaN
   if (std::isnan(z1))
     return {z2, z2};  // z2,z2 which could be NaN,NaN

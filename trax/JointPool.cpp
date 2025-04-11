@@ -1,11 +1,8 @@
 #include "JointPool.h"
 #include "Joint.h"
 #include "Vertex.h"
-
-#if 1
 #include <fmt/format.h>
 #include <iostream>
-#endif
 
 namespace Trax
 {

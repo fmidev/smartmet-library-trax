@@ -232,7 +232,7 @@ Polylines extract_right_turning_sequence(Joint* joint, bool strict, bool verbose
   try
   {
 #if 0
-  std::cout << "RIGHT\n";
+    std::cout << "RIGHT\n";
 #endif
 
     while (true)
@@ -240,7 +240,7 @@ Polylines extract_right_turning_sequence(Joint* joint, bool strict, bool verbose
       const auto& vertex = joint->vertex;
 
 #if 0
-    std::cout << fmt::format("\t{},{}\n", vertex.x, vertex.y);
+      std::cout << fmt::format("\t{},{}\n", vertex.x, vertex.y);
 #endif
 
       polyline.append(vertex);
@@ -373,7 +373,7 @@ void extract_left_turning_sequence(Polylines& polylines, Polylines& shells, Hole
       auto polyline = extract_left_turning_polyline(sorted_polylines);
 
 #if 0
-    std::cout << "Left turning polyline: " << polyline.wkt() << "\n";
+      std::cout << "Left turning polyline: " << polyline.wkt() << "\n";
 #endif
 
       polyline.update_bbox();
@@ -484,7 +484,7 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
   try
   {
 #if 0
-  std::cout << "Joint map at start:\n" << Trax::to_string(joints);
+    std::cout << "Joint map at start of building rings:\n" << Trax::to_string(joints);
 #endif
 
     // Some joints are bad first candidates since we cannot decide which path turns most to the left
@@ -554,18 +554,19 @@ void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
   try
   {
 #if 0
-  int counter = 0;
-  std::cout << fmt::format(
-      "{} : Assigning {} holes to {} polygons\n", ++counter, holes.size(), shells.size());
+    int counter = 0;
+    std::cout << fmt::format(
+        "{} : Assigning {} holes to {} polygons\n", ++counter, holes.size(), shells.size());
 
-  auto i = 0UL;
-  for (const auto& shell : shells)
-    std::cout << "Shell " << i++ << " " << shell.wkt() << "\n\tbbox = " << shell.bbox().wkt()
-              << "\n";
-  i = 0UL;
-  for (const auto& hole : holes)
-    std::cout << "Hole " << i++ << " " << hole.wkt() << "\n\tbbox = " << hole.bbox().wkt() << "\n";
-  counter = 0;
+    auto i = 0UL;
+    for (const auto& shell : shells)
+      std::cout << "Shell " << i++ << " " << shell.wkt() << "\n\tbbox = " << shell.bbox().wkt()
+                << "\n";
+    i = 0UL;
+    for (const auto& hole : holes)
+      std::cout << "Hole " << i++ << " " << hole.wkt() << "\n\tbbox = " << hole.bbox().wkt()
+                << "\n";
+    counter = 0;
 #endif
 
     for (auto&& shell : shells)
@@ -593,7 +594,7 @@ void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
       {
         auto candidates = possible_shells(rtree, hole);
 #if 0
-      std::cout << fmt::format("\t{} candidates for hole {}\n", candidates.size(), counter++);
+        std::cout << fmt::format("\t{} candidates for hole {}\n", candidates.size(), counter++);
 #endif
         if (candidates.empty())
           ++it;  // should be isolated hole when calculating isolines
@@ -601,7 +602,7 @@ void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
         {
           auto polygon = innermost_polygon(candidates);
 #if 0
-        std::cout << fmt::format("\tInnermost polygon: {}\n", polygon->wkt());
+          std::cout << fmt::format("\tInnermost polygon: {}\n", polygon->wkt());
 #endif
           polygon->hole(hole);
           it = holes.erase(it);

@@ -363,7 +363,7 @@ void JointMerger::merge_row()
 #if 0
   if (!prev_row_empty)
   {
-    std::cout << "\n\n\n\nJoints before row merge:\n" << to_string(m_pool) << "\n";
+    std::cout << "\n\n\n\nJoints before merging a new row:\n" << to_string(m_pool) << "\n";
     std::cout << fmt::format("\trange {}..{}\n",
                              reinterpret_cast<void*>(*m_row_start),
                              reinterpret_cast<void*>(*m_row_end));
@@ -400,7 +400,7 @@ void JointMerger::merge_row()
         merge_joint(joint, *match_iter);
         hint = match_iter;
 #if 0
-        std::cout << "Joints after joint merge:\n" << to_string(m_pool) << "\n";
+        std::cout << "Joints after one joint merge:\n" << to_string(m_pool) << "\n";
 #endif
       }
     }
