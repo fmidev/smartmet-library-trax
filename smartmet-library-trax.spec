@@ -20,7 +20,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 25.4.11
+Version: 25.6.19
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -92,6 +92,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Thu Jun 19 2025 Andris Pavēnis <andris.pavenis@fmi.fi> 25.6.19-1.fmi
+- Add support for RHEL 10 and RockyLinux 10
+
 * Fri Apr 11 2025 Mika Heiskanen <mika.heiskanen@fmi.fi> - 25.4.11-1.fmi
 - Fixed robustness issues when grid cell saddle point values are exactly the isoband high limit
 
