@@ -2,6 +2,9 @@
 %define LIBNAME smartmet-%{DIRNAME}
 %define SPECNAME smartmet-library-%{DIRNAME}
 
+# https://fedoraproject.org/wiki/Changes/Broken_RPATH_will_fail_rpmbuild
+%global __brp_check_rpaths %{nil}
+
 %if 0%{?rhel} && 0%{rhel} < 9
 %define smartmet_boost boost169
 %else
