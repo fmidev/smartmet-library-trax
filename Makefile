@@ -9,6 +9,15 @@ OPTIMIZE = -O3
 include $(shell echo $${PREFIX-/usr})/share/smartmet/devel/makefile.inc
 CFLAGS += -Wno-maybe-uninitialized
 
+# There are rounding related problems in case of -march=x86-64-v3 used as default
+# in RHEL 10 and Rocky Linux 10 when -O2 or higher is used. Restrict to x86-64
+# to avoid these problems. Perhaps it would be sufficient to use it for some files only,
+# but it is not worth the effort to find out which ones.
+ifeq ($(findstring x86_64,$(shell $(CC) -dumpmachine)), x86_64)
+MARCH_CFLAGS += -march=x86-64
+endif
+CFLAGS += $(MARCH_CFLAGS)
+
 # maybe-uninitialized: GCC analyzes incorrectly that a vertex may be uninitialized since all data members have defaults
 
 DEFINES = -DUNIX -D_REENTRANT -DUSE_UNSTABLE_GEOS_CPP_API

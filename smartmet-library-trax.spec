@@ -8,6 +8,16 @@
 %define smartmet_boost boost
 %endif
 
+%if 0%{?rhel} && 0%{rhel} <= 9
+%define smartmet_fmt_min 11.0.1
+%define smartmet_fmt_max 12.0.0
+%define smartmet_fmt fmt-libs >= %{smartmet_fmt_min}, fmt-libs < %{smartmet_fmt_max}
+%define smartmet_fmt_devel fmt-devel >= %{smartmet_fmt_min}, fmt-devel < %{smartmet_fmt_max}
+%else
+%define smartmet_fmt fmt
+%define smartmet_fmt_devel fmt-devel
+%endif
+
 Summary: Trax library
 Name: %{SPECNAME}
 Version: 25.4.11
@@ -24,12 +34,12 @@ BuildRequires: make
 BuildRequires: rpm-build
 BuildRequires: gdal310-devel
 BuildRequires: geos313-devel
-BuildRequires: fmt-devel
+BuildRequires: %{smartmet_fmt_devel}
 BuildRequires: libcurl-devel >= 7.68.0
 Requires: smartmet-library-macgyver >= 25.2.18
 Requires: gdal310
 Requires: geos313
-Requires: fmt-libs
+Requires: %{smartmet_fmt}
 Requires: libcurl >= 7.68.0
 Provides: %{LIBNAME}
 #TestRequires: %{smartmet_boost}-devel
@@ -47,7 +57,7 @@ Isoline/isoband calculation library.
 rm -rf $RPM_BUILD_ROOT
 
 %setup -q -n %{SPECNAME}
- 
+
 %build
 make %{_smp_mflags}
 
