@@ -23,7 +23,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 25.6.19
+Version: 25.9.29
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -32,14 +32,14 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 25.2.18
+BuildRequires: smartmet-library-macgyver-devel >= 25.9.19
 BuildRequires: make
 BuildRequires: rpm-build
 BuildRequires: gdal310-devel
 BuildRequires: geos313-devel
 BuildRequires: %{smartmet_fmt_devel}
 BuildRequires: libcurl-devel >= 7.68.0
-Requires: smartmet-library-macgyver >= 25.2.18
+Requires: smartmet-library-macgyver >= 25.9.19
 Requires: gdal310
 Requires: geos313
 Requires: %{smartmet_fmt}
@@ -51,7 +51,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos313-devel
 #TestRequires: gdal310-devel
-#TestRequires: smartmet-library-macgyver-devel >= 25.2.18
+#TestRequires: smartmet-library-macgyver-devel >= 25.9.19
 
 %description
 Isoline/isoband calculation library.
@@ -95,6 +95,10 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Mon Sep 29 2025 Mika Heiskanen <mika.heiskanen@fmi.fi> - 25.9.29-1.fmi
+- Small performance improvements
+- Fixed compiler warnings
+
 * Thu Jun 19 2025 Andris Pavēnis <andris.pavenis@fmi.fi> 25.6.19-1.fmi
 - Add support for RHEL 10 and RockyLinux 10
 
