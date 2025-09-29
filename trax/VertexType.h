@@ -1,10 +1,12 @@
 #pragma once
 
+#include <cstdint>
+
 namespace Trax
 {
 // Note: This order is designed to enable lexicographic sorting so that column+1 vertices
 // would be the last elements.
-enum class VertexType
+enum class VertexType : std::uint8_t
 {
   Corner,
   Vertical_lo,

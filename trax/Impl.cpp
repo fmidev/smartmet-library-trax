@@ -82,7 +82,7 @@ std::list<std::string> validate_isolines(const GeometryCollections& geoms,
   return details;
 }
 
-void throw_with_details(
+[[noreturn]] void throw_with_details(
     const Grid& grid, long imin, long imax, long jmin, long jmax, long nx, long ny)
 {
   std::string details;
@@ -347,6 +347,8 @@ void Contour::Impl::isoline(int index, const Cell& c)
   }
 }
 
+namespace
+{
 // Extract data from grid valid area
 void fill_buffers(const Grid& grid,
                   const std::array<long, 4>& area,
@@ -360,6 +362,7 @@ void fill_buffers(const Grid& grid,
     points[i] = GridPoint(grid.x(ii, j), grid.y(ii, j), grid(ii, j));
   }
 }
+}  // namespace
 
 // Contour full grid
 GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimits& limits)
@@ -453,7 +456,6 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   {
     // Try to provide some info into the logs
     throw_with_details(grid, imin, imax, jmin, jmax, nx, ny);
-    return {};  // NOTREACHED
   }
 }
 
@@ -546,9 +548,7 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   catch (...)
   {
     // Try to provide some info into the logs
-    // Try to provide some info into the logs
     throw_with_details(grid, imin, imax, jmin, jmax, nx, ny);
-    return {};  // NOTREACHED
   }
 }
 

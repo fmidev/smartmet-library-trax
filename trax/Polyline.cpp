@@ -413,6 +413,8 @@ struct ValidRange
   std::size_t end;
 };
 
+namespace
+{
 std::optional<ValidRange> find_valid_range(const Points& points, std::size_t startpos)
 {
   const auto n = points.size();
@@ -427,6 +429,7 @@ std::optional<ValidRange> find_valid_range(const Points& points, std::size_t sta
 
   return ValidRange{startpos, endpos};
 }
+}  // namespace
 
 // precondition: has_ghosts is true, closed is true
 void Polyline::remove_ghosts(Polylines& new_polylines)

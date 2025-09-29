@@ -1,10 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace Trax
 {
-enum class InterpolationType
+enum class InterpolationType : std::uint8_t
 {
   Linear,      // linear interpolation
   Midpoint,    // nearest neighbour midpoint style, produces smoother and shorter paths

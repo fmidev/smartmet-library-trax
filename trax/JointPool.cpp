@@ -125,6 +125,8 @@ Joint* JointPool::create_slow(const Vertex& vertex)
   return joint;
 }
 
+namespace
+{
 // For debugging only
 std::size_t resolve(JointPool& pool, const Joint* joint)
 {
@@ -134,6 +136,7 @@ std::size_t resolve(JointPool& pool, const Joint* joint)
       return i;
   return 0xffffffff;
 }
+}  // namespace
 
 std::string to_string(JointPool& pool, bool print_used)
 {

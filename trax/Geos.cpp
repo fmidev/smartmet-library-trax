@@ -25,7 +25,7 @@ std::unique_ptr<gg::LineString> to_geos_linestring(const Polyline& line,
   auto ycoords = line.ycoordinates();
 
   for (auto i = 0UL; i < n; i++)
-    points.emplace_back(gg::Coordinate(xcoords[i], ycoords[i]));
+    points.emplace_back(xcoords[i], ycoords[i]);
 
   std::unique_ptr<gg::CoordinateSequence> coords(new gg::CoordinateSequence());
   coords->setPoints(points);
@@ -49,7 +49,7 @@ std::unique_ptr<gg::LinearRing> to_geos_linearring(const Polyline& ring,
   auto ycoords = ring.ycoordinates();
 
   for (auto i = 0UL; i < n; i++)
-    points.emplace_back(gg::Coordinate(xcoords[i], ycoords[i]));
+    points.emplace_back(xcoords[i], ycoords[i]);
 
   std::unique_ptr<gg::CoordinateSequence> coords(new gg::CoordinateSequence());
   coords->setPoints(points);
@@ -77,8 +77,10 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
   for (const auto& poly : geom.polygons())
   {
     auto exterior = to_geos_linearring(poly.exterior(), factory);
-    std::vector<std::unique_ptr<gg::LinearRing> > holerings;
     const auto& holes = poly.holes();
+
+    std::vector<std::unique_ptr<gg::LinearRing> > holerings;
+    holerings.reserve(holes.size());
 
     for (const auto& hole : holes)
       holerings.emplace_back(to_geos_linearring(hole, factory).release());
@@ -89,7 +91,7 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
   // Handle lines
 
   std::unique_ptr<gg::Geometry> linegeoms;
-  auto polylines = geom.polylines();
+  const auto& polylines = geom.polylines();
   if (!polylines.empty())
   {
     if (polylines.size() == 1)
@@ -123,10 +125,10 @@ std::unique_ptr<gg::Geometry> to_geos_geom(const GeometryCollection& geom,
 
   // Return the simplest possible geometry type
 
-  if (linegeoms.get() == nullptr)
+  if (!linegeoms)
     return polygeoms;
 
-  if (polygeoms.get() == nullptr)
+  if (!polygeoms)
     return linegeoms;
 
   std::vector<std::unique_ptr<gg::Geometry> > parts;

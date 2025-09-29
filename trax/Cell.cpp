@@ -31,6 +31,8 @@ bool first_diagonal_larger(const Cell& cell)
   return (cell.p1.z + cell.p3.z > cell.p2.z + cell.p4.z);
 }
 
+namespace
+{
 // Return minmax values of a grid cell. Returns NaN if all the elements are NaN.
 // Note that if a comparison returns true, neither of the arguments can be NaN.
 // This can be utilized to avoid std::isnan if none of the numbers is NaN.
@@ -46,6 +48,7 @@ inline MinMax minmax(float z1, float z2)
     return {z2, z2};  // z2,z2 which could be NaN,NaN
   return {z1, z1};    // z1,z1 which cannot be NaN,NaN
 }
+}  // namespace
 
 MinMax minmax(const Cell& cell)
 {

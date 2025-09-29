@@ -1900,6 +1900,9 @@ void JointBuilder::build_edge(VertexType type,
         add(i1, j1, VertexType::Corner, g1);
       break;
     }
+    // To avoid compiler warnings on non-enumerated switches
+    default:
+      break;
   }
 }
 
@@ -2139,6 +2142,9 @@ void JointBuilder::build_midpoint(const Cell& c, double shell)
       close();
       break;
     }
+    // To avoid compiler warnings on non-enumerated switches
+    default:
+      break;
   }
   finish_cell();
 }

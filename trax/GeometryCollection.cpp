@@ -151,6 +151,8 @@ GeometryCollection &GeometryCollection::normalize()
   return *this;
 }
 
+namespace
+{
 template <typename T>
 void desliver_container(T &container)
 {
@@ -168,6 +170,7 @@ void desliver_container(T &container)
     std::swap(container, new_container);
   }
 }
+}  // namespace
 
 // Remove slivers
 void GeometryCollection::desliver()
