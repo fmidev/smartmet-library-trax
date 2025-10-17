@@ -118,8 +118,6 @@ JoinCandidates find_append_candidates(const Polyline& polyline, SortedPolylines&
 // Assumes !polylines.empty()
 JoinCandidate select_turn(const Polyline& polyline, JoinCandidates& candidates, bool turn_right)
 {
-  using boost::math::double_constants::radian;
-
   // std::list::size is slow: if (candidates.size() == 1)
   if (++candidates.begin() == candidates.end())
     return candidates.front();
