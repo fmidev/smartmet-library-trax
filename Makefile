@@ -56,7 +56,6 @@ HDRS =	$(SUBNAME)/BBox.h \
 	$(SUBNAME)/InterpolationType.h \
 	$(SUBNAME)/IsobandLimits.h \
 	$(SUBNAME)/IsolineValues.h \
-	$(SUBNAME)/MirrorMatrix.h \
 	$(SUBNAME)/OGR.h \
 	$(SUBNAME)/Point.h \
 	$(SUBNAME)/Polygon.h \
