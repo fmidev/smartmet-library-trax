@@ -11,15 +11,10 @@
 %define smartmet_boost boost
 %endif
 
-%if 0%{?rhel} && 0%{rhel} <= 9
-%define smartmet_fmt_min 11.0.1
-%define smartmet_fmt_max 12.0.0
+%define smartmet_fmt_min 12.0.0
+%define smartmet_fmt_max 13.0.0
 %define smartmet_fmt fmt-libs >= %{smartmet_fmt_min}, fmt-libs < %{smartmet_fmt_max}
 %define smartmet_fmt_devel fmt-devel >= %{smartmet_fmt_min}, fmt-devel < %{smartmet_fmt_max}
-%else
-%define smartmet_fmt fmt
-%define smartmet_fmt_devel fmt-devel
-%endif
 
 Summary: Trax library
 Name: %{SPECNAME}
@@ -32,15 +27,15 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 25.9.19
+BuildRequires: smartmet-library-macgyver-devel >= 26.2.4
 BuildRequires: make
 BuildRequires: rpm-build
-BuildRequires: gdal310-devel
+BuildRequires: gdal312-devel
 BuildRequires: geos313-devel
 BuildRequires: %{smartmet_fmt_devel}
 BuildRequires: libcurl-devel >= 7.68.0
-Requires: smartmet-library-macgyver >= 25.9.19
-Requires: gdal310
+Requires: smartmet-library-macgyver >= 26.2.4
+Requires: gdal312
 Requires: geos313
 Requires: %{smartmet_fmt}
 Requires: libcurl >= 7.68.0
@@ -50,8 +45,8 @@ Provides: %{LIBNAME}
 #TestRequires: make
 #TestRequires: fmt-devel
 #TestRequires: geos313-devel
-#TestRequires: gdal310-devel
-#TestRequires: smartmet-library-macgyver-devel >= 25.9.19
+#TestRequires: gdal312-devel
+#TestRequires: smartmet-library-macgyver-devel >= 26.2.4
 
 %description
 Isoline/isoband calculation library.
