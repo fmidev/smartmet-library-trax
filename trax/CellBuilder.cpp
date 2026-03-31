@@ -31,6 +31,7 @@ struct point
  * Private small builder class to connect the vertices properly in a single grid cell.
  */
 
+template <bool Logarithmic>
 class JointBuilder
 {
  public:
@@ -40,7 +41,6 @@ class JointBuilder
   void build_midpoint(const Cell& c, double shell);
   void build_missing(const Cell& c);  // with linear interpolation
 
-  void set_logarithmic_mode() { m_logarithmic = true; }
   void set_isoline_mode() { m_isoline = true; }
 
  private:
@@ -73,14 +73,23 @@ class JointBuilder
   point intersect_bottom(const Cell& c, VertexType type) const;
   Place center_place(const Cell& c) const;
 
+  // Lazy log1p cache: pointers to the 4 cell corners set at start of build_linear,
+  // values computed on first use (NaN = not yet computed). Only active when Logarithmic=true.
+  double get_lz(const GridPoint& p) const;
+  const GridPoint* m_gp[4] = {nullptr, nullptr, nullptr, nullptr};
+  mutable double m_lz[4] = {std::numeric_limits<double>::quiet_NaN(),
+                             std::numeric_limits<double>::quiet_NaN(),
+                             std::numeric_limits<double>::quiet_NaN(),
+                             std::numeric_limits<double>::quiet_NaN()};
+
   Range m_range;
   JointMerger& m_joints;
   Vertices m_vertices;
-  bool m_logarithmic = false;
   bool m_isoline = false;
 };
 
-point JointBuilder::intersect(
+template <bool Logarithmic>
+point JointBuilder<Logarithmic>::intersect(
     const GridPoint& p1, const GridPoint& p2, int di, int dj, VertexType type, float value) const
 {
   // These equality tests are necessary for handling value==lolimit cases without any rounding
@@ -98,9 +107,11 @@ point JointBuilder::intersect(
 
   if (p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y))  // lexicographic sorting to guarantee the same
   {  // result even if input x1,y1 and x2,y2 are swapped
-    auto s = (!m_logarithmic
-                  ? (z - p2.z) / (p1.z - p2.z)
-                  : (std::log1p(z) - std::log1p(p2.z)) / (std::log1p(p1.z) - std::log1p(p2.z)));
+    double s;
+    if constexpr (Logarithmic)
+      s = (std::log1p(z) - get_lz(p2)) / (get_lz(p1) - get_lz(p2));
+    else
+      s = (z - p2.z) / (p1.z - p2.z);
 
     // std::clamp in C++17
     if (s < 0)
@@ -117,9 +128,11 @@ point JointBuilder::intersect(
     return {x, y, type, 0, 0};
   }
 
-  auto s =
-      (!m_logarithmic ? (z - p1.z) / (p2.z - p1.z)
-                      : (std::log1p(z) - std::log1p(p1.z)) / (std::log1p(p2.z) - std::log1p(p1.z)));
+  double s;
+  if constexpr (Logarithmic)
+    s = (std::log1p(z) - get_lz(p1)) / (get_lz(p2) - get_lz(p1));
+  else
+    s = (z - p1.z) / (p2.z - p1.z);
 
   // std::clamp in C++17
   if (s < 0)
@@ -138,41 +151,70 @@ point JointBuilder::intersect(
 
 // Utilities to avoid highly likely typos in repetetive code. As luck would have it,
 // I managed to mess up all four the first time...
-point JointBuilder::intersect_left(const Cell& c, VertexType type) const
+template <bool Logarithmic>
+point JointBuilder<Logarithmic>::intersect_left(const Cell& c, VertexType type) const
 {
   const auto limit = (type == VertexType::Vertical_lo ? m_range.lo() : m_range.hi());
   return intersect(c.p1, c.p2, 0, 1, type, limit);
 }
 
-point JointBuilder::intersect_top(const Cell& c, VertexType type) const
+template <bool Logarithmic>
+point JointBuilder<Logarithmic>::intersect_top(const Cell& c, VertexType type) const
 {
   const auto limit = (type == VertexType::Horizontal_lo ? m_range.lo() : m_range.hi());
   return intersect(c.p2, c.p3, 1, 0, type, limit);
 }
 
-point JointBuilder::intersect_right(const Cell& c, VertexType type) const
+template <bool Logarithmic>
+point JointBuilder<Logarithmic>::intersect_right(const Cell& c, VertexType type) const
 {
   const auto limit = (type == VertexType::Vertical_lo ? m_range.lo() : m_range.hi());
   return intersect(c.p4, c.p3, 0, 1, type, limit);
 }
 
-point JointBuilder::intersect_bottom(const Cell& c, VertexType type) const
+template <bool Logarithmic>
+point JointBuilder<Logarithmic>::intersect_bottom(const Cell& c, VertexType type) const
 {
   const auto limit = (type == VertexType::Horizontal_lo ? m_range.lo() : m_range.hi());
   return intersect(c.p1, c.p4, 1, 0, type, limit);
 }
 
-Place JointBuilder::center_place(const Cell& c) const
+template <bool Logarithmic>
+Place JointBuilder<Logarithmic>::center_place(const Cell& c) const
 {
-  if (!m_logarithmic)
+  if constexpr (!Logarithmic)
   {
     const auto z = (c.p1.z + c.p2.z + c.p3.z + c.p4.z) / 4;
     return place(z, m_range);
   }
+  else
+  {
+    const auto z = std::expm1((get_lz(c.p1) + get_lz(c.p2) + get_lz(c.p3) + get_lz(c.p4)) / 4);
+    return place(z, m_range);
+  }
+}
 
-  const auto z = std::expm1(
-      (std::log1p(c.p1.z) + std::log1p(c.p2.z) + std::log1p(c.p3.z) + std::log1p(c.p4.z)) / 4);
-  return place(z, m_range);
+// Return log1p(p.z) with lazy caching keyed by GridPoint pointer.
+// In linear mode this is never called; the if constexpr guard below is for
+// the compiler so it can dead-code-eliminate the body for Logarithmic=false.
+template <bool Logarithmic>
+double JointBuilder<Logarithmic>::get_lz(const GridPoint& p) const
+{
+  if constexpr (!Logarithmic)
+    return 0.0;  // unreachable in linear mode
+  else
+  {
+    for (int i = 0; i < 4; ++i)
+    {
+      if (m_gp[i] == &p)
+      {
+        if (std::isnan(m_lz[i]))
+          m_lz[i] = std::log1p(p.z);
+        return m_lz[i];
+      }
+    }
+    return std::log1p(p.z);  // fallback for GridPoints not in the cell (build_edge rare path)
+  }
 }
 
 // Connect from previous to next by default, close() will fix the necessary prev/next indices
@@ -186,23 +228,27 @@ Place JointBuilder::center_place(const Cell& c) const
 // and neither can decrease (both row&column are equal at the bottom left corner). Hence a simple
 // std::max solution is enough to merge the two vertices.
 
-inline void JointBuilder::add(std::int32_t column, std::int32_t row, const point& p, float z)
+template <bool Logarithmic>
+inline void JointBuilder<Logarithmic>::add(std::int32_t column, std::int32_t row, const point& p, float z)
 {
   add(column + p.di, row + p.dj, p.type, p.x, p.y, z);
 }
 
-void JointBuilder::add(std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p)
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::add(std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p)
 {
   add(column, row, vtype, p.x, p.y, p.z);
 }
 
-void JointBuilder::add(
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::add(
     std::int32_t column, std::int32_t row, VertexType vtype, const GridPoint& p, bool ghost)
 {
   add(column, row, vtype, p.x, p.y, ghost);
 }
 
-void JointBuilder::add(
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::add(
     std::int32_t column, std::int32_t row, VertexType vtype, double x, double y, float z)
 {
   // Note that NaN is always marked a ghost as needed for midpoint algorithm
@@ -210,7 +256,8 @@ void JointBuilder::add(
   add(column, row, vtype, x, y, ghost);
 }
 
-void JointBuilder::add(
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::add(
     std::int32_t column, std::int32_t row, VertexType vtype, double x, double y, bool ghost)
 {
   Vertex vertex(column, row, vtype, x, y, ghost);
@@ -238,7 +285,8 @@ void JointBuilder::add(
 }
 
 // Close the ring.
-void JointBuilder::close()
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::close()
 {
 #if 0
   if (print_it)
@@ -271,17 +319,28 @@ void JointBuilder::close()
   m_vertices.clear();
 }
 
-void JointBuilder::finish_cell()
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::finish_cell()
 {
   m_joints.finish_cell();
 }
 
-void JointBuilder::build_linear(const Cell& c)
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_linear(const Cell& c)
 {
   if (m_range.missing())
   {
     build_missing(c);
     return;
+  }
+
+  // Store corner pointers so get_lz() can lazily cache log1p(corner.z) on first use
+  if constexpr (Logarithmic)
+  {
+    m_gp[0] = &c.p1;
+    m_gp[1] = &c.p2;
+    m_gp[2] = &c.p3;
+    m_gp[3] = &c.p4;
   }
 
   const auto c1 = place(c.p1.z, m_range);
@@ -1811,7 +1870,8 @@ void JointBuilder::build_linear(const Cell& c)
 // edge first. Hence reducing the size of the switch for triangles at the
 // end of the above 'build_linear' method could be tricky.
 
-void JointBuilder::build_edge(VertexType type,
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_edge(VertexType type,
                               int di,
                               int dj,
                               Place c1,
@@ -1911,7 +1971,8 @@ void JointBuilder::build_edge(VertexType type,
 // use build_midpoint, since it will connect centers of edges instead of
 // the corners like build_linear does.
 
-void JointBuilder::build_missing(const Cell& c)
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_missing(const Cell& c)
 {
   auto hash = nan_hash(c.p1.z, c.p2.z, c.p3.z, c.p4.z);
 
@@ -1965,7 +2026,8 @@ void JointBuilder::build_missing(const Cell& c)
   finish_cell();
 }
 
-void JointBuilder::build_midpoint(const Cell& c, double shell)
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_midpoint(const Cell& c, double shell)
 {
   // Abort if not contouring missing values and in the shell regions. Note that if there is no
   // shell, the value is NaN, and hence all comparisons will fail.
@@ -2157,7 +2219,7 @@ namespace CellBuilder
 {
 void isoband_linear(JointMerger& joints, const Cell& c, const Range& range)
 {
-  JointBuilder b(joints, range);
+  JointBuilder<false> b(joints, range);
   b.build_linear(c);
 }
 
@@ -2165,15 +2227,14 @@ void isoline_linear(JointMerger& joints, const Cell& c, float limit)
 {
   auto hilimit = (std::isnan(limit) ? limit : std::numeric_limits<float>::infinity());
   Range range(limit, hilimit);
-  JointBuilder b(joints, range);
+  JointBuilder<false> b(joints, range);
   b.set_isoline_mode();
   b.build_linear(c);
 }
 
 void isoband_logarithmic(JointMerger& joints, const Cell& c, const Range& range)
 {
-  JointBuilder b(joints, range);
-  b.set_logarithmic_mode();
+  JointBuilder<true> b(joints, range);
   b.build_linear(c);
 }
 
@@ -2181,15 +2242,14 @@ void isoline_logarithmic(JointMerger& joints, const Cell& c, float limit)
 {
   auto hilimit = (std::isnan(limit) ? limit : std::numeric_limits<float>::infinity());
   Range range(limit, hilimit);
-  JointBuilder b(joints, range);
+  JointBuilder<true> b(joints, range);
   b.set_isoline_mode();
-  b.set_logarithmic_mode();
   b.build_linear(c);
 }
 
 void isoband_midpoint(JointMerger& joints, const Cell& c, const Range& range, double shell)
 {
-  JointBuilder b(joints, range);
+  JointBuilder<false> b(joints, range);
   b.build_midpoint(c, shell);
 }
 

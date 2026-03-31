@@ -232,6 +232,8 @@ void JointMerger::merge_cell(const Vertices& vertices)
       j1 = j;
     else if (j->vertex == vertices[1])
       j2 = j;
+    if (j1 && j2)
+      break;
   }
 
 #if 0
