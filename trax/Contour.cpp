@@ -39,6 +39,12 @@ void Contour::desliver(bool flag)
   impl->desliver(flag);
 }
 
+// Set thread count: 1 = single-threaded (default), N>1 = N threads, 0 = auto
+void Contour::threads(int n)
+{
+  impl->threads(n);
+}
+
 // Contour full grid
 GeometryCollections Contour::isobands(const Grid& grid, const IsobandLimits& limits)
 {

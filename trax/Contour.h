@@ -27,6 +27,7 @@ class Contour
   void strict(bool flag);
   void validate(bool flag);
   void desliver(bool flag);
+  void threads(int n);  // 1 = single-threaded (default), N>1 = N threads, 0 = auto
 
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
   GeometryCollections isolines(const Grid& grid, const IsolineValues& limits);

@@ -3,6 +3,7 @@
 #include "Contour.h"
 #include "IsobandLimits.h"
 #include "IsolineValues.h"
+#include <array>
 #include <limits>
 
 namespace Trax
@@ -18,6 +19,7 @@ class Contour::Impl
   void validate(bool flag) { m_validate = flag; }
   void desliver(bool flag) { m_desliver = flag; }
   void shell(double value) { m_shell = value; }
+  void threads(int n) { m_threads = n; }
 
   // Calculate full set of contours
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -43,6 +45,12 @@ class Contour::Impl
   void finish_row();
   void finish_isolines();
   void finish_isobands();
+
+  // Grid loop helpers: single-threaded and parallel
+  GeometryCollections isobands_impl(const Grid& grid, const std::array<long, 4>& bbox, long nx, long ny);
+  GeometryCollections isobands_parallel(const Grid& grid, const std::array<long, 4>& bbox, long nx, long ny);
+  GeometryCollections isolines_impl(const Grid& grid, const std::array<long, 4>& bbox, long nx, long ny);
+  GeometryCollections isolines_parallel(const Grid& grid, const std::array<long, 4>& bbox, long nx, long ny);
 
   // Update a specific isoline from a single cell
   void isoline(int index, const Cell& c);
@@ -93,6 +101,9 @@ class Contour::Impl
 
   std::size_t m_min_index = 0;
   std::size_t m_max_index = 0;
+
+  // Thread count: 1 = single-threaded (default), N>1 = N threads, 0 = auto
+  int m_threads = 1;
 };
 
 }  // namespace Trax

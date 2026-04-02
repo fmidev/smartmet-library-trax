@@ -7,6 +7,9 @@
 #include <macgyver/StringConversion.h>
 #include <algorithm>  // std::minmax
 #include <cmath>      // std::min and std::max
+#include <future>     // std::async
+#include <memory>     // std::make_shared
+#include <thread>     // std::thread::hardware_concurrency
 #include <utility>    // std::pair and std::make_pair
 
 #include <fmt/format.h>
@@ -364,6 +367,124 @@ void fill_buffers(const Grid& grid,
 }
 }  // namespace
 
+// Single-threaded grid loop for isobands; caller handles desliver/validate
+GeometryCollections Contour::Impl::isobands_impl(const Grid& grid,
+                                                  const std::array<long, 4>& bbox,
+                                                  long nx,
+                                                  long ny)
+{
+  const auto imin = bbox[0];
+  const auto jmin = bbox[1];
+  const auto imax = bbox[2];
+  const auto jmax = bbox[3];
+
+  long shift = grid.shift();
+  const auto imid = shift - imin;
+  const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
+
+  // Accessing data through grid is sometimes slow, so we buffer the values into vectors
+  // and just swap them after each row to avoid unnecessary copying.
+  std::vector<GridPoint> row1(nx);
+  std::vector<GridPoint> row2(nx);
+  fill_buffers(grid, bbox, jmin, row1);
+
+  std::vector<long> loop_limits;
+  if (!needs_two_passes)
+    loop_limits = {0, nx - 1};
+  else
+    loop_limits = {imid, nx - 1, 0, imid - 1};
+
+  for (auto j = jmin; j <= jmax; j++)
+  {
+    fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
+
+    // Keep Cell i,j coordinates continuous by applying a shift in the second loop
+    auto ishift = 0;
+    for (auto k = 0UL; k < loop_limits.size(); k += 2)
+    {
+      for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
+        if (grid.valid(imin + i, j))
+          isoband(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
+      ishift = loop_limits[k + 1];
+    }
+
+    finish_row();
+    std::swap(row1, row2);  // roll down the coordinates to the bottom row
+  }
+
+  finish_isobands();
+  return result();
+}
+
+// Parallel isoband contouring: split sorted levels across threads, merge results.
+//
+// All isoband levels have already been sorted by init(). We divide the finite
+// levels (skipping the NaN range at index 0, if any) across N threads. Thread 0
+// also takes the NaN range so that m_contour_missing works correctly in its slice.
+// Each thread runs an independent isobands_impl() on its slice and returns results
+// in sorted order. The parent maps those back to global original positions.
+GeometryCollections Contour::Impl::isobands_parallel(const Grid& grid,
+                                                      const std::array<long, 4>& bbox,
+                                                      long nx,
+                                                      long ny)
+{
+  const auto n = m_isoband_limits.size();
+  const auto n0 = m_contour_missing ? 1UL : 0UL;  // index of first finite level
+  const auto n_finite = n - n0;
+
+  // Resolve thread count: auto (0) uses hardware concurrency, capped to level count
+  auto hw = std::thread::hardware_concurrency();
+  auto n_threads = (m_threads == 0) ? std::max(1U, hw) : (unsigned)m_threads;
+  n_threads = (unsigned)std::min((std::size_t)n_threads, n_finite);
+
+  // Not enough levels to benefit from splitting – fall back to single-threaded
+  if (n_threads <= 1)
+    return isobands_impl(grid, bbox, nx, ny);
+
+  const auto chunk = (n_finite + n_threads - 1) / n_threads;  // ceiling division
+
+  std::vector<std::future<GeometryCollections>> futures;
+  std::vector<std::size_t> slice_starts;
+
+  for (auto t = 0U; t < n_threads; t++)
+  {
+    // Thread 0 starts at 0 to include the NaN range (if any); others start at n0 + t*chunk
+    const auto start = (t == 0) ? 0UL : n0 + t * chunk;
+    const auto end = std::min(n0 + (t + 1) * chunk, n);
+    slice_starts.push_back(start);
+
+    // Build a sub-IsobandLimits from the already sorted and adjusted full limits.
+    // Ranges are added in sorted order, so sort() inside init() is an identity permutation
+    // and original_position(i)==i, meaning isobands_impl() returns results in sorted order.
+    // closed_range is left at its default (false) since ranges are already adjusted.
+    IsobandLimits sub_limits;
+    for (auto i = start; i < end; i++)
+      sub_limits.add(m_isoband_limits[i].lo(), m_isoband_limits[i].hi());
+
+    // Create a sub-Impl with the same contouring settings for this slice
+    auto sub = std::make_shared<Impl>();
+    sub->m_itype = m_itype;
+    sub->m_strict = m_strict;
+    sub->m_shell = m_shell;
+    sub->init(sub_limits, nx, ny);
+
+    futures.push_back(std::async(std::launch::async, [sub, &grid, &bbox, nx, ny]() {
+      return sub->isobands_impl(grid, bbox, nx, ny);
+    }));
+  }
+
+  // Collect partial results and place them at their global original positions
+  GeometryCollections final_result(n);
+  for (auto t = 0U; t < n_threads; t++)
+  {
+    auto partial = futures[t].get();
+    const auto start = slice_starts[t];
+    for (auto i = 0UL; i < partial.size(); i++)
+      final_result[m_isoband_limits.original_position(start + i)] = std::move(partial[i]);
+  }
+  return final_result;
+}
+
 // Contour full grid
 GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimits& limits)
 {
@@ -391,47 +512,8 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   {
     init(limits, nx, ny);
 
-    // Determine whether we need to split rows into two parts due to shifted global data. Otherwise
-    // we'd need special code to handle joining the first and last cells.
-
-    long shift = grid.shift();
-    const auto imid = shift - imin;
-    const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
-
-    // Accessing data through grid is sometimes slow, so we buffer the values into vectors
-    // and just swap them after each row to avoid unnecessary copying.
-    std::vector<GridPoint> row1(nx);
-    std::vector<GridPoint> row2(nx);
-
-    fill_buffers(grid, bbox, jmin, row1);
-
-    std::vector<long> loop_limits;
-    if (!needs_two_passes)
-      loop_limits = {0, nx - 1};
-    else
-      loop_limits = {imid, nx - 1, 0, imid - 1};
-
-    for (auto j = jmin; j <= jmax; j++)
-    {
-      fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
-
-      // Keep Cell i,j coordinates continuous by applying a shift in the second loop
-      auto ishift = 0;
-      for (auto k = 0UL; k < loop_limits.size(); k += 2)
-      {
-        for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
-          if (grid.valid(imin + i, j))
-            isoband(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
-        ishift = loop_limits[k + 1];
-      }
-
-      finish_row();
-      std::swap(row1, row2);  // roll down the coordinates to the bottom row
-    }
-
-    finish_isobands();
-
-    auto res = result();
+    auto res = (m_threads == 1) ? isobands_impl(grid, bbox, nx, ny)
+                                 : isobands_parallel(grid, bbox, nx, ny);
 
     if (m_desliver)
       desliver_geoms(res);
@@ -457,6 +539,108 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
     // Try to provide some info into the logs
     throw_with_details(grid, imin, imax, jmin, jmax, nx, ny);
   }
+}
+
+// Single-threaded grid loop for isolines; caller handles desliver/validate
+GeometryCollections Contour::Impl::isolines_impl(const Grid& grid,
+                                                  const std::array<long, 4>& bbox,
+                                                  long nx,
+                                                  long ny)
+{
+  const auto imin = bbox[0];
+  const auto jmin = bbox[1];
+  const auto imax = bbox[2];
+  const auto jmax = bbox[3];
+
+  long shift = grid.shift();
+  const auto imid = shift - imin;
+  const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
+
+  // Accessing data through grid is sometimes slow, so we buffer the values into vectors
+  // and just swap them after each row to avoid unnecessary copying.
+  std::vector<GridPoint> row1(nx);
+  std::vector<GridPoint> row2(nx);
+  fill_buffers(grid, bbox, jmin, row1);
+
+  std::vector<long> loop_limits;
+  if (!needs_two_passes)
+    loop_limits = {0, nx - 1};
+  else
+    loop_limits = {imid, nx - 1, 0, imid - 1};
+
+  for (auto j = jmin; j <= jmax; j++)
+  {
+    fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
+
+    // Keep Cell i,j coordinates continuous by applying a shift in the second loop
+    auto ishift = 0;
+    for (auto k = 0UL; k < loop_limits.size(); k += 2)
+    {
+      for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
+        if (grid.valid(imin + i, j))
+          isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
+      ishift = loop_limits[k + 1];
+    }
+    finish_row();
+    std::swap(row1, row2);  // roll down the coordinates to the bottom row
+  }
+
+  finish_isolines();
+  return result();
+}
+
+// Parallel isoline contouring: same split strategy as isobands_parallel
+GeometryCollections Contour::Impl::isolines_parallel(const Grid& grid,
+                                                      const std::array<long, 4>& bbox,
+                                                      long nx,
+                                                      long ny)
+{
+  const auto n = m_isoline_values.size();
+  const auto n0 = m_contour_missing ? 1UL : 0UL;  // index of first finite level
+  const auto n_finite = n - n0;
+
+  auto hw = std::thread::hardware_concurrency();
+  auto n_threads = (m_threads == 0) ? std::max(1U, hw) : (unsigned)m_threads;
+  n_threads = (unsigned)std::min((std::size_t)n_threads, n_finite);
+
+  if (n_threads <= 1)
+    return isolines_impl(grid, bbox, nx, ny);
+
+  const auto chunk = (n_finite + n_threads - 1) / n_threads;
+
+  std::vector<std::future<GeometryCollections>> futures;
+  std::vector<std::size_t> slice_starts;
+
+  for (auto t = 0U; t < n_threads; t++)
+  {
+    const auto start = (t == 0) ? 0UL : n0 + t * chunk;
+    const auto end = std::min(n0 + (t + 1) * chunk, n);
+    slice_starts.push_back(start);
+
+    IsolineValues sub_values;
+    for (auto i = start; i < end; i++)
+      sub_values.add(m_isoline_values[i]);
+
+    auto sub = std::make_shared<Impl>();
+    sub->m_itype = m_itype;
+    sub->m_strict = m_strict;
+    sub->m_shell = m_shell;
+    sub->init(sub_values, nx, ny);
+
+    futures.push_back(std::async(std::launch::async, [sub, &grid, &bbox, nx, ny]() {
+      return sub->isolines_impl(grid, bbox, nx, ny);
+    }));
+  }
+
+  GeometryCollections final_result(n);
+  for (auto t = 0U; t < n_threads; t++)
+  {
+    auto partial = futures[t].get();
+    const auto start = slice_starts[t];
+    for (auto i = 0UL; i < partial.size(); i++)
+      final_result[m_isoline_values.original_position(start + i)] = std::move(partial[i]);
+  }
+  return final_result;
 }
 
 // Contour full grid for isolines
@@ -486,45 +670,8 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   {
     init(limits, nx, ny);
 
-    // Determine whether we need to split rows into two parts due to shifted global data. Otherwise
-    // we'd need special code to handle joining the first and last cells.
-
-    long shift = grid.shift();
-    const auto imid = shift - imin;
-    const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
-
-    // Accessing data through grid is sometimes slow, so we buffer the values into vectors
-    // and just swap them after each row to avoid unnecessary copying.
-    std::vector<GridPoint> row1(nx);
-    std::vector<GridPoint> row2(nx);
-    fill_buffers(grid, bbox, jmin, row1);
-
-    std::vector<long> loop_limits;
-    if (!needs_two_passes)
-      loop_limits = {0, nx - 1};
-    else
-      loop_limits = {imid, nx - 1, 0, imid - 1};
-
-    for (auto j = jmin; j <= jmax; j++)
-    {
-      fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
-
-      // Keep Cell i,j coordinates continuous by applying a shift in the second loop
-      auto ishift = 0;
-      for (auto k = 0UL; k < loop_limits.size(); k += 2)
-      {
-        for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
-          if (grid.valid(imin + i, j))
-            isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
-        ishift = loop_limits[k + 1];
-      }
-      finish_row();
-      std::swap(row1, row2);  // roll down the coordinates to the bottom row
-    }
-
-    finish_isolines();
-
-    auto res = result();
+    auto res = (m_threads == 1) ? isolines_impl(grid, bbox, nx, ny)
+                                 : isolines_parallel(grid, bbox, nx, ny);
 
     if (m_desliver)
       desliver_geoms(res);

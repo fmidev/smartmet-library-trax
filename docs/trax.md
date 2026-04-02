@@ -19,6 +19,7 @@ Trax is a high-performance C++ library for generating **isobands** (filled conto
 6. [Exact Boundary Collisions in Weather Data](#exact-boundary-collisions-in-weather-data)
 7. [Output Integration (OGR / GEOS)](#output-integration-ogr--geos)
 8. [Performance Design](#performance-design)
+   - [Parallel level-subset processing](#parallel-level-subset-processing)
 9. [Build and Dependencies](#build-and-dependencies)
 
 ---
@@ -182,6 +183,7 @@ public:
     void strict(bool flag);                       // default: false
     void validate(bool flag);                     // default: false
     void desliver(bool flag);                     // default: false
+    void threads(int n);                          // default: 1 (see below)
 
     // Computation
     GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -194,6 +196,16 @@ public:
 **`validate(true)`** runs GEOS `IsValidOp` on every output geometry. This is very slow and intended only for debugging. Combined with `strict(true)`, invalid geometries throw; otherwise they are printed to stderr.
 
 **`desliver(true)`** removes degenerate sliver geometries from output.
+
+**`threads(n)`** controls how many threads are used to parallelise contouring across isoband/isoline levels:
+
+| Value | Meaning |
+|---|---|
+| `1` | Single-threaded (default) |
+| `N > 1` | Use exactly N threads |
+| `0` | Auto: use `std::thread::hardware_concurrency()` threads |
+
+See [Parallel level-subset processing](#parallel-level-subset-processing) for details.
 
 The `Contour` object is not copyable or movable. It is safe to call `isobands()` / `isolines()` multiple times on the same object with different grids or limits.
 
@@ -408,6 +420,18 @@ Trax takes a different approach: **all isoband levels are processed simultaneous
 Because adjacent cells on a meteorological grid have similar values, the window barely moves from one cell to the next — a short bidirectional linear scan of a few steps is all that is needed to update it. The amortized cost is O(1) per cell regardless of how many isoband levels were requested.
 
 The isoband levels are sorted internally to make this sliding-window approach work. The original order supplied by the caller is recorded beforehand and restored when assembling the output, so `results[i]` always corresponds to the `i`-th `add()` call.
+
+### Parallel level-subset processing
+
+When `threads(N)` or `threads(0)` is set, the sorted isoband or isoline levels are divided into N equal-sized slices. Each slice is processed by an independent `std::async` task that runs a complete grid pass for its subset of levels. The grid is shared read-only across all threads.
+
+The NaN/missing range (always sorted to index 0) is assigned entirely to thread 0's slice, so `m_contour_missing` logic is preserved within that thread without any cross-thread coordination.
+
+Each thread works with its own `Builder`, `JointMerger`, and `JointPool` instances — there is no shared mutable state between threads during the grid pass. After all threads complete, the partial results are merged back into the final `GeometryCollections` using the global `original_position()` mapping, restoring the user's original level order.
+
+If the resolved thread count exceeds the number of finite levels, it is capped so that every thread has at least one level to process. If the cap reduces the count to 1, the single-threaded path is taken with no threading overhead.
+
+The `validate` and `desliver` steps are applied to the merged result after all threads finish, not per-thread.
 
 ### Row buffering with swap
 

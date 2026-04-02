@@ -49,10 +49,11 @@ catch (std::exception& e)
   throw;
 }
 
-void run_file_tests(const std::string& filename)
+void run_file_tests(const std::string& filename, int threads = 1)
 {
   // Default contouring settings
   Trax::Contour contourer;
+  contourer.threads(threads);
 
   std::unique_ptr<Trax::TestGrid> grid;
   double x1 = 0;
@@ -338,6 +339,39 @@ BOOST_AUTO_TEST_CASE(isoband_debug)
 {
   BOOST_TEST_MESSAGE("+ [Trax::Builder::isoband debug cases");
   run_file_tests("data/isoband_debug.txt");
+}
+
+// Run all data files with a fixed thread count or with automatic thread selection.
+// Results must be identical to the single-threaded runs above.
+
+void run_all_file_tests(int threads)
+{
+  run_file_tests("data/isoband_2x2.txt", threads);
+  run_file_tests("data/isoband_2x2_missing.txt", threads);
+  run_file_tests("data/midpoint_2x2.txt", threads);
+  run_file_tests("data/midpoint_2x2_missing.txt", threads);
+  run_file_tests("data/midpoint_4x3.txt", threads);
+  run_file_tests("data/isoband_3x3.txt", threads);
+  run_file_tests("data/isoband_3x3_missing.txt", threads);
+  run_file_tests("data/isoband_3x3_inf.txt", threads);
+  run_file_tests("data/isoband_4x4.txt", threads);
+  run_file_tests("data/isoline_2x2.txt", threads);
+  run_file_tests("data/isoline_2x2_missing.txt", threads);
+  run_file_tests("data/isoline_3x3.txt", threads);
+  run_file_tests("data/isoline_4x4.txt", threads);
+  run_file_tests("data/isoband_debug.txt", threads);
+}
+
+BOOST_AUTO_TEST_CASE(all_tests_4_threads)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Contour all tests with 4 threads]");
+  run_all_file_tests(4);
+}
+
+BOOST_AUTO_TEST_CASE(all_tests_auto_threads)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Contour all tests with automatic thread selection]");
+  run_all_file_tests(0);
 }
 
 // #define RUN_REALLY_BIG_TESTS 1
