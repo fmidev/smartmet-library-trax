@@ -221,7 +221,15 @@ void JointMerger::merge_cell(const Vertices& vertices)
   if (vertices.size() <= 2)  // safety check
     return;
 
-  // Find matches for the first two vertices
+  // Find matches for the first two vertices from the previous cell on this row.
+  // In the common case the vertices are on the shared left edge, j2->next is j1
+  // in the previous cell's ring, and we can break early for speed. However, near
+  // the poles of global grids projected coordinates may be nearly degenerate,
+  // causing accidental vertex matches from non-adjacent edges (e.g. triangle
+  // cases where a missing corner shifts vertices[0..1] to the top edge instead
+  // of the left edge). The j2->next==j1 check validates that the matched pair
+  // actually forms a consecutive shared edge before accepting the early exit.
+
   Joint* j1 = nullptr;
   Joint* j2 = nullptr;
 
@@ -229,11 +237,17 @@ void JointMerger::merge_cell(const Vertices& vertices)
   {
     auto* j = *it;
     if (j->vertex == vertices[0])
+    {
       j1 = j;
+      if (j2 && j2->next == j1)
+        break;
+    }
     else if (j->vertex == vertices[1])
+    {
       j2 = j;
-    if (j1 && j2)
-      break;
+      if (j1 && j2->next == j1)
+        break;
+    }
   }
 
 #if 0
@@ -246,7 +260,12 @@ void JointMerger::merge_cell(const Vertices& vertices)
   }
 #endif
 
-  if (j1 != nullptr && j2 != nullptr)
+  // Direct merge is valid only when j2->next==j1, meaning they form a consecutive
+  // edge in the previous cell's ring that can be replaced with the new vertices.
+  // If the scan found accidental matches (degenerate polar coordinates), fall
+  // through to the safer indirect merge instead.
+
+  if (j1 != nullptr && j2 != nullptr && j2->next == j1)
   {
 #if 0
     std::cout << "\tDirect merge: j1=" << j1 << " j2=" << j2 << "\n";
