@@ -27,6 +27,15 @@ struct point
   int dj;
 };
 
+// Identifies one of the four cell edges when densifying a level-curve segment.
+enum class Edge : std::uint8_t
+{
+  Left,    // p1 -> p2
+  Top,     // p2 -> p3
+  Right,   // p4 -> p3
+  Bottom   // p1 -> p4
+};
+
 /*
  * Private small builder class to connect the vertices properly in a single grid cell.
  */
@@ -42,6 +51,15 @@ class JointBuilder
   void build_missing(const Cell& c);  // with linear interpolation
 
   void set_isoline_mode() { m_isoline = true; }
+  void set_subdivide(int n) { m_subdivide = n; }
+
+  // Emit (m_subdivide - 1) Interior sample points on the bilinear level curve
+  // of value `limit` between the edge intersection on ea and the one on eb.
+  // Does nothing when m_subdivide <= 1. Edge intersection endpoints are added
+  // separately by the caller to keep their (column, row, type, x, y) bit-identical
+  // to the non-subdivided path, preserving JointMerger's ability to stitch
+  // adjacent cells along the shared edge.
+  void densify(const Cell& c, Edge ea, Edge eb, float limit);
 
  private:
   void build_edge(VertexType type,
@@ -86,6 +104,7 @@ class JointBuilder
   JointMerger& m_joints;
   Vertices m_vertices;
   bool m_isoline = false;
+  int m_subdivide = 0;  // 0 = off; N>0 = insert N-1 Interior samples per curve segment
 };
 
 template <bool Logarithmic>
@@ -214,6 +233,170 @@ double JointBuilder<Logarithmic>::get_lz(const GridPoint& p) const
       }
     }
     return std::log1p(p.z);  // fallback for GridPoints not in the cell (build_edge rare path)
+  }
+}
+
+// Emit interior bilinear samples between two edge intersections at value `limit`.
+// Endpoints are added separately by the caller and stay bit-identical to the
+// non-subdivided path, so JointMerger's cross-cell stitching on the shared edges
+// is unaffected. Interior vertices get sentinel (column, row) that cannot collide
+// with any edge-intersection key and a VertexType::Interior that merge predicates
+// skip explicitly.
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::densify(const Cell& c, Edge ea, Edge eb, float limit)
+{
+  if (m_subdivide < 2)
+    return;
+
+  // Corner values in the chosen space (raw or log1p).
+  double z1;
+  double z2;
+  double z3;
+  double z4;
+  double zc;
+  if constexpr (Logarithmic)
+  {
+    z1 = get_lz(c.p1);
+    z2 = get_lz(c.p2);
+    z3 = get_lz(c.p3);
+    z4 = get_lz(c.p4);
+    zc = std::log1p(static_cast<double>(limit));
+  }
+  else
+  {
+    z1 = c.p1.z;
+    z2 = c.p2.z;
+    z3 = c.p3.z;
+    z4 = c.p4.z;
+    zc = limit;
+  }
+
+  // f(u,v) = z1 + B*u + C*v + D*u*v, solve f == zc for the level curve.
+  const double B = z4 - z1;
+  const double C = z2 - z1;
+  const double D = (z1 + z3) - (z2 + z4);
+
+  // Skip densification when the level curve is linear in (u, v). For rectilinear
+  // grids that also implies a straight segment in world coords, so the samples
+  // would just duplicate the straight edge the caller already draws.
+  if (std::abs(D) < 1e-20)
+    return;
+
+  // Edge parameter s along the directed edge (value from za to zb).
+  auto edge_s = [&](Edge e) {
+    double za = 0;
+    double zb = 0;
+    switch (e)
+    {
+      case Edge::Left:
+        za = z1;
+        zb = z2;
+        break;
+      case Edge::Top:
+        za = z2;
+        zb = z3;
+        break;
+      case Edge::Right:
+        za = z4;
+        zb = z3;
+        break;
+      case Edge::Bottom:
+        za = z1;
+        zb = z4;
+        break;
+    }
+    if (za == zb)
+      return 0.0;
+    double s = (zc - za) / (zb - za);
+    if (s < 0.0)
+      s = 0.0;
+    else if (s > 1.0)
+      s = 1.0;
+    return s;
+  };
+
+  auto edge_uv = [](Edge e, double s, double& u, double& v) {
+    switch (e)
+    {
+      case Edge::Left:
+        u = 0.0;
+        v = s;
+        break;
+      case Edge::Top:
+        u = s;
+        v = 1.0;
+        break;
+      case Edge::Right:
+        u = 1.0;
+        v = s;
+        break;
+      case Edge::Bottom:
+        u = s;
+        v = 0.0;
+        break;
+    }
+  };
+
+  double ua = 0;
+  double va = 0;
+  double ub = 0;
+  double vb = 0;
+  edge_uv(ea, edge_s(ea), ua, va);
+  edge_uv(eb, edge_s(eb), ub, vb);
+
+  const bool u_dominant = std::abs(ub - ua) >= std::abs(vb - va);
+  const bool ghost = (static_cast<double>(limit) != static_cast<double>(m_range.lo()));
+
+  // Unique (column, row) per interior sample. Vertex equality is integer-based on
+  // (column, row, type), and VertexType::Interior plus sentinel columns keep these
+  // out of collision range of any cell-edge vertex in the same pool.
+  const std::int32_t base_col = std::numeric_limits<std::int32_t>::min() / 2 + c.i;
+  const std::int32_t base_row = std::numeric_limits<std::int32_t>::min() / 2 + c.j * 16;
+
+  for (int k = 1; k < m_subdivide; ++k)
+  {
+    const double t = static_cast<double>(k) / static_cast<double>(m_subdivide);
+    double u;
+    double v;
+    if (u_dominant)
+    {
+      u = ua + t * (ub - ua);
+      const double denom = C + D * u;
+      if (std::abs(denom) < 1e-20)
+        v = va + t * (vb - va);
+      else
+        v = (zc - z1 - B * u) / denom;
+    }
+    else
+    {
+      v = va + t * (vb - va);
+      const double denom = B + D * v;
+      if (std::abs(denom) < 1e-20)
+        u = ua + t * (ub - ua);
+      else
+        u = (zc - z1 - C * v) / denom;
+    }
+
+    if (u < 0.0)
+      u = 0.0;
+    else if (u > 1.0)
+      u = 1.0;
+    if (v < 0.0)
+      v = 0.0;
+    else if (v > 1.0)
+      v = 1.0;
+
+    // Spatial bilinear mapping from (u, v) to world coords. Supports curvilinear cells.
+    const double omu = 1.0 - u;
+    const double omv = 1.0 - v;
+    const double w1 = omu * omv;
+    const double w2 = omu * v;
+    const double w3 = u * v;
+    const double w4 = u * omv;
+    const double x = w1 * c.p1.x + w2 * c.p2.x + w3 * c.p3.x + w4 * c.p4.x;
+    const double y = w1 * c.p1.y + w2 * c.p2.y + w3 * c.p3.y + w4 * c.p4.y;
+
+    add(base_col, base_row + k, VertexType::Interior, x, y, ghost);
   }
 }
 
@@ -414,6 +597,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo);
       const auto p2 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, p1, m_range.lo());              // B----B
+      densify(c, Edge::Bottom, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p2, m_range.lo());          // |    |
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // |   /|
       close();                                      // |  /*|
@@ -426,6 +610,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, p2, m_range.lo());              // B----I
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |  \*|
       add(c.i + 1, c.j, p1, m_range.lo());              // |   \|
+      densify(c, Edge::Right, Edge::Top, m_range.lo()); // (curve closes back to p2 via wraparound)
       close();                                          // |    |
       break;                                            // B----B
     }
@@ -436,6 +621,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, p1, m_range.lo());              // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |*/  |
       add(c.i, c.j + 1, p2, m_range.lo());          // |/   |
+      densify(c, Edge::Top, Edge::Left, m_range.lo()); // (curve closes back to p1 via wraparound)
       close();                                      // |    |
       break;                                        // B----B
     }
@@ -445,6 +631,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);  // B----B
       add(c.i, c.j, p1, m_range.lo());          // |    |
+      densify(c, Edge::Left, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p2, m_range.lo());          // |\   |
       close();                                  // |*\  |
       break;                                    // I----B
@@ -455,6 +642,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p2 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);  // A----A
       add(c.i, c.j, p1, m_range.hi());          // |    |
+      densify(c, Edge::Left, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p2, m_range.hi());          // |\   |
       close();                                  // |*\  |
       break;                                    // I----A
@@ -466,6 +654,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, p1, m_range.hi());              // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |*/  |
       add(c.i, c.j + 1, p2, m_range.hi());          // |/   |
+      densify(c, Edge::Top, Edge::Left, m_range.hi()); // (curve closes back to p1 via wraparound)
       close();                                      // |    |
       break;                                        // A----A
     }
@@ -476,6 +665,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, p1, m_range.hi());              // A----I
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |  \*|
       add(c.i + 1, c.j, p2, m_range.hi());              // |   \|
+      densify(c, Edge::Right, Edge::Top, m_range.hi()); // (curve closes back to p1 via wraparound)
       close();                                          // |    |
       break;                                            // A----A
     }
@@ -484,6 +674,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
       const auto p2 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, p1, m_range.hi());              // A----A
+      densify(c, Edge::Bottom, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p2, m_range.hi());          // |    |
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // |   /|
       close();                                      // |  /*|
@@ -496,6 +687,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_lo);
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());                  // B----I
+      densify(c, Edge::Bottom, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p2, m_range.lo());              // |  |*|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |  |*|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);      // |  |*|
@@ -510,6 +702,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |----|
       add(c.i + 1, c.j, p2, m_range.lo());              // |    |
+      densify(c, Edge::Right, Edge::Left, m_range.lo()); // (curve closes back to p1 via wraparound)
       close();                                          // B----B
 
       break;
@@ -520,6 +713,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p2 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);      // B----B
       add(c.i, c.j, p1, m_range.lo());              // |    |
+      densify(c, Edge::Left, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p2, m_range.lo());          // |----|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // |****|
       close();                                      // I----I
@@ -532,6 +726,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |*|  |
       add(c.i, c.j + 1, p1, m_range.lo());          // |*|  |
+      densify(c, Edge::Top, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p2, m_range.lo());              // |*|  |
       close();                                      // I----B
       break;
@@ -543,6 +738,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |*|  |
       add(c.i, c.j + 1, p1, m_range.hi());          // |*|  |
+      densify(c, Edge::Top, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p2, m_range.hi());              // |*|  |
       close();                                      // I----A
       break;
@@ -553,6 +749,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p2 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);      // A----A
       add(c.i, c.j, p1, m_range.hi());              // |    |
+      densify(c, Edge::Left, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p2, m_range.hi());          // |----|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // |****|
       close();                                      // I----I
@@ -566,6 +763,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |----|
       add(c.i + 1, c.j, p2, m_range.hi());              // |    |
+      densify(c, Edge::Right, Edge::Left, m_range.hi()); // (curve closes back to p1 via wraparound)
       close();                                          // A----A
       break;
     }
@@ -574,6 +772,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p1 = intersect_bottom(c, VertexType::Horizontal_hi);
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());                  // A----I
+      densify(c, Edge::Bottom, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p2, m_range.hi());              // |  |*|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |  |*|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);      // |  |*|
@@ -590,8 +789,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, p1, m_range.hi());      // B----B
       add(c.i, c.j, p2, m_range.lo());      // |    |
+      densify(c, Edge::Bottom, Edge::Right, m_range.lo()); // lo-level curve p2->p3
       add(c.i + 1, c.j, p3, m_range.lo());  // |   /|
       add(c.i + 1, c.j, p4, m_range.hi());  // |  //|
+      densify(c, Edge::Right, Edge::Bottom, m_range.hi()); // hi-level curve p4->p1 via wraparound
       close();                              // B----A
       break;
     }
@@ -602,8 +803,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
       const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i + 1, c.j, p1, m_range.lo());  // B----A
+      densify(c, Edge::Right, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p2, m_range.lo());  // |  \\|
       add(c.i, c.j + 1, p3, m_range.hi());  // |   \|
+      densify(c, Edge::Top, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p4, m_range.hi());  // |    |
       close();                              // B----B
       break;
@@ -616,8 +819,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());      // A----B
       add(c.i, c.j, p2, m_range.hi());      // |//  |
+      densify(c, Edge::Left, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p3, m_range.hi());  // |/   |
       add(c.i, c.j + 1, p4, m_range.lo());  // |    |
+      densify(c, Edge::Top, Edge::Left, m_range.lo()); // wraps back to p1
       close();                              // B----B
       break;
     }
@@ -629,8 +834,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());  // A----A
       add(c.i, c.j, p2, m_range.hi());  // |    |
+      densify(c, Edge::Left, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p3, m_range.hi());  // |\   |
       add(c.i, c.j, p4, m_range.lo());  // |\\  |
+      densify(c, Edge::Bottom, Edge::Left, m_range.lo()); // wraps back to p1
       close();                          // B----A
       break;
     }
@@ -642,8 +849,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());  // B----B
       add(c.i, c.j, p2, m_range.lo());  // |    |
+      densify(c, Edge::Left, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p3, m_range.lo());  // |\   |
       add(c.i, c.j, p4, m_range.hi());  // |\\  |
+      densify(c, Edge::Bottom, Edge::Left, m_range.hi()); // wraps back to p1
       close();                          // A----B
       break;
     }
@@ -655,8 +864,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());      // B----A
       add(c.i, c.j, p2, m_range.lo());      // |//  |
+      densify(c, Edge::Left, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p3, m_range.lo());  // |/   |
       add(c.i, c.j + 1, p4, m_range.hi());  // |    |
+      densify(c, Edge::Top, Edge::Left, m_range.hi()); // wraps back to p1
       close();                              // A----A
       break;
     }
@@ -667,8 +878,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
       const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i + 1, c.j, p1, m_range.hi());  // A----B
+      densify(c, Edge::Right, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p2, m_range.hi());  // |  \\|
       add(c.i, c.j + 1, p3, m_range.lo());  // |   \|
+      densify(c, Edge::Top, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p4, m_range.lo());  // |    |
       close();                              // A----A
       break;
@@ -680,8 +893,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p3 = intersect_right(c, VertexType::Vertical_lo);
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.hi());      // A----A
+      densify(c, Edge::Bottom, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p2, m_range.hi());  // |    |
       add(c.i + 1, c.j, p3, m_range.lo());  // |   /|
+      densify(c, Edge::Right, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p4, m_range.lo());      // |  //|
       close();                              // A----B  A may be H!
       break;
@@ -1259,10 +1474,21 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
       add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/|
       if (cc != Place::Inside && !melt)             // |\***|   |  /*|
-        close();                                    // A----I   A----I
+      {                                             // A----I   A----I
+        densify(c, Edge::Top, Edge::Left, m_range.hi());
+        close();
+      }
+      else
+      {
+        densify(c, Edge::Top, Edge::Right, m_range.hi());
+      }
       add(c.i + 1, c.j, p3, m_range.hi());
       add(c.i + 1, c.j, VertexType::Corner, c.p4);
       add(c.i, c.j, p4, m_range.hi());
+      if (cc != Place::Inside && !melt)
+        densify(c, Edge::Bottom, Edge::Right, m_range.hi());
+      else
+        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1277,10 +1503,21 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
       add(c.i, c.j + 1, p2, m_range.lo());          // |**I*|   |/ B/|
       if (cc != Place::Inside)                      // |\***|   |  /*|
-        close();                                    // B----I   B----I
+      {                                             // B----I   B----I
+        densify(c, Edge::Top, Edge::Left, m_range.lo()); // ring1 curve p2->p1 via wrap
+        close();
+      }
+      else
+      {
+        densify(c, Edge::Top, Edge::Right, m_range.lo()); // connected hexagon: p2->p3 curve
+      }
       add(c.i + 1, c.j, p3, m_range.lo());
       add(c.i + 1, c.j, VertexType::Corner, c.p4);
       add(c.i, c.j, p4, m_range.lo());
+      if (cc != Place::Inside)
+        densify(c, Edge::Bottom, Edge::Right, m_range.lo()); // ring2 curve p4->p3 via wrap
+      else
+        densify(c, Edge::Bottom, Edge::Left, m_range.lo()); // hexagon curve p4->p1 via wrap
       close();
       break;
     }
@@ -1297,9 +1534,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);          // A----I
         add(c.i, c.j, p1, m_range.hi());                  // |/***|
+        densify(c, Edge::Left, Edge::Top, m_range.hi());
         add(c.i, c.j + 1, p2, m_range.hi());              // |**I*|
         add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |***/|
         add(c.i + 1, c.j, p3, m_range.hi());              // I----A
+        densify(c, Edge::Right, Edge::Bottom, m_range.hi());
         add(c.i, c.j, p4, m_range.hi());
         close();
       }
@@ -1307,11 +1546,13 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);  // A----I
         add(c.i, c.j, p1, m_range.hi());          // |  \*|
+        densify(c, Edge::Left, Edge::Bottom, m_range.hi());
         add(c.i, c.j, p4, m_range.hi());          // |\ A\|
         close();                                  // |*\  |
         add(c.i, c.j + 1, p2, m_range.hi());      // I----A
         add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
         add(c.i + 1, c.j, p3, m_range.hi());
+        densify(c, Edge::Right, Edge::Top, m_range.hi()); // wraps back to p2
         close();
       }
       break;
@@ -1327,9 +1568,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
         add(c.i, c.j, p1, m_range.lo());                  // | /**|
+        densify(c, Edge::Left, Edge::Top, m_range.lo());
         add(c.i, c.j + 1, p2, m_range.lo());              // |/*I/|
         add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |**/ |
         add(c.i + 1, c.j, p3, m_range.lo());              // I----B
+        densify(c, Edge::Right, Edge::Bottom, m_range.lo());
         add(c.i, c.j, p4, m_range.lo());
         close();
       }
@@ -1337,10 +1580,12 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
         add(c.i, c.j, p1, m_range.lo());                  // |  \*|
+        densify(c, Edge::Left, Edge::Bottom, m_range.lo());
         add(c.i, c.j, p4, m_range.lo());                  // |\ B\|
         close();                                          // |*\  |
         add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // I----B
         add(c.i + 1, c.j, p3, m_range.lo());
+        densify(c, Edge::Right, Edge::Top, m_range.lo());
         add(c.i, c.j + 1, p2, m_range.lo());
         close();
       }
@@ -2217,33 +2462,37 @@ void JointBuilder<Logarithmic>::build_midpoint(const Cell& c, double shell)
 
 namespace CellBuilder
 {
-void isoband_linear(JointMerger& joints, const Cell& c, const Range& range)
+void isoband_linear(JointMerger& joints, const Cell& c, const Range& range, int subdivide)
 {
   JointBuilder<false> b(joints, range);
+  b.set_subdivide(subdivide);
   b.build_linear(c);
 }
 
-void isoline_linear(JointMerger& joints, const Cell& c, float limit)
+void isoline_linear(JointMerger& joints, const Cell& c, float limit, int subdivide)
 {
   auto hilimit = (std::isnan(limit) ? limit : std::numeric_limits<float>::infinity());
   Range range(limit, hilimit);
   JointBuilder<false> b(joints, range);
   b.set_isoline_mode();
+  b.set_subdivide(subdivide);
   b.build_linear(c);
 }
 
-void isoband_logarithmic(JointMerger& joints, const Cell& c, const Range& range)
+void isoband_logarithmic(JointMerger& joints, const Cell& c, const Range& range, int subdivide)
 {
   JointBuilder<true> b(joints, range);
+  b.set_subdivide(subdivide);
   b.build_linear(c);
 }
 
-void isoline_logarithmic(JointMerger& joints, const Cell& c, float limit)
+void isoline_logarithmic(JointMerger& joints, const Cell& c, float limit, int subdivide)
 {
   auto hilimit = (std::isnan(limit) ? limit : std::numeric_limits<float>::infinity());
   Range range(limit, hilimit);
   JointBuilder<true> b(joints, range);
   b.set_isoline_mode();
+  b.set_subdivide(subdivide);
   b.build_linear(c);
 }
 

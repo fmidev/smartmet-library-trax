@@ -443,6 +443,73 @@ BOOST_AUTO_TEST_CASE(logarithmic_vs_linear_peak)
   BOOST_CHECK_CLOSE(log_area, 101.24, 2.0);
 }
 
+// Bilinear subdivision replaces the straight diagonal of a corner-triangle cell
+// with N-1 samples on the true bilinear level curve. On the single-peak grid the
+// resulting isoband is the four-lobed bilinear region bounded by hyperbolas instead
+// of a sharp diamond; its area is the same across subdivide values once every cell
+// already sees the curve (the four cells contribute identical shapes by symmetry),
+// so we verify (a) subdivide==0 reproduces the linear baseline exactly and
+// (b) any subdivide >= 2 converges to the analytical bilinear area within tolerance.
+BOOST_AUTO_TEST_CASE(subdivide_peak_bilinear_curve)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Contour subdivide single-peak bilinear curve]");
+
+  const int nx = 3;
+  const int ny = 3;
+  Trax::TestGrid grid(nx, ny, 0.0, 0.0, 20.0, 20.0);
+  for (int j = 0; j < ny; ++j)
+    for (int i = 0; i < nx; ++i)
+      grid.set(i, j, 0.0f);
+  grid.set(1, 1, 10.0f);
+
+  Trax::IsobandLimits limits;
+  limits.add(1.0f, std::numeric_limits<float>::infinity());
+
+  auto area_for = [&](int n) {
+    Trax::Contour c;
+    c.interpolation(Trax::InterpolationType::Linear);
+    c.subdivide(n);
+    auto res = c.isobands(grid, limits);
+    BOOST_REQUIRE_EQUAL(res.size(), 1u);
+    const auto factory = geos::geom::GeometryFactory::create();
+    return Trax::to_geos_geom(res[0], factory)->getArea();
+  };
+
+  // subdivide == 0 is the linear baseline (straight diagonal diamond, area == 162)
+  const double base = area_for(0);
+  BOOST_CHECK_CLOSE(base, 162.0, 1.0);
+
+  // Analytical bilinear area per cell: integral over the unit square of
+  // [f(u,v) > 1] where f(u,v) = 10 u (1-v)  is 0.9 + 0.1*ln(0.1) = 0.6697.
+  // Four cells * 100 world units = 267.88.
+  const double bilinear_ref = 4.0 * (0.9 + 0.1 * std::log(0.1)) * 100.0;
+
+  // Densification adds samples that pull the straight line to the hyperbola.
+  // Each step should bring the area closer to the analytical bilinear reference.
+  const double a2 = area_for(2);
+  const double a3 = area_for(3);
+  const double a4 = area_for(4);
+
+  BOOST_TEST_INFO("subdivide=0 area : " << base);
+  BOOST_TEST_INFO("subdivide=2 area : " << a2);
+  BOOST_TEST_INFO("subdivide=3 area : " << a3);
+  BOOST_TEST_INFO("subdivide=4 area : " << a4);
+  BOOST_TEST_INFO("bilinear analytical area : " << bilinear_ref);
+
+  // Monotone approach toward the bilinear reference (from below: the piecewise-linear
+  // approximation undershoots the true area of the region bounded by the hyperbola).
+  BOOST_CHECK_GT(a2, base);
+  BOOST_CHECK_GT(a3, a2);
+  BOOST_CHECK_GT(a4, a3);
+  BOOST_CHECK_LT(a4, bilinear_ref);
+
+  // At subdivide=4 (three interior samples per curve segment) the four-corner
+  // piecewise-linear approximation is within ~5-10% of the analytical bilinear
+  // reference; use a loose bound that still catches regressions without coupling
+  // to the exact sample count.
+  BOOST_CHECK_CLOSE(a4, bilinear_ref, 10.0);
+}
+
 // #define RUN_REALLY_BIG_TESTS 1
 #ifdef RUN_REALLY_BIG_TESTS
 BOOST_AUTO_TEST_CASE(isoband_4x3)

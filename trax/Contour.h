@@ -29,6 +29,13 @@ class Contour
   void desliver(bool flag);
   void threads(int n);  // 1 = single-threaded (default), N>1 = N threads, 0 = auto
 
+  // Interior densification count per cell-level-curve segment.
+  // 0 (default) = current linear marching-squares straight segment between edge intersections.
+  // N in [1..4] = N-1 extra samples on the true bilinear level curve so curved isoband
+  // boundaries (e.g. a single peak surrounded by zeros) no longer render as diamonds.
+  // Clamped to [0, 4].
+  void subdivide(int n);
+
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
   GeometryCollections isolines(const Grid& grid, const IsolineValues& limits);
 

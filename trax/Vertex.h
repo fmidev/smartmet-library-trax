@@ -22,7 +22,9 @@ struct Vertex
   bool ghost = false;                    // true if the value is not exactly range.lo()
 };
 
-using Vertices = SmallVector<Vertex, 8UL>;  // maximum from a single grid cell
+// 8 base vertices per cell plus up to 8 densification samples (two curve segments
+// in a saddle cell, each with at most (subdivide-1) interior samples, subdivide <= 4).
+using Vertices = SmallVector<Vertex, 16UL>;
 
 // When looking for vertex matches the rows are +-1 but columns may differ wildly, hence the order.
 inline bool operator==(const Vertex& v1, const Vertex& v2)

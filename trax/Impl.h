@@ -20,6 +20,8 @@ class Contour::Impl
   void desliver(bool flag) { m_desliver = flag; }
   void shell(double value) { m_shell = value; }
   void threads(int n) { m_threads = n; }
+  void subdivide(int n) { m_subdivide = n; }
+  int subdivide() const { return m_subdivide; }
 
   // Calculate full set of contours
   GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -104,6 +106,12 @@ class Contour::Impl
 
   // Thread count: 1 = single-threaded (default), N>1 = N threads, 0 = auto
   int m_threads = 1;
+
+  // Interior densification count per cell level-curve segment (0 = off, max 4).
+  // When >0, inserts (m_subdivide - 1) bilinear samples between the entry and exit
+  // edge vertices of the curve segment inside a cell. Edge vertices stay bit-identical
+  // to the non-subdivided output, so JointMerger can still stitch cells along shared edges.
+  int m_subdivide = 0;
 };
 
 }  // namespace Trax

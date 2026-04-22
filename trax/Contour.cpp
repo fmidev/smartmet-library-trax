@@ -45,6 +45,16 @@ void Contour::threads(int n)
   impl->threads(n);
 }
 
+// Set interior densification count, clamped to [0, 4]
+void Contour::subdivide(int n)
+{
+  if (n < 0)
+    n = 0;
+  else if (n > 4)
+    n = 4;
+  impl->subdivide(n);
+}
+
 // Contour full grid
 GeometryCollections Contour::isobands(const Grid& grid, const IsobandLimits& limits)
 {
