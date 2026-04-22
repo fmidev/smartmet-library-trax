@@ -963,8 +963,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // B----I
       add(c.i + 1, c.j, p1, m_range.hi());              // | |**|
+      densify(c, Edge::Right, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p2, m_range.hi());                  // | |**|
       add(c.i, c.j, p3, m_range.lo());                  // | |*/|
+      densify(c, Edge::Bottom, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p4, m_range.lo());              // B----A
       close();
       break;
@@ -978,8 +980,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, p1, m_range.lo());              // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p2, m_range.hi());          // |****|
+      densify(c, Edge::Top, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p3, m_range.hi());          // |----|
       add(c.i + 1, c.j, p4, m_range.lo());          // B----B
+      densify(c, Edge::Right, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -992,8 +996,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, p1, m_range.lo());              // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**| |
       add(c.i, c.j + 1, p2, m_range.hi());          // |**| |
+      densify(c, Edge::Top, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p3, m_range.hi());              // |\*| |
       add(c.i, c.j, p4, m_range.lo());              // B----A
+      densify(c, Edge::Bottom, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -1005,9 +1011,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, p1, m_range.lo());                  // A----I
       add(c.i, c.j, p2, m_range.hi());                  // |/***|
+      densify(c, Edge::Left, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p3, m_range.hi());              // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |----|
       add(c.i + 1, c.j, p4, m_range.lo());              // B----B
+      densify(c, Edge::Right, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -1019,8 +1027,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // B----A
       add(c.i, c.j, p1, m_range.lo());              // | |\ |
+      densify(c, Edge::Bottom, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p2, m_range.lo());          // | |*\|
       add(c.i, c.j + 1, p3, m_range.hi());          // | |**|
+      densify(c, Edge::Top, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p4, m_range.hi());          // B----I
       close();
       break;
@@ -1034,6 +1044,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\***|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);      // | \**|
       add(c.i, c.j, p2, m_range.lo());                  // B----I
+      densify(c, Edge::Bottom, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -1045,9 +1056,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());              // A----A
       add(c.i, c.j, p2, m_range.hi());              // |    |
+      densify(c, Edge::Left, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p3, m_range.hi());          // |----|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // |\***|
       add(c.i, c.j, p4, m_range.lo());              // B----I
+      densify(c, Edge::Bottom, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -1059,8 +1072,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);  // B----B
       add(c.i, c.j, p1, m_range.lo());          // |    |
+      densify(c, Edge::Left, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p2, m_range.lo());      // |----|
       add(c.i + 1, c.j, p3, m_range.hi());      // |***/|
+      densify(c, Edge::Right, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p4, m_range.hi());          // I----A
       close();
       break;
@@ -1071,6 +1086,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
       add(c.i, c.j, p1, m_range.lo());                  // | /**|
+      densify(c, Edge::Left, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p2, m_range.lo());              // |/***|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |****|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);      // I----I
@@ -1085,8 +1101,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
       add(c.i, c.j, p1, m_range.lo());          // |/*| |
+      densify(c, Edge::Left, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p2, m_range.lo());      // |**| |
       add(c.i, c.j + 1, p3, m_range.hi());      // |**| |
+      densify(c, Edge::Top, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p4, m_range.hi());          // I----A
       close();
       break;
@@ -1098,6 +1116,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**\ |
       add(c.i, c.j + 1, p1, m_range.lo());          // |***\|
+      densify(c, Edge::Top, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p2, m_range.lo());          // |****|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // I----I
       close();
@@ -1111,6 +1130,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |***/|
       add(c.i + 1, c.j, p1, m_range.lo());              // |**/ |
+      densify(c, Edge::Right, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p2, m_range.lo());                  // I----B
       close();
       break;
@@ -1123,6 +1143,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |***/|
       add(c.i + 1, c.j, p1, m_range.hi());              // |**/ |
+      densify(c, Edge::Right, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p2, m_range.hi());                  // I----A
       close();
       break;
@@ -1134,6 +1155,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**\ |
       add(c.i, c.j + 1, p1, m_range.hi());          // |***\|
+      densify(c, Edge::Top, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p2, m_range.hi());          // |****|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // I----I
       close();
@@ -1147,8 +1169,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
       add(c.i, c.j, p1, m_range.hi());          // |/*| |
+      densify(c, Edge::Left, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p2, m_range.hi());      // |**| |
       add(c.i, c.j + 1, p3, m_range.lo());      // |**| |
+      densify(c, Edge::Top, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p4, m_range.lo());          // I----B
       close();
       break;
@@ -1159,6 +1183,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);          // A----I
       add(c.i, c.j, p1, m_range.hi());                  // |/***|
+      densify(c, Edge::Left, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p2, m_range.hi());              // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |****|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);      // I----I
@@ -1173,8 +1198,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);  // A----A
       add(c.i, c.j, p1, m_range.hi());          // |----|
+      densify(c, Edge::Left, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p2, m_range.hi());      // |****|
       add(c.i + 1, c.j, p3, m_range.lo());      // |***/|
+      densify(c, Edge::Right, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p4, m_range.lo());          // I----B
       close();
       break;
@@ -1187,9 +1214,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());              // B----B
       add(c.i, c.j, p2, m_range.lo());              // |    |
+      densify(c, Edge::Left, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p3, m_range.lo());          // |----|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // |\***|
       add(c.i, c.j, p4, m_range.hi());              // A----I
+      densify(c, Edge::Bottom, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1201,9 +1230,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, p1, m_range.hi());                  // B----I
       add(c.i, c.j, p2, m_range.lo());                  // |/***|
+      densify(c, Edge::Left, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p3, m_range.lo());              // |----|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |    |
       add(c.i + 1, c.j, p4, m_range.hi());              // A----A
+      densify(c, Edge::Right, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1216,8 +1247,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, p1, m_range.hi());              // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**| |
       add(c.i, c.j + 1, p2, m_range.lo());          // |**| |
+      densify(c, Edge::Top, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p3, m_range.lo());              // |\*| |
       add(c.i, c.j, p4, m_range.hi());              // A----B
+      densify(c, Edge::Bottom, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1230,8 +1263,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, p1, m_range.hi());              // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p2, m_range.lo());          // |****|
+      densify(c, Edge::Top, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p3, m_range.lo());          // |----|
       add(c.i + 1, c.j, p4, m_range.hi());          // A----A
+      densify(c, Edge::Right, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1244,6 +1279,7 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |****|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);      // |\***|
       add(c.i, c.j, p2, m_range.hi());                  // A----I
+      densify(c, Edge::Bottom, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1255,8 +1291,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // A----B
       add(c.i, c.j, p1, m_range.hi());              // | |*\|
+      densify(c, Edge::Bottom, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p2, m_range.hi());          // | |**|
       add(c.i, c.j + 1, p3, m_range.lo());          // | |**|
+      densify(c, Edge::Top, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p4, m_range.lo());          // A----I
       close();
       break;
@@ -1268,9 +1306,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p3 = intersect_right(c, VertexType::Vertical_lo);
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.hi());                  // A----I
+      densify(c, Edge::Bottom, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p2, m_range.hi());              // | |**|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // | |**|
       add(c.i + 1, c.j, p3, m_range.lo());              // | |*/|
+      densify(c, Edge::Right, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p4, m_range.lo());                  // A----B
       close();
       break;
@@ -1286,8 +1326,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p1, m_range.lo());          // |****|
+      densify(c, Edge::Top, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p2, m_range.lo());          // |***/|
       add(c.i + 1, c.j, p3, m_range.hi());          // I----A
+      densify(c, Edge::Right, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p4, m_range.hi());
       close();
       break;
@@ -1301,8 +1343,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, VertexType::Corner, c.p1);      // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p1, m_range.hi());          // |****|
+      densify(c, Edge::Top, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p2, m_range.hi());          // |***/|
       add(c.i + 1, c.j, p3, m_range.lo());          // I----B
+      densify(c, Edge::Right, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p4, m_range.lo());
       close();
       break;
@@ -1315,10 +1359,12 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());                  // A----I
       add(c.i, c.j, p2, m_range.hi());                  // |/***|
+      densify(c, Edge::Left, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p3, m_range.hi());              // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\***|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);      // B----I
       add(c.i, c.j, p4, m_range.lo());
+      densify(c, Edge::Bottom, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -1330,10 +1376,12 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, p1, m_range.hi());                  // B----I
       add(c.i, c.j, p2, m_range.lo());                  // |/***|
+      densify(c, Edge::Left, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p3, m_range.lo());              // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\***|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);      // A----I
       add(c.i, c.j, p4, m_range.hi());
+      densify(c, Edge::Bottom, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1347,8 +1395,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\***|
       add(c.i + 1, c.j, p2, m_range.hi());              // | \*/|
+      densify(c, Edge::Right, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p3, m_range.hi());                  // B----A
       add(c.i, c.j, p4, m_range.lo());
+      densify(c, Edge::Bottom, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -1362,8 +1412,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);      // |****|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\***|
       add(c.i + 1, c.j, p2, m_range.lo());              // | \*/|
+      densify(c, Edge::Right, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p3, m_range.lo());                  // A----B
       add(c.i, c.j, p4, m_range.hi());
+      densify(c, Edge::Bottom, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1375,8 +1427,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
       add(c.i, c.j, p1, m_range.lo());          // | /*\|
+      densify(c, Edge::Left, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p2, m_range.lo());      // |/**\|
       add(c.i, c.j + 1, p3, m_range.hi());      // |****|
+      densify(c, Edge::Top, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p4, m_range.hi());      // I----I
       add(c.i + 1, c.j, VertexType::Corner, c.p4);
       close();
@@ -1390,8 +1444,10 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_right(c, VertexType::Vertical_lo);
       add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
       add(c.i, c.j, p1, m_range.hi());          // | /*\|
+      densify(c, Edge::Left, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p2, m_range.hi());      // |/**\|
       add(c.i, c.j + 1, p3, m_range.lo());      // |****|
+      densify(c, Edge::Top, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p4, m_range.lo());      // I----I
       add(c.i + 1, c.j, VertexType::Corner, c.p4);
       close();
@@ -1407,9 +1463,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, p1, m_range.lo());              // I----A
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |**\ |
       add(c.i, c.j + 1, p2, m_range.hi());          // |\**\|
+      densify(c, Edge::Top, Edge::Right, m_range.hi());
       add(c.i + 1, c.j, p3, m_range.hi());          // | \**|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // B----I
       add(c.i, c.j, p4, m_range.lo());
+      densify(c, Edge::Bottom, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -1422,9 +1480,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j, p1, m_range.hi());              // I----B
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|
       add(c.i, c.j + 1, p2, m_range.lo());          // |****|
+      densify(c, Edge::Top, Edge::Right, m_range.lo());
       add(c.i + 1, c.j, p3, m_range.lo());          // |\***|
       add(c.i + 1, c.j, VertexType::Corner, c.p4);  // A----I
       add(c.i, c.j, p4, m_range.hi());
+      densify(c, Edge::Bottom, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1435,9 +1495,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p3 = intersect_right(c, VertexType::Vertical_lo);
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.hi());                  // A----I
+      densify(c, Edge::Left, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p2, m_range.hi());              // |/***|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |****|
       add(c.i + 1, c.j, p3, m_range.lo());              // |***/|
+      densify(c, Edge::Right, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p4, m_range.lo());                  // I----B
       add(c.i, c.j, VertexType::Corner, c.p1);
       close();
@@ -1451,9 +1513,11 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
       add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
       add(c.i, c.j, p1, m_range.lo());                  // |/***|
+      densify(c, Edge::Left, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p2, m_range.lo());              // |***/|
       add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |**/ |
       add(c.i + 1, c.j, p3, m_range.hi());              // I----A
+      densify(c, Edge::Right, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p4, m_range.hi());
       close();
       break;
@@ -1605,11 +1669,23 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|    |*/  |
       add(c.i, c.j + 1, p2, m_range.lo());          // |\*I*|    |/ X/|  X = A or B
       if (cc != Place::Inside)                      // | \*/|    |  //|
-        close();                                    // B----A    B----A
+      {                                             // B----A    B----A
+        densify(c, Edge::Top, Edge::Left, m_range.lo());
+        close();
+      }
+      else
+      {
+        densify(c, Edge::Top, Edge::Right, m_range.lo());
+      }
       add(c.i + 1, c.j, p3, m_range.lo());
       add(c.i + 1, c.j, p4, m_range.hi());
+      densify(c, Edge::Right, Edge::Bottom, m_range.hi());
       add(c.i, c.j, p5, m_range.hi());
       add(c.i, c.j, p6, m_range.lo());
+      if (cc != Place::Inside)
+        densify(c, Edge::Bottom, Edge::Right, m_range.lo());
+      else
+        densify(c, Edge::Bottom, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -1627,11 +1703,23 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
       add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/| X = A or B
       if (cc != Place::Inside && !melt)             // |\**/|   |  //|
-        close();                                    // A----B   A----B
+      {                                             // A----B   A----B
+        densify(c, Edge::Top, Edge::Left, m_range.hi());
+        close();
+      }
+      else
+      {
+        densify(c, Edge::Top, Edge::Right, m_range.hi());
+      }
       add(c.i + 1, c.j, p3, m_range.hi());
       add(c.i + 1, c.j, p4, m_range.lo());
+      densify(c, Edge::Right, Edge::Bottom, m_range.lo());
       add(c.i, c.j, p5, m_range.lo());
       add(c.i, c.j, p6, m_range.hi());
+      if (cc != Place::Inside && !melt)
+        densify(c, Edge::Bottom, Edge::Right, m_range.hi());
+      else
+        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1646,13 +1734,25 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
       add(c.i, c.j, p1, m_range.lo());      // A----B    A----B
       add(c.i, c.j, p2, m_range.hi());      // |/**\|    |//  |
+      densify(c, Edge::Left, Edge::Top, m_range.hi());
       add(c.i, c.j + 1, p3, m_range.hi());  // |**I*|    |/ X/| X = A or B
       add(c.i, c.j + 1, p4, m_range.lo());  // |\***|    |  /*|
       if (cc != Place::Inside)              // B----I    B----I
+      {
+        densify(c, Edge::Top, Edge::Left, m_range.lo());
         close();
+      }
+      else
+      {
+        densify(c, Edge::Top, Edge::Right, m_range.lo());
+      }
       add(c.i + 1, c.j, p5, m_range.lo());
       add(c.i + 1, c.j, VertexType::Corner, c.p4);
       add(c.i, c.j, p6, m_range.lo());
+      if (cc != Place::Inside)
+        densify(c, Edge::Bottom, Edge::Right, m_range.lo());
+      else
+        densify(c, Edge::Bottom, Edge::Left, m_range.lo());
       close();
       break;
     }
@@ -1668,13 +1768,25 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
       add(c.i, c.j, p1, m_range.hi());      // B----A    B----A
       add(c.i, c.j, p2, m_range.lo());      // |/**\|    |//  |
+      densify(c, Edge::Left, Edge::Top, m_range.lo());
       add(c.i, c.j + 1, p3, m_range.lo());  // |**I*|    |/ X/| X = A or B
       add(c.i, c.j + 1, p4, m_range.hi());  // |\***|    |  /*|
       if (cc != Place::Inside && !melt)     // A----I    A----I
+      {
+        densify(c, Edge::Top, Edge::Left, m_range.hi());
         close();
+      }
+      else
+      {
+        densify(c, Edge::Top, Edge::Right, m_range.hi());
+      }
       add(c.i + 1, c.j, p5, m_range.hi());
       add(c.i + 1, c.j, VertexType::Corner, c.p4);
       add(c.i, c.j, p6, m_range.hi());
+      if (cc != Place::Inside && !melt)
+        densify(c, Edge::Bottom, Edge::Right, m_range.hi());
+      else
+        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
       close();
       break;
     }
@@ -1691,10 +1803,13 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
         add(c.i, c.j, p1, m_range.lo());          // |/*\ |
+        densify(c, Edge::Left, Edge::Top, m_range.lo());
         add(c.i, c.j + 1, p2, m_range.lo());      // |**I\|
         add(c.i, c.j + 1, p3, m_range.hi());      // |***/|
+        densify(c, Edge::Top, Edge::Right, m_range.hi());
         add(c.i + 1, c.j, p4, m_range.hi());      // I----B
         add(c.i + 1, c.j, p5, m_range.lo());
+        densify(c, Edge::Right, Edge::Bottom, m_range.lo());
         add(c.i, c.j, p6, m_range.lo());
         close();
       }
@@ -1702,12 +1817,15 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
         add(c.i, c.j, p1, m_range.lo());          // |  \\|
+        densify(c, Edge::Left, Edge::Bottom, m_range.lo());
         add(c.i, c.j, p6, m_range.lo());          // |\ X\| X = A or B
         close();                                  // |*\  |
         add(c.i, c.j + 1, p2, m_range.lo());      // I----B
         add(c.i, c.j + 1, p3, m_range.hi());
+        densify(c, Edge::Top, Edge::Right, m_range.hi());
         add(c.i + 1, c.j, p4, m_range.hi());
         add(c.i + 1, c.j, p5, m_range.lo());
+        densify(c, Edge::Right, Edge::Top, m_range.lo());
         close();
       }
       break;
@@ -1726,10 +1844,13 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
         add(c.i, c.j, p1, m_range.hi());          // |/**\|
+        densify(c, Edge::Left, Edge::Top, m_range.hi());
         add(c.i, c.j + 1, p2, m_range.hi());      // |**I*|
         add(c.i, c.j + 1, p3, m_range.lo());      // |***/|
+        densify(c, Edge::Top, Edge::Right, m_range.lo());
         add(c.i + 1, c.j, p4, m_range.lo());      // I----A
         add(c.i + 1, c.j, p5, m_range.hi());
+        densify(c, Edge::Right, Edge::Bottom, m_range.hi());
         add(c.i, c.j, p6, m_range.hi());
         close();
       }
@@ -1737,12 +1858,15 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
         add(c.i, c.j, p1, m_range.hi());          // |  \\|
+        densify(c, Edge::Left, Edge::Bottom, m_range.hi());
         add(c.i, c.j, p6, m_range.hi());          // |\ X\| X = A or B
         close();                                  // |*\  |
         add(c.i, c.j + 1, p2, m_range.hi());      // I----A
         add(c.i, c.j + 1, p3, m_range.lo());
+        densify(c, Edge::Top, Edge::Right, m_range.lo());
         add(c.i + 1, c.j, p4, m_range.lo());
         add(c.i + 1, c.j, p5, m_range.hi());
+        densify(c, Edge::Right, Edge::Top, m_range.hi());
         close();
       }
       break;
@@ -1760,23 +1884,29 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, p1, m_range.hi());                  // B----I
         add(c.i, c.j, p2, m_range.lo());                  // |/***|
+        densify(c, Edge::Left, Edge::Top, m_range.lo());
         add(c.i, c.j + 1, p3, m_range.lo());              // |**I*|
         add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\**/|
         add(c.i + 1, c.j, p4, m_range.lo());              // A----B
+        densify(c, Edge::Right, Edge::Bottom, m_range.lo());
         add(c.i, c.j, p5, m_range.lo());
         add(c.i, c.j, p6, m_range.hi());
+        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
         close();
       }
       else
       {
         add(c.i, c.j, p1, m_range.hi());  // B----I
         add(c.i, c.j, p2, m_range.lo());  // |  \*|
+        densify(c, Edge::Left, Edge::Bottom, m_range.lo());
         add(c.i, c.j, p5, m_range.lo());  // |\ X\| X = A or B
         add(c.i, c.j, p6, m_range.hi());  // |\\  |
+        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
         close();                          // A----B
         add(c.i, c.j + 1, p3, m_range.lo());
         add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
         add(c.i + 1, c.j, p4, m_range.lo());
+        densify(c, Edge::Right, Edge::Top, m_range.lo());
         close();
       }
       break;
@@ -1795,23 +1925,29 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
       {
         add(c.i, c.j, p1, m_range.lo());                  // A----I
         add(c.i, c.j, p2, m_range.hi());                  // |/***|
+        densify(c, Edge::Left, Edge::Top, m_range.hi());
         add(c.i, c.j + 1, p3, m_range.hi());              // |**I*|
         add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\**/|
         add(c.i + 1, c.j, p4, m_range.hi());              // B----A
+        densify(c, Edge::Right, Edge::Bottom, m_range.hi());
         add(c.i, c.j, p5, m_range.hi());
         add(c.i, c.j, p6, m_range.lo());
+        densify(c, Edge::Bottom, Edge::Left, m_range.lo());
         close();
       }
       else
       {
         add(c.i, c.j, p1, m_range.lo());  // A----I
         add(c.i, c.j, p2, m_range.hi());  // |  \*|
+        densify(c, Edge::Left, Edge::Bottom, m_range.hi());
         add(c.i, c.j, p5, m_range.hi());  // |\ X\| X = A or B
         add(c.i, c.j, p6, m_range.lo());  // |\\  |
+        densify(c, Edge::Bottom, Edge::Left, m_range.lo());
         close();                          // B----A
         add(c.i, c.j + 1, p3, m_range.hi());
         add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
         add(c.i + 1, c.j, p4, m_range.hi());
+        densify(c, Edge::Right, Edge::Top, m_range.hi());
         close();
       }
       break;
