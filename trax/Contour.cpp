@@ -45,13 +45,13 @@ void Contour::threads(int n)
   impl->threads(n);
 }
 
-// Set interior densification count, clamped to [0, 4]
+// Set interior densification count, clamped to [0, 10]
 void Contour::subdivide(int n)
 {
   if (n < 0)
     n = 0;
-  else if (n > 4)
-    n = 4;
+  else if (n > 10)
+    n = 10;
   impl->subdivide(n);
 }
 

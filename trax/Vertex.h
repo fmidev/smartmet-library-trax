@@ -22,9 +22,12 @@ struct Vertex
   bool ghost = false;                    // true if the value is not exactly range.lo()
 };
 
-// 8 base vertices per cell plus up to 8 densification samples (two curve segments
-// in a saddle cell, each with at most (subdivide-1) interior samples, subdivide <= 4).
-using Vertices = SmallVector<Vertex, 16UL>;
+// 8 base vertices per cell plus up to 2*(subdivide-1) densification samples
+// (cells with two interior level-curve segments per ring, e.g. side-stripes
+// and pentagon/hexagon shapes, each curve segment carrying at most subdivide-1
+// interior samples). With the hard clamp of subdivide <= 10 the worst case is
+// 8 + 18 = 26, rounded up to 32.
+using Vertices = SmallVector<Vertex, 32UL>;
 
 // When looking for vertex matches the rows are +-1 but columns may differ wildly, hence the order.
 inline bool operator==(const Vertex& v1, const Vertex& v2)

@@ -479,6 +479,9 @@ BOOST_AUTO_TEST_CASE(subdivide_peak_bilinear_curve)
   const double base = area_for(0);
   BOOST_CHECK_CLOSE(base, 162.0, 1.0);
 
+  // subdivide == 1 is a no-op by construction (one sub-segment, zero interior samples).
+  BOOST_CHECK_EQUAL(area_for(1), base);
+
   // Analytical bilinear area per cell: integral over the unit square of
   // [f(u,v) > 1] where f(u,v) = 10 u (1-v)  is 0.9 + 0.1*ln(0.1) = 0.6697.
   // Four cells * 100 world units = 267.88.
@@ -487,27 +490,29 @@ BOOST_AUTO_TEST_CASE(subdivide_peak_bilinear_curve)
   // Densification adds samples that pull the straight line to the hyperbola.
   // Each step should bring the area closer to the analytical bilinear reference.
   const double a2 = area_for(2);
-  const double a3 = area_for(3);
   const double a4 = area_for(4);
+  const double a8 = area_for(8);
+  const double a10 = area_for(10);
 
-  BOOST_TEST_INFO("subdivide=0 area : " << base);
-  BOOST_TEST_INFO("subdivide=2 area : " << a2);
-  BOOST_TEST_INFO("subdivide=3 area : " << a3);
-  BOOST_TEST_INFO("subdivide=4 area : " << a4);
+  BOOST_TEST_INFO("subdivide=0  area : " << base);
+  BOOST_TEST_INFO("subdivide=2  area : " << a2);
+  BOOST_TEST_INFO("subdivide=4  area : " << a4);
+  BOOST_TEST_INFO("subdivide=8  area : " << a8);
+  BOOST_TEST_INFO("subdivide=10 area : " << a10);
   BOOST_TEST_INFO("bilinear analytical area : " << bilinear_ref);
 
   // Monotone approach toward the bilinear reference (from below: the piecewise-linear
   // approximation undershoots the true area of the region bounded by the hyperbola).
   BOOST_CHECK_GT(a2, base);
-  BOOST_CHECK_GT(a3, a2);
-  BOOST_CHECK_GT(a4, a3);
-  BOOST_CHECK_LT(a4, bilinear_ref);
+  BOOST_CHECK_GT(a4, a2);
+  BOOST_CHECK_GT(a8, a4);
+  BOOST_CHECK_GE(a10, a8);
+  BOOST_CHECK_LT(a10, bilinear_ref);
 
-  // At subdivide=4 (three interior samples per curve segment) the four-corner
-  // piecewise-linear approximation is within ~5-10% of the analytical bilinear
-  // reference; use a loose bound that still catches regressions without coupling
-  // to the exact sample count.
-  BOOST_CHECK_CLOSE(a4, bilinear_ref, 10.0);
+  // At subdivide=8 the piecewise-linear approximation is within a couple percent of
+  // the analytical bilinear reference; at subdivide=10 even closer.
+  BOOST_CHECK_CLOSE(a8, bilinear_ref, 3.0);
+  BOOST_CHECK_CLOSE(a10, bilinear_ref, 2.0);
 }
 
 // #define RUN_REALLY_BIG_TESTS 1
