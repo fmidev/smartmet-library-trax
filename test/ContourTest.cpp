@@ -374,6 +374,75 @@ BOOST_AUTO_TEST_CASE(all_tests_auto_threads)
   run_all_file_tests(0);
 }
 
+// Radar-style test: a single peak of 10 surrounded by zeros. Linear interpolation
+// lets the high value dominate (intersections land near the zero corners), while
+// logarithmic interpolation pulls intersections towards the peak, shrinking the
+// covered area. This verifies that the interpolation mode actually affects the
+// output geometry for a classic radar precipitation pattern.
+BOOST_AUTO_TEST_CASE(logarithmic_vs_linear_peak)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Contour logarithmic vs linear single-peak isoband]");
+
+  // 3x3 grid on a 0..20 viewbox with a single peak of 10 in the center.
+  // The four cells sharing the peak all have three zero corners and one 10 corner.
+  const int nx = 3;
+  const int ny = 3;
+  Trax::TestGrid grid(nx, ny, 0.0, 0.0, 20.0, 20.0);
+  for (int j = 0; j < ny; ++j)
+    for (int i = 0; i < nx; ++i)
+      grid.set(i, j, 0.0f);
+  grid.set(1, 1, 10.0f);
+
+  // Contour the isoband [1, inf]: everything with value >= 1. The lo-limit of 1
+  // is what makes linear and logarithmic behaviour diverge visibly (log1p(1)/log1p(10)
+  // ~= 0.29 vs the linear 1/10 = 0.10).
+  Trax::IsobandLimits limits;
+  limits.add(1.0f, std::numeric_limits<float>::infinity());
+
+  Trax::Contour linear_contourer;
+  linear_contourer.interpolation(Trax::InterpolationType::Linear);
+  auto linear_result = linear_contourer.isobands(grid, limits);
+
+  Trax::Contour log_contourer;
+  log_contourer.interpolation(Trax::InterpolationType::Logarithmic);
+  auto log_result = log_contourer.isobands(grid, limits);
+
+  BOOST_REQUIRE_EQUAL(linear_result.size(), 1u);
+  BOOST_REQUIRE_EQUAL(log_result.size(), 1u);
+
+  const auto factory = geos::geom::GeometryFactory::create();
+  auto linear_geom = Trax::to_geos_geom(linear_result[0], factory);
+  auto log_geom = Trax::to_geos_geom(log_result[0], factory);
+
+  const double linear_area = linear_geom->getArea();
+  const double log_area = log_geom->getArea();
+
+  BOOST_TEST_INFO("Linear WKT : " << linear_result[0].wkt());
+  BOOST_TEST_INFO("Log WKT    : " << log_result[0].wkt());
+  BOOST_TEST_INFO("Linear area: " << linear_area);
+  BOOST_TEST_INFO("Log area   : " << log_area);
+
+  // Both contours must be non-empty and cover a real region.
+  BOOST_CHECK_GT(linear_area, 0.0);
+  BOOST_CHECK_GT(log_area, 0.0);
+
+  // Logarithmic interpolation must produce a strictly smaller isoband than linear
+  // for this single-peak-in-zeros case. The 0-surrounded peak should not dominate
+  // as much under log interpolation.
+  BOOST_CHECK_LT(log_area, linear_area);
+
+  // The two geometries must differ. If logarithmic interpolation had no effect
+  // (e.g. silently falling back to linear), the WKT strings would be identical.
+  BOOST_CHECK_NE(linear_result[0].wkt(), log_result[0].wkt());
+
+  // Analytical expectations for this specific grid:
+  //   Linear  : diamond with corners (1,10), (10,1), (19,10), (10,19), area = 162
+  //   Log     : diamond with corners (~2.89,10), (10,~2.89), ..., area ~= 101.24
+  // Use loose bounds to stay robust against future minor refactors.
+  BOOST_CHECK_CLOSE(linear_area, 162.0, 1.0);
+  BOOST_CHECK_CLOSE(log_area, 101.24, 2.0);
+}
+
 // #define RUN_REALLY_BIG_TESTS 1
 #ifdef RUN_REALLY_BIG_TESTS
 BOOST_AUTO_TEST_CASE(isoband_4x3)
