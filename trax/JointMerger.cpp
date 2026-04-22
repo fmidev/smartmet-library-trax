@@ -326,8 +326,9 @@ void JointMerger::merge_cell()
       auto* joint = *it;
       const auto& vertex = joint->vertex;
 
-      // Only corners and verticals at the left edge can merge
-      if (!joint->used && !is_horizontal(vertex.type))
+      // Only corners and verticals at the left edge can merge.
+      // Interior densification samples never participate in cross-cell merging.
+      if (!joint->used && !is_horizontal(vertex.type) && !is_interior(vertex.type))
       {
 #if 0
         std::cout << fmt::format("\tSearching for {},{} from range {}..{}\n",
@@ -406,7 +407,8 @@ void JointMerger::merge_row()
 
     new_maxrow = std::max(new_maxrow, vertex.row);
 
-    if (!prev_row_empty && !joint->used && vertex.row == m_maxrow && !is_vertical(vertex.type))
+    if (!prev_row_empty && !joint->used && vertex.row == m_maxrow && !is_vertical(vertex.type) &&
+        !is_interior(vertex.type))
     {
 #if 0
       std::cout << fmt::format("\tSearching for {},{} from range {}..{}\n",

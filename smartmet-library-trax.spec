@@ -18,7 +18,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 26.4.13
+Version: 26.4.22
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -27,14 +27,14 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 26.2.4
+BuildRequires: smartmet-library-macgyver-devel >= 26.4.13
 BuildRequires: make
 BuildRequires: rpm-build
 BuildRequires: gdal312-devel
 BuildRequires: geos313-devel
 BuildRequires: %{smartmet_fmt_devel}
 BuildRequires: libcurl-devel >= 7.68.0
-Requires: smartmet-library-macgyver >= 26.2.4
+Requires: smartmet-library-macgyver >= 26.4.13
 Requires: gdal312
 Requires: geos313
 Requires: %{smartmet_fmt}
@@ -46,7 +46,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos313-devel
 #TestRequires: gdal312-devel
-#TestRequires: smartmet-library-macgyver-devel >= 26.2.4
+#TestRequires: smartmet-library-macgyver-devel >= 26.4.13
 
 %description
 Isoline/isoband calculation library.
@@ -90,6 +90,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Wed Apr 22 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.4.22-1.fmi
+- Added optional cell subdivision by bilinear interpolation
+
 * Mon Apr 13 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> 26.4.13-1.fmi
 - Added optional multi-threaded contouring
 - Speed optimizations

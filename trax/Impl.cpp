@@ -320,13 +320,13 @@ void Contour::Impl::isoband(int index, const Cell& c)
   switch (m_itype)
   {
     case InterpolationType::Linear:
-      CellBuilder::isoband_linear(merger, c, range);
+      CellBuilder::isoband_linear(merger, c, range, m_subdivide);
       break;
     case InterpolationType::Midpoint:
       CellBuilder::isoband_midpoint(merger, c, range, m_shell);
       break;
     case InterpolationType::Logarithmic:
-      CellBuilder::isoband_logarithmic(merger, c, range);
+      CellBuilder::isoband_logarithmic(merger, c, range, m_subdivide);
       break;
   }
 }
@@ -340,10 +340,10 @@ void Contour::Impl::isoline(int index, const Cell& c)
   switch (m_itype)
   {
     case InterpolationType::Linear:
-      CellBuilder::isoline_linear(merger, c, limit);
+      CellBuilder::isoline_linear(merger, c, limit, m_subdivide);
       break;
     case InterpolationType::Logarithmic:
-      CellBuilder::isoline_logarithmic(merger, c, limit);
+      CellBuilder::isoline_logarithmic(merger, c, limit, m_subdivide);
       break;
     case InterpolationType::Midpoint:
       break;
@@ -466,6 +466,7 @@ GeometryCollections Contour::Impl::isobands_parallel(const Grid& grid,
     sub->m_itype = m_itype;
     sub->m_strict = m_strict;
     sub->m_shell = m_shell;
+    sub->m_subdivide = m_subdivide;
     sub->init(sub_limits, nx, ny);
 
     futures.push_back(std::async(std::launch::async, [sub, &grid, &bbox, nx, ny]() {
@@ -625,6 +626,7 @@ GeometryCollections Contour::Impl::isolines_parallel(const Grid& grid,
     sub->m_itype = m_itype;
     sub->m_strict = m_strict;
     sub->m_shell = m_shell;
+    sub->m_subdivide = m_subdivide;
     sub->init(sub_values, nx, ny);
 
     futures.push_back(std::async(std::launch::async, [sub, &grid, &bbox, nx, ny]() {

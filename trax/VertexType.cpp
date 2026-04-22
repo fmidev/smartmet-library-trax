@@ -12,6 +12,11 @@ bool is_horizontal(VertexType type)
   return type == VertexType::Horizontal_lo || type == VertexType::Horizontal_hi;
 }
 
+bool is_interior(VertexType type)
+{
+  return type == VertexType::Interior;
+}
+
 VertexType lo(VertexType type)
 {
   switch (type)
@@ -60,6 +65,8 @@ const char* to_string(VertexType type)
       return "dlo";
     case VertexType::Diagonal_hi:
       return "dhi";
+    case VertexType::Interior:
+      return "int";
       // gcc 4.8.5 does not see that all enum class values have been processed
     default:
       return "nan";

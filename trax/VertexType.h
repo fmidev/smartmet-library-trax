@@ -14,11 +14,13 @@ enum class VertexType : std::uint8_t
   Horizontal_lo,
   Horizontal_hi,
   Diagonal_lo,
-  Diagonal_hi
+  Diagonal_hi,
+  Interior  // Interior densification sample on a bilinear level curve; never merges across cells.
 };
 
 bool is_vertical(VertexType type);
 bool is_horizontal(VertexType type);
+bool is_interior(VertexType type);
 
 VertexType lo(VertexType type);
 VertexType hi(VertexType type);

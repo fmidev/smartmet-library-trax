@@ -374,6 +374,147 @@ BOOST_AUTO_TEST_CASE(all_tests_auto_threads)
   run_all_file_tests(0);
 }
 
+// Radar-style test: a single peak of 10 surrounded by zeros. Linear interpolation
+// lets the high value dominate (intersections land near the zero corners), while
+// logarithmic interpolation pulls intersections towards the peak, shrinking the
+// covered area. This verifies that the interpolation mode actually affects the
+// output geometry for a classic radar precipitation pattern.
+BOOST_AUTO_TEST_CASE(logarithmic_vs_linear_peak)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Contour logarithmic vs linear single-peak isoband]");
+
+  // 3x3 grid on a 0..20 viewbox with a single peak of 10 in the center.
+  // The four cells sharing the peak all have three zero corners and one 10 corner.
+  const int nx = 3;
+  const int ny = 3;
+  Trax::TestGrid grid(nx, ny, 0.0, 0.0, 20.0, 20.0);
+  for (int j = 0; j < ny; ++j)
+    for (int i = 0; i < nx; ++i)
+      grid.set(i, j, 0.0f);
+  grid.set(1, 1, 10.0f);
+
+  // Contour the isoband [1, inf]: everything with value >= 1. The lo-limit of 1
+  // is what makes linear and logarithmic behaviour diverge visibly (log1p(1)/log1p(10)
+  // ~= 0.29 vs the linear 1/10 = 0.10).
+  Trax::IsobandLimits limits;
+  limits.add(1.0f, std::numeric_limits<float>::infinity());
+
+  Trax::Contour linear_contourer;
+  linear_contourer.interpolation(Trax::InterpolationType::Linear);
+  auto linear_result = linear_contourer.isobands(grid, limits);
+
+  Trax::Contour log_contourer;
+  log_contourer.interpolation(Trax::InterpolationType::Logarithmic);
+  auto log_result = log_contourer.isobands(grid, limits);
+
+  BOOST_REQUIRE_EQUAL(linear_result.size(), 1u);
+  BOOST_REQUIRE_EQUAL(log_result.size(), 1u);
+
+  const auto factory = geos::geom::GeometryFactory::create();
+  auto linear_geom = Trax::to_geos_geom(linear_result[0], factory);
+  auto log_geom = Trax::to_geos_geom(log_result[0], factory);
+
+  const double linear_area = linear_geom->getArea();
+  const double log_area = log_geom->getArea();
+
+  BOOST_TEST_INFO("Linear WKT : " << linear_result[0].wkt());
+  BOOST_TEST_INFO("Log WKT    : " << log_result[0].wkt());
+  BOOST_TEST_INFO("Linear area: " << linear_area);
+  BOOST_TEST_INFO("Log area   : " << log_area);
+
+  // Both contours must be non-empty and cover a real region.
+  BOOST_CHECK_GT(linear_area, 0.0);
+  BOOST_CHECK_GT(log_area, 0.0);
+
+  // Logarithmic interpolation must produce a strictly smaller isoband than linear
+  // for this single-peak-in-zeros case. The 0-surrounded peak should not dominate
+  // as much under log interpolation.
+  BOOST_CHECK_LT(log_area, linear_area);
+
+  // The two geometries must differ. If logarithmic interpolation had no effect
+  // (e.g. silently falling back to linear), the WKT strings would be identical.
+  BOOST_CHECK_NE(linear_result[0].wkt(), log_result[0].wkt());
+
+  // Analytical expectations for this specific grid:
+  //   Linear  : diamond with corners (1,10), (10,1), (19,10), (10,19), area = 162
+  //   Log     : diamond with corners (~2.89,10), (10,~2.89), ..., area ~= 101.24
+  // Use loose bounds to stay robust against future minor refactors.
+  BOOST_CHECK_CLOSE(linear_area, 162.0, 1.0);
+  BOOST_CHECK_CLOSE(log_area, 101.24, 2.0);
+}
+
+// Bilinear subdivision replaces the straight diagonal of a corner-triangle cell
+// with N-1 samples on the true bilinear level curve. On the single-peak grid the
+// resulting isoband is the four-lobed bilinear region bounded by hyperbolas instead
+// of a sharp diamond; its area is the same across subdivide values once every cell
+// already sees the curve (the four cells contribute identical shapes by symmetry),
+// so we verify (a) subdivide==0 reproduces the linear baseline exactly and
+// (b) any subdivide >= 2 converges to the analytical bilinear area within tolerance.
+BOOST_AUTO_TEST_CASE(subdivide_peak_bilinear_curve)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Contour subdivide single-peak bilinear curve]");
+
+  const int nx = 3;
+  const int ny = 3;
+  Trax::TestGrid grid(nx, ny, 0.0, 0.0, 20.0, 20.0);
+  for (int j = 0; j < ny; ++j)
+    for (int i = 0; i < nx; ++i)
+      grid.set(i, j, 0.0f);
+  grid.set(1, 1, 10.0f);
+
+  Trax::IsobandLimits limits;
+  limits.add(1.0f, std::numeric_limits<float>::infinity());
+
+  auto area_for = [&](int n) {
+    Trax::Contour c;
+    c.interpolation(Trax::InterpolationType::Linear);
+    c.subdivide(n);
+    auto res = c.isobands(grid, limits);
+    BOOST_REQUIRE_EQUAL(res.size(), 1u);
+    const auto factory = geos::geom::GeometryFactory::create();
+    return Trax::to_geos_geom(res[0], factory)->getArea();
+  };
+
+  // subdivide == 0 is the linear baseline (straight diagonal diamond, area == 162)
+  const double base = area_for(0);
+  BOOST_CHECK_CLOSE(base, 162.0, 1.0);
+
+  // subdivide == 1 is a no-op by construction (one sub-segment, zero interior samples).
+  BOOST_CHECK_EQUAL(area_for(1), base);
+
+  // Analytical bilinear area per cell: integral over the unit square of
+  // [f(u,v) > 1] where f(u,v) = 10 u (1-v)  is 0.9 + 0.1*ln(0.1) = 0.6697.
+  // Four cells * 100 world units = 267.88.
+  const double bilinear_ref = 4.0 * (0.9 + 0.1 * std::log(0.1)) * 100.0;
+
+  // Densification adds samples that pull the straight line to the hyperbola.
+  // Each step should bring the area closer to the analytical bilinear reference.
+  const double a2 = area_for(2);
+  const double a4 = area_for(4);
+  const double a8 = area_for(8);
+  const double a10 = area_for(10);
+
+  BOOST_TEST_INFO("subdivide=0  area : " << base);
+  BOOST_TEST_INFO("subdivide=2  area : " << a2);
+  BOOST_TEST_INFO("subdivide=4  area : " << a4);
+  BOOST_TEST_INFO("subdivide=8  area : " << a8);
+  BOOST_TEST_INFO("subdivide=10 area : " << a10);
+  BOOST_TEST_INFO("bilinear analytical area : " << bilinear_ref);
+
+  // Monotone approach toward the bilinear reference (from below: the piecewise-linear
+  // approximation undershoots the true area of the region bounded by the hyperbola).
+  BOOST_CHECK_GT(a2, base);
+  BOOST_CHECK_GT(a4, a2);
+  BOOST_CHECK_GT(a8, a4);
+  BOOST_CHECK_GE(a10, a8);
+  BOOST_CHECK_LT(a10, bilinear_ref);
+
+  // At subdivide=8 the piecewise-linear approximation is within a couple percent of
+  // the analytical bilinear reference; at subdivide=10 even closer.
+  BOOST_CHECK_CLOSE(a8, bilinear_ref, 3.0);
+  BOOST_CHECK_CLOSE(a10, bilinear_ref, 2.0);
+}
+
 // #define RUN_REALLY_BIG_TESTS 1
 #ifdef RUN_REALLY_BIG_TESTS
 BOOST_AUTO_TEST_CASE(isoband_4x3)
