@@ -7,6 +7,7 @@ A high-performance C++ library for generating **isobands** (filled contour polyg
 Key features:
 - Marching-squares contouring with native NaN (missing-value) handling
 - Three interpolation modes: linear, midpoint (nearest-neighbour), and logarithmic
+- Optional bilinear cell subdivision (`Contour::subdivide(n)`, `n` up to 10) that replaces the straight marching-squares diamond between edge intersections with `n-1` samples on the true bilinear level curve
 - Explicit missing-value isobands and isolines for contouring NaN regions
 - Open-ended isobands using `±infinity` limits
 - Global grid wrap-around support

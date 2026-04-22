@@ -14,6 +14,7 @@ Trax is a high-performance C++ library for generating **isobands** (filled conto
    - [Contour — running the algorithm](#contour--running-the-algorithm)
    - [GeometryCollection — reading results](#geometrycollection--reading-results)
    - [Interpolation modes](#interpolation-modes)
+   - [Bilinear cell subdivision](#bilinear-cell-subdivision)
 4. [Handling Missing Values in Data](#handling-missing-values-in-data)
 5. [Using Missing-Value Limits to Contour NaN Areas](#using-missing-value-limits-to-contour-nan-areas)
 6. [Exact Boundary Collisions in Weather Data](#exact-boundary-collisions-in-weather-data)
@@ -184,6 +185,7 @@ public:
     void validate(bool flag);                     // default: false
     void desliver(bool flag);                     // default: false
     void threads(int n);                          // default: 1 (see below)
+    void subdivide(int n);                        // default: 0 (off, see below), max 10
 
     // Computation
     GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -196,6 +198,8 @@ public:
 **`validate(true)`** runs GEOS `IsValidOp` on every output geometry. This is very slow and intended only for debugging. Combined with `strict(true)`, invalid geometries throw; otherwise they are printed to stderr.
 
 **`desliver(true)`** removes degenerate sliver geometries from output.
+
+**`subdivide(n)`** enables bilinear densification of cell level-curve segments. The default `0` keeps the classic linear marching-squares output (one straight segment between each pair of edge intersections). A non-zero `n` splits every interior level-curve segment into `n` sub-segments and inserts `n-1` samples on the true bilinear level curve between the edge intersections. The edge intersections themselves stay bit-identical so adjacent cells still stitch together correctly. See [Bilinear cell subdivision](#bilinear-cell-subdivision) for details. Clamped to the range `[0, 10]`; `1` is a valid but no-op value.
 
 **`threads(n)`** controls how many threads are used to parallelise contouring across isoband/isoline levels:
 
@@ -259,6 +263,46 @@ InterpolationType itype = Trax::to_interpolation_type("linear");
 **Midpoint** (nearest-neighbour / discrete) places all intersection points at the midpoints of grid cell edges instead of at the exact isovalue crossing. This produces shorter, smoother contour paths that are less sensitive to noise in the data, at the cost of not being exactly at the isovalue. Only available for isobands. The `Grid::shell()` method can clip a border band.
 
 **Logarithmic** substitutes `log1p(z)` for each value before interpolating, then maps back. This compresses the high end of exponential-scale data (such as radar reflectivity), producing more evenly distributed contour lines across the dynamic range. The saddle-point disambiguation uses the geometric mean of the four cell corners. Log values are lazily computed and cached per-cell to avoid redundant calls.
+
+---
+
+### Bilinear cell subdivision
+
+Classic marching squares draws a straight segment between the two edge intersections that a cell's level curve crosses. Inside a grid cell the true bilinear interpolant `f(u, v) = f₁ + (f₄−f₁)·u + (f₂−f₁)·v + (f₁+f₃−f₂−f₄)·u·v` has level sets that are **hyperbolas**, not straight lines — the straight-segment approximation visibly fails when a single high cell is surrounded by low cells (radar pixel, temperature extreme) and produces a sharp diamond instead of a curved blob.
+
+Calling `Contour::subdivide(n)` with `n >= 2` asks the contouring pipeline to insert `n-1` interior samples on the true bilinear level curve between each pair of edge intersections, splitting one straight segment into `n` shorter chords that track the hyperbola:
+
+```cpp
+Trax::Contour contourer;
+contourer.interpolation(Trax::InterpolationType::Linear);
+contourer.subdivide(4);   // split each curve segment into 4 chords (3 interior samples)
+auto result = contourer.isobands(grid, limits);
+```
+
+Accepted values are `0..10`:
+- `0` (default): off. Output is bit-identical to pre-subdivide trax.
+- `1`: documented no-op (one sub-segment, zero interior samples); accepted so a caller-exposed control knob can scale linearly from "off" through "maximum smoothing" without special-casing.
+- `2..10`: increasing densification. Sample positions are computed analytically from the bilinear coefficients, so the samples land exactly on the hyperbola — no iterative solver.
+
+**Edge-intersection invariant.** The vertices on each cell edge (where two neighbouring cells have to agree) are produced by the same `intersect()` as the non-subdivided path and written with the same `(column, row, VertexType)` merge key. Adjacent cells still stitch cleanly along shared edges regardless of which `subdivide` values their contouring used. Interior samples use a dedicated `VertexType::Interior` with sentinel coordinates that cannot collide with any edge-intersection key.
+
+**Which cell configurations are densified.** The `build_linear` dispatch densifies corner triangles, side rectangles, side stripes, pentagons, hexagons, and single-level saddles — together covering the vast majority of real-world cell topologies. Two exceptions remain piecewise-linear:
+- The two **double-saddle** configurations (`Below/Above/Below/Above` and `Above/Below/Above/Below`) where the value crosses both the lo and hi limits on every edge. These rings carry a hand-tuned ghost-flag encoding that densify would need to match edge-by-edge; touching them is deferred.
+- The **NaN-triangle** cases (cells with exactly one NaN corner). Their phantom diagonal is a triangle-bilinear curve, different from the quad-bilinear densify kernel.
+
+**Numerics on the single-peak test.** The unit test `subdivide_peak_bilinear_curve` contours a 3×3 grid with one peak of 10 surrounded by zeros at isoband `[1, ∞)`:
+
+| subdivide | linear area | % of analytical bilinear (267.90) |
+|----|-------|---|
+| 0 | 162.00 | 60% |
+| 2 | 228.27 | 85% |
+| 4 | 254.83 | 95% |
+| 8 | ~265 | ~99% |
+| 10 | ~266 | ~99.3% |
+
+The bilinear level curve of a peak-in-zeros cell bends **outward** away from the peak (the hyperbola bulges into the low-value side), so the densified isoband has a **larger area** than the linear diamond, not smaller. For radar-style data where the goal is to suppress a lone-pixel diamond, `subdivide` replaces the sharp shape with a rounded four-lobed blob but does not shrink it. To shrink, use `InterpolationType::Logarithmic` or the Savitzky-Golay smoother at the data-preprocessing stage.
+
+**When the effect is visible on rendered output.** The maximum deviation between the straight segment and the bilinear curve scales with `cell_size × |D| / (hi − lo)` where `D = f₁ + f₃ − f₂ − f₄`. On synthetic grids where one cell fills many screen pixels and corner values contrast strongly, the improvement is dramatic. On smooth real-world data at typical zoom where each cell maps to ~1 screen pixel, the improvement is sub-pixel. Bilinear subdivision is specifically worth it for cells that simultaneously (a) render large relative to pixel and (b) have high corner contrast.
 
 ---
 
