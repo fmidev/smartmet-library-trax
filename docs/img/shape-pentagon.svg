@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+<style>
+  .lbl   { font: bold 14px sans-serif; fill: white;   text-anchor: middle; dominant-baseline: middle }
+  .clbl  { font: bold 12px sans-serif; fill: #1f2937; text-anchor: middle }
+  .ann   { font: 11px sans-serif;      fill: #374151; text-anchor: middle }
+  .annl  { font: 11px sans-serif;      fill: #374151 }
+</style>
+<rect width="240" height="240" fill="white"/>
+<polygon points="40.0,200.0 40.0,128.0 104.0,200.0" fill="#dbeafe" stroke="none"/>
+<polygon points="40.0,128.0 40.0,40.0 104.0,40.0 136.0,200.0 104.0,200.0" fill="#bbf7d0" stroke="none"/>
+<polygon points="104.0,40.0 200.0,40.0 200.0,200.0 136.0,200.0" fill="#fee2e2" stroke="none"/>
+<rect x="40" y="40" width="160" height="160" fill="none" stroke="#9ca3af" stroke-width="1.5"/>
+<path d="M40.0,128.0 L104.0,200.0" fill="none" stroke="#111827" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M104.0,40.0 L136.0,200.0" fill="none" stroke="#111827" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="40" cy="200" r="13" fill="#3b82f6" stroke="white" stroke-width="2.5"/>
+<text x="40" y="201" class="lbl">B</text>
+<circle cx="40" cy="40" r="13" fill="#10b981" stroke="white" stroke-width="2.5"/>
+<text x="40" y="41" class="lbl">I</text>
+<circle cx="200" cy="40" r="13" fill="#ef4444" stroke="white" stroke-width="2.5"/>
+<text x="200" y="41" class="lbl">A</text>
+<circle cx="200" cy="200" r="13" fill="#ef4444" stroke="white" stroke-width="2.5"/>
+<text x="200" y="201" class="lbl">A</text>
+</svg>

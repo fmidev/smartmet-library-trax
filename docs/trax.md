@@ -17,7 +17,15 @@ Trax is a high-performance C++ library for generating **isobands** (filled conto
    - [Bilinear cell subdivision](#bilinear-cell-subdivision)
 4. [Handling Missing Values in Data](#handling-missing-values-in-data)
 5. [Using Missing-Value Limits to Contour NaN Areas](#using-missing-value-limits-to-contour-nan-areas)
-6. [Exact Boundary Collisions in Weather Data](#exact-boundary-collisions-in-weather-data)
+6. [How the Algorithm Works](#how-the-algorithm-works)
+   - [Cell layout and classification](#cell-layout-and-classification)
+   - [The basic cell shapes](#the-basic-cell-shapes)
+   - [Saddle points and the centre value](#saddle-points-and-the-centre-value)
+   - [Special case: corner exactly on a limit](#special-case-corner-exactly-on-a-limit)
+   - [Special case: ridge edges (equal-value endpoints)](#special-case-ridge-edges-equal-value-endpoints)
+   - [Special case: melt — saddle with diagonal corners on the upper limit](#special-case-melt--saddle-with-diagonal-corners-on-the-upper-limit)
+   - [Special case: double saddle (BABA / ABAB)](#special-case-double-saddle-baba--abab)
+   - [Special case: NaN corner — triangular contouring](#special-case-nan-corner--triangular-contouring)
 7. [Output Integration (OGR / GEOS)](#output-integration-ogr--geos)
 8. [Performance Design](#performance-design)
    - [Parallel level-subset processing](#parallel-level-subset-processing)
@@ -394,36 +402,162 @@ Combined with `NaN, NaN`, this setup partitions the entire grid surface (includi
 
 ---
 
-## Exact Boundary Collisions in Weather Data
+## How the Algorithm Works
 
-Weather model output is commonly stored at reduced precision. For example, MEPS precipitation is rounded to one decimal place. When the isoband limits are also expressed in tenths (e.g. `0.1`, `0.2`, `0.3`), every tenth value in the grid is an integer multiple of the limit step and will collide **exactly** with a range boundary. On a large grid this happens frequently.
+Trax uses **marching squares** — the same family of algorithm summarised on the [Wikipedia page](https://en.wikipedia.org/wiki/Marching_squares). Wikipedia's presentation assumes a clean, theoretical grid: every isoline crosses each cell edge in at most one place, no corner ever falls exactly on a contour level, and saddles can be resolved with a single global rule. None of those assumptions hold for real meteorological forecasts. This section walks through how trax extends the textbook algorithm so that quantised weather data, missing values, and pathological corner placements all produce clean polygons.
 
-### Why this matters
+The presentation here is for **isobands** (filled half-open ranges `[lo, hi)`), which is where most of the complexity lives. Isolines use the same machinery with `Below` / `Above` classifications around a single value.
 
-The linear interpolation formula for finding where an edge crosses a limit is:
+### Cell layout and classification
+
+Each interior 2×2 block of grid points is one **cell**. Trax labels the four corners clockwise from the bottom-left:
+
+![Cell corner naming](img/cell-layout.svg)
+
+Every corner is classified against the active isoband range `[lo, hi)`:
+
+![Corner classifications](img/classification.svg)
+
+| Symbol | `Place` enum | Condition |
+|--------|--------------|-----------|
+| **B** | `Below`   | `value < lo` |
+| **I** | `Inside`  | `lo ≤ value < hi` |
+| **A** | `Above`   | `value ≥ hi` |
+| **N** | `Invalid` | `value` is NaN |
+
+The four classifications are packed into a single integer (`place_hash(p1, p2, p3, p4)`) that selects one of 256 cases via a `switch` (compiled as a jump table). For pure isolines there are only two classifications (`Below`, `Above`), shrinking the dispatch to the classic 16 Wikipedia cases — but every isoband table entry is essentially a pair of those isoline cases, one for `lo` and one for `hi`, which is what blows the case count up.
+
+In the figures below, the **Inside** region of each cell is shaded green (the isoband fill that trax outputs), the **Below** region pale blue, and the **Above** region pale pink. Black lines trace the polygon edges that the cell contributes.
+
+### The basic cell shapes
+
+After excluding the trivial uniform cases (`BBBB` and `AAAA` produce no output, `IIII` outputs the whole cell), every remaining cell falls into one of a handful of geometric shapes. Wikipedia covers only the shapes that arise when a single contour level crosses a cell. For an isoband, both `lo` and `hi` may cross the same cell, so the shape vocabulary is larger.
+
+**All-Inside** — every corner is Inside the band, so the polygon is the whole cell:
+
+![Cell with all four Inside corners](img/shape-full.svg)
+
+**Corner triangle** — exactly one corner Inside, the other three all Below (or all Above). Trax traces a triangle clipped off the Inside corner, with two vertices on the adjacent cell edges and one literal corner vertex:
+
+![BBBI corner triangle](img/shape-triangle.svg)
+
+**Side rectangle** — two adjacent corners on the same side are Inside, the opposite two are uniformly Below or Above. The fill is bounded by one edge of the cell and one `lo`-level segment:
+
+![BBII side rectangle](img/shape-side-rectangle.svg)
+
+**Side stripe** — three corners are Below and the remaining diagonal corner is Above (or vice versa). Both `lo` and `hi` cross the same two edges, so the bottom and right edges each carry two intersections; the Inside band is the thin diagonal slice between them:
+
+![BBBA side stripe](img/shape-side-stripe.svg)
+
+**Pentagon** — three different classifications appear in the same cell, e.g. one Below corner, one Inside, two Above. The polygon walks the Inside corner → top edge `hi` cut → bottom edge `hi` cut → bottom edge `lo` cut → left edge `lo` cut, picking up five vertices on the way:
+
+![BIAA pentagon](img/shape-pentagon.svg)
+
+**Hexagon** — two adjacent Inside corners with the other two corners split between Below and Above. Six vertices: the two Inside corners (literal), plus two cuts on the `lo` side and two on the `hi` side:
+
+![IIBA hexagon](img/shape-hexagon.svg)
+
+These shape categories plus the saddles below cover almost every cell that arises in practice. They are also the cell types that the optional `Contour::subdivide(n)` densifier inserts bilinear samples into — see [Bilinear cell subdivision](#bilinear-cell-subdivision).
+
+### Saddle points and the centre value
+
+The classic ambiguity. When opposite corners share a classification, two topologically different polygons fit the same corner labels — one connected hexagon, or two disjoint triangles:
+
+| Connected (centre Inside) | Split (centre Below) |
+|:---:|:---:|
+| ![BIBI saddle, connected](img/saddle-connected.svg) | ![BIBI saddle, split](img/saddle-split.svg) |
+
+The marching-squares hash alone cannot tell which is correct. Trax picks the topology by sampling the **centre** of the cell — the bilinear interpolant `(p1 + p2 + p3 + p4) / 4` (or the geometric mean in `Logarithmic` mode):
+
+- If `centre` is **Inside** the band, the two Inside corners are connected through the middle (the hexagon, left).
+- Otherwise the cell splits into two disjoint triangles (right).
+
+Note that the actual cut positions on each edge differ between the two cases: when the centre is Inside, the gradient is gentle and the lo cuts land close to the B corners (large hexagon, small B triangles). When the centre is Below, the gradient is steep near the I corners and the lo cuts land close to those corners (small I triangles, mostly Below background). The same disambiguation runs for all saddle hashes: `BIBI`, `IAIA`, `IBIB`, `AIAI`, plus the mixed-saddle cases like `BIBA`, `AIBI`, etc.
+
+### Special case: corner exactly on a limit
+
+Weather model output is commonly stored at reduced precision. MEPS precipitation is rounded to one decimal place. When the isoband limits are also expressed in tenths (e.g. `0.1`, `0.2`, `0.3`), every value in the grid is an integer multiple of the limit step and will collide **exactly** with a range boundary. On a large grid this happens millions of times per render, not as a corner case.
+
+The standard linear interpolation along an edge is
 
 ```
 s = (limit - v2) / (v1 - v2)
 ```
 
-If `v1 == limit` (the corner is exactly on the boundary), the formula becomes `(limit - v2) / (limit - v2)` which equals `1.0` — correct, but only by coincidence. If *both* endpoints equal the limit, the denominator is zero and the result is `NaN` or `±inf`, which would produce a degenerate or invisible contour vertex.
+If `v1 == limit` the formula returns `1.0` (correct, but only by accident of arithmetic). If *both* endpoints equal the limit, `0/0` produces `NaN` or `±inf` and the contour vertex disappears. More subtly, a corner value exactly equal to `hi` is classified as `Above` for the current range *and* as `Below` for the next range — the two adjacent ranges may both call `intersect()` with conflicting expectations.
 
-More subtly, a corner value exactly equal to `hi` is classified as `Above` for the current range and `Below` for the next range. The marching-squares switch sees a configuration that straddles the boundary, expects an intersection, and calls `intersect()`. Without a guard, the interpolation result would be wrong.
+![Boundary collision: corner value exactly equal to hi](img/boundary-collision.svg)
 
-### The guard: exact equality short-circuit
-
-Before performing any division, `intersect()` checks whether either endpoint is exactly equal to the limit value:
+When `p4.z` exactly equals `hi`, the polygon vertex must land *precisely* on the corner. Without a guard, near-zero divisors in the interpolation formula would put the vertex slightly off the corner with rounding-dependent jitter — the two adjacent isoband rings would no longer share an exact T-junction. Trax's `intersect()` short-circuits the interpolation whenever an endpoint is exactly on the limit:
 
 ```cpp
 if (p1.z == value)  return the corner coordinates of p1 as a VertexType::Corner;
 if (p2.z == value)  return the corner coordinates of p2 as a VertexType::Corner;
 ```
 
-When an endpoint is exactly on the limit, its own coordinates are returned directly — no arithmetic, no division. The contour vertex is placed precisely at the grid corner. This eliminates all rounding errors for the common case of quantised weather data and was added specifically in response to MEPS forecast artefacts (Brainstorm-2679).
+The contour vertex is placed precisely at the grid corner — no arithmetic, no division, no rounding. This guard was added in response to MEPS forecast artefacts (Brainstorm-2679) and is the load-bearing fix for quantised weather data.
 
-### The `nextafter` safety net
+The `closed_range(true)` option provides a complementary safety net: it bumps the *upper* bound of the last finite range by one ULP via `std::nextafter`, so a data maximum exactly equal to the nominal cap is classified as `Inside` instead of being lost off the top.
 
-For the last range when `closed_range(true)` is used, `hi` is bumped by one ULP. This means a data maximum exactly equal to the nominal upper bound is classified as `Inside` rather than `Above`, ensuring no data point is silently lost off the top of the range stack.
+### Special case: ridge edges (equal-value endpoints)
+
+A subtler problem appears in **isoline** mode. Suppose the isoline value is `X` and a cell edge has both endpoints exactly equal to `X`:
+
+![Ridge edge: both endpoints equal to the isoline value](img/ridge-edge.svg)
+
+The dashed grey line marks an edge whose both endpoints have the isoline value `X`, but neither side of the edge is the wrong side — the whole cell is Inside the band. A naive "draw a line wherever value == X" would paint the entire edge as an isoline, even though the colour does not change across it. The result is a stray line drawn through the middle of a uniformly-coloured isoband. Because operational weather data is rounded to coarse units, ridges of constant `X` are common, not exotic.
+
+Trax solves this with the **ghost** flag carried on every emitted vertex. `Vertex::ghost` is set to true whenever the vertex sits on an edge that is not a true band boundary (its endpoints both sit on the limit and the cell shading does not actually flip across the edge). For isobands the ghost vertices are kept in the polygon ring — the ring is still topologically closed. For isolines, `Polyline::remove_ghosts` strips ghost-flagged runs out of the ring, so ridges are silently dropped.
+
+The book-keeping is "load-bearing": every code path that creates a vertex must pass the right ghost value, and the double-saddle case in particular has hand-tuned ghost-flag inversions on its right and bottom edges. Twenty years of iteration on trax has been mostly about getting these flags right — the cell hash dispatch itself is short.
+
+### Special case: melt — saddle with diagonal corners on the upper limit
+
+In an `AIAI` or `IAIA` saddle (two diagonal Above corners, two diagonal Inside corners), the Above corners may have value exactly equal to `hi`:
+
+![AIAI saddle with both Above corners exactly on hi (the melt case)](img/melt.svg)
+
+The dashed red rings mark the two Above corners whose values equal `hi` exactly. The diagonal corners are nominally Above, so the centre-value rule would pick the split topology. But because the corners are *literally on* the upper boundary, splitting introduces a degenerate point-touch between the two Inside lobes. Trax detects this with
+
+```cpp
+const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
+```
+
+and forces the connected (hexagon) topology regardless of what the centre value says. The same `melt` test runs for the mirror-image cases on different corner pairs (`p2 == hi && p4 == hi`).
+
+### Special case: double saddle (BABA / ABAB)
+
+The most pathological cell: every edge crosses **both** `lo` and `hi`, because the four corners alternate between Below and Above with no Inside corner anywhere. This happens for narrow bands when the data oscillates faster than the cell size resolves.
+
+| centre = I (connected) | centre = B (two stripes) | centre = A (mirrored) |
+|:---:|:---:|:---:|
+| ![BABA double saddle, centre Inside](img/double-saddle-connected.svg) | ![BABA double saddle, centre Below](img/double-saddle-below.svg) | ![BABA double saddle, centre Above](img/double-saddle-above.svg) |
+
+The cell may contribute up to **eight** vertices in a single ring (every edge donates two cuts: one for `lo`, one for `hi`). Three sub-cases are dispatched on the centre value:
+
+- **`cc == Inside`** (left) — the four-edge ring is connected as one octagonal Inside band threading around the cell, with the `lo` and `hi` cuts on each edge alternating around the perimeter. Above lobes appear at the two A corners, Below lobes at the two B corners.
+- **`cc == Below`** (centre) — the ring splits into two diagonal stripes, each wrapping one of the two A corners. The centre and the rest of the cell are Below.
+- **`cc == Above`** (right) — mirror image: two stripes wrap the two B corners; the centre is Above.
+
+The double-saddle cases also invert several ghost flags compared to the surrounding cases. This is **not** a bug or a stylistic choice; it is exactly the encoding that lets `Polyline::remove_ghosts` extract the right isoline pieces from a single 8-vertex ring. The two double-saddle hashes are explicitly excluded from `Contour::subdivide()` densification because the densifier would have to thread the same ghost-flag pattern edge-by-edge, and that has not been worked through yet.
+
+The `melt` test (described above) also applies to the BABA / ABAB cases when the diagonal Above corners both equal `hi`, forcing the connected topology in that subcase.
+
+### Special case: NaN corner — triangular contouring
+
+When a single corner is NaN (typically masked terrain, ocean cells in a land-only product, or the bbox edge of a sub-grid), the cell collapses to a triangle. The three valid corners and a *phantom diagonal* across the NaN corner form a 3-edge boundary:
+
+![NaN corner triangle with phantom diagonal](img/nan-triangle.svg)
+
+The dashed grey line is the phantom diagonal — it splits the cell so that the NaN half (gray) is excluded and the contouring algorithm walks only the three remaining edges of the valid triangle. Trax dispatches these with `nan_hash(...)` and a smaller switch (4 × 27 = 108 entries) that walks the triangle one edge at a time using `build_edge`. Because triangular cells have no opposite-corner pairs they can never be saddles, so no centre-value disambiguation is needed — every NaN-corner case is unambiguous from the three valid corner classifications alone.
+
+Cells with **two or more** NaN corners are skipped; no contour fragment is generated. To fill in those regions explicitly, add a `Range(NaN, NaN)` to `IsobandLimits` — see [Using Missing-Value Limits](#using-missing-value-limits-to-contour-nan-areas) — or a `NaN` value to `IsolineValues` for the boundary curve.
+
+The phantom diagonal on a NaN-triangle cell is a true bilinear curve too, but its bilinear coefficients differ from the four-corner cell, so the `Contour::subdivide()` densifier intentionally leaves NaN-triangle cases piecewise-linear.
+
+---
+
+## Output Integration (OGR / GEOS)
 
 ```cpp
 #include <trax/OGR.h>
