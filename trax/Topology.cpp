@@ -2,11 +2,11 @@
 #include "Joint.h"
 #include "JointPool.h"
 #include "SmallVector.h"
-#include <boost/geometry.hpp>
-#include <boost/geometry/index/rtree.hpp>
 #include <boost/math/constants/constants.hpp>
 #include <fmt/format.h>
 #include <smartmet/macgyver/Exception.h>
+#include <algorithm>
+#include <map>
 
 #if 0
 #include <iostream>
@@ -14,13 +14,6 @@
 
 namespace Trax
 {
-// Geometry types for r-tree searches
-namespace bg = boost::geometry;
-namespace bgi = boost::geometry::index;
-using bg_point = bg::model::point<double, 2, bg::cs::cartesian>;
-using bg_box = bg::model::box<bg_point>;
-using bg_value = std::pair<bg_box, Polygons::iterator>;
-using bg_rtree = bgi::rtree<bg_value, bgi::rstar<16>>;  // R* variant
 
 // We may sort polylines base on the head coordinate or the tail coordinate. Head sort
 // is for appending to a growing polyline, tail for prepending. Appending is sufficient
@@ -45,7 +38,7 @@ using Duplicates = SmallVector<Joint*, 8UL>;
 using SortedPolylines = std::multimap<JoinCoordinate, Polyline>;
 
 using JoinCandidate = SortedPolylines::iterator;
-using JoinCandidates = std::list<JoinCandidate>;
+using JoinCandidates = SmallVector<JoinCandidate, 8UL>;
 
 namespace
 {
@@ -118,15 +111,14 @@ JoinCandidates find_append_candidates(const Polyline& polyline, SortedPolylines&
 // Assumes !polylines.empty()
 JoinCandidate select_turn(const Polyline& polyline, JoinCandidates& candidates, bool turn_right)
 {
-  // std::list::size is slow: if (candidates.size() == 1)
-  if (++candidates.begin() == candidates.end())
-    return candidates.front();
+  if (candidates.size() == 1)
+    return candidates[0];
 
   // Tail angle of the polyline to append a candidate to
   const auto end_angle = polyline.end_angle();
 
   // Find best candidate
-  auto best_candidate = candidates.front();
+  auto best_candidate = candidates[0];
   double best_turn = (turn_right ? -999.0 : 999.0);  // anything above 180 will do
 
 #if 0
@@ -328,7 +320,7 @@ Polyline extract_left_turning_polyline(SortedPolylines& polylines)
 
       auto candidate = select_turn(result, candidates, turn_right);
 
-      result.append(candidate->second);
+      result.append(std::move(candidate->second));
       polylines.erase(candidate);
     }
     return result;
@@ -387,79 +379,39 @@ void extract_left_turning_sequence(Polylines& polylines, Polylines& shells, Hole
   }
 }
 
-bg_box make_bg_box(const BBox& bbox)
+// Find the smallest-bbox shell that geometrically contains the hole.
+// Strategy: collect all shells whose bbox contains the hole's bbox into a
+// SmallVector (allocation-free in the common case), sort ascending by bbox
+// area, then pnpoly-verify in order. The smallest-bbox-first ordering is a
+// strong heuristic that almost always succeeds on the first candidate, but a
+// non-convex shell (C/U/S-shape) can have its bbox accidentally contain a
+// hole it does not geometrically contain, so the contains() verify is
+// required for correctness.
+Polygons::iterator find_containing_shell(Polygons& polygons, const Polyline& hole)
 {
-  return {bg_point(bbox.xmin(), bbox.ymin()), bg_point(bbox.xmax(), bbox.ymax())};
-}
+  using Candidate = Polygons::iterator;
+  SmallVector<Candidate, 8UL> candidates;
 
-bg_rtree build_rtree(Polygons& polygons)
-{
-  bg_rtree rtree;
-
+  const auto& hole_bbox = hole.bbox();
   for (auto it = polygons.begin(), end = polygons.end(); it != end; ++it)
-    rtree.insert(std::make_pair(make_bg_box(it->exterior().bbox()), it));
+    if (it->exterior().bbox().contains(hole_bbox))
+      candidates.push_back(it);
 
-  return rtree;
-}
+  if (candidates.empty())
+    return polygons.end();
 
-std::list<Polygons::iterator> possible_rtree_shells(const bg_rtree& rtree, const Polyline& hole)
-{
-  auto query_box = make_bg_box(hole.bbox());
-  std::vector<bg_value> results;
-  rtree.query(bgi::contains(query_box), std::back_inserter(results));
+  auto area = [](const BBox& b) { return (b.xmax() - b.xmin()) * (b.ymax() - b.ymin()); };
 
-  // Accept only those that contain the hole bbox (should be true for all elements)
-  std::list<Polygons::iterator> ret;
+  std::sort(candidates.begin(),
+            candidates.end(),
+            [&area](Candidate a, Candidate b)
+            { return area(a->exterior().bbox()) < area(b->exterior().bbox()); });
 
-  for (const auto& result : results)
-    if (result.second->bbox_contains(hole))
-      ret.push_back(result.second);
+  for (auto candidate : candidates)
+    if (candidate->contains(hole))
+      return candidate;
 
-  return ret;
-}
-
-std::list<Polygons::iterator> possible_shells(const bg_rtree& rtree, const Polyline& hole)
-{
-  auto ret = possible_rtree_shells(rtree, hole);
-
-  // We assume all holes have an exterior to avoid an expensive contains() test
-
-#if 0
-  if (ret.size() < 2)  // std::list::size is slow
-    return ret;
-#else
-  if (ret.empty())
-    return ret;
-  if (++ret.begin() == ret.end())
-    return ret;
-#endif
-
-  // Find ones that actually contain the point
-
-  for (auto it = ret.begin(), end = ret.end(); it != end;)
-  {
-    if ((*it)->contains(hole))
-      ++it;
-    else
-      it = ret.erase(it);
-  }
-
-  return ret;
-}
-
-Polygons::iterator innermost_polygon(const std::list<Polygons::iterator>& polygons)
-{
-  // For valid touching rule polygons the innermost polygon must necessarily have
-  // a bbox that is contained by the bbox of all the other available choices since
-  // polygons may touch only at a single vertex.
-
-  auto ret = polygons.front();  // first candidate
-
-  for (const auto& it : polygons)
-    if (ret != it && ret->exterior().bbox().contains(it->exterior().bbox()))
-      ret = it;
-
-  return ret;
+  return polygons.end();
 }
 
 }  // namespace
@@ -576,32 +528,23 @@ void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
     if (holes.empty())
       return;
 
-    // TODO: Should we optimize in case there is just one polygon?
-
-    // Build an R-tree of the polygon exterior bounding boxes for speed
-
-    auto rtree = build_rtree(polygons);
-
     for (auto it = holes.begin(); it != holes.end();)
     {
       auto& hole = *it;  // shorthand variable
 
       if (hole.size() < 4)  // discard too small holes
+      {
         ++it;
+      }
       else
       {
-        auto candidates = possible_shells(rtree, hole);
-#if 0
-        std::cout << fmt::format("\t{} candidates for hole {}\n", candidates.size(), counter++);
-#endif
-        if (candidates.empty())
-          ++it;  // should be isolated hole when calculating isolines
+        auto polygon = find_containing_shell(polygons, hole);
+        if (polygon == polygons.end())
+        {
+          ++it;  // isolated hole; can happen at grid boundaries with isolines
+        }
         else
         {
-          auto polygon = innermost_polygon(candidates);
-#if 0
-          std::cout << fmt::format("\tInnermost polygon: {}\n", polygon->wkt());
-#endif
           polygon->hole(hole);
           it = holes.erase(it);
         }

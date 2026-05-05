@@ -6,7 +6,6 @@
 #include <smartmet/macgyver/Exception.h>
 #include <algorithm>
 #include <optional>
-#include <stdexcept>
 
 using boost::math::double_constants::radian;
 
@@ -105,19 +104,82 @@ void remove_sliver(Points& points, bool& found_sliver, std::size_t pos, std::siz
   }
 }
 
+// Iterate every unique vertex of a segmented polyline in order.
+// Skips the leading point of every non-leading segment (which duplicates the
+// previous segment's tail).
+template <typename F>
+void for_each_point(const std::vector<Points>& segments, F&& f)
+{
+  for (std::size_t i = 0; i < segments.size(); ++i)
+  {
+    const auto& seg = segments[i];
+    const std::size_t start = (i == 0) ? 0 : 1;
+    for (std::size_t j = start; j < seg.size(); ++j)
+      f(seg[j]);
+  }
+}
+
+// Iterate every consecutive (a,b) point pair across the whole segmented polyline.
+template <typename F>
+void for_each_pair(const std::vector<Points>& segments, F&& f)
+{
+  bool have_prev = false;
+  Point prev{0, 0, false};
+  for_each_point(segments,
+                 [&](const Point& p)
+                 {
+                   if (have_prev)
+                     f(prev, p);
+                   prev = p;
+                   have_prev = true;
+                 });
+}
+
 }  // namespace
+
+bool Polyline::empty() const
+{
+  return m_segments.empty() || m_segments.front().empty();
+}
+
+std::size_t Polyline::size() const
+{
+  if (m_segments.empty())
+    return 0;
+  std::size_t total = 0;
+  for (const auto& seg : m_segments)
+    total += seg.size();
+  // Subtract the duplicate leading point shared by each non-leading segment.
+  total -= (m_segments.size() - 1);
+  return total;
+}
+
+void Polyline::flatten()
+{
+  if (m_segments.size() <= 1)
+    return;
+
+  Points flat;
+  flat.reserve(size());
+  for_each_point(m_segments, [&](const Point& p) { flat.push_back(p); });
+
+  m_segments.clear();
+  m_segments.push_back(std::move(flat));
+}
 
 // Begin a new polyline
 Polyline::Polyline(std::initializer_list<double> init_list)
 {
   if (init_list.size() == 0 || init_list.size() % 2 != 0)
     throw Fmi::Exception(BCP, "Invalid initialization of Polyline from elements");
+  m_segments.emplace_back();
+  auto& seg = m_segments.back();
   const auto* iter = init_list.begin();
   while (iter != init_list.end())
   {
     double x = *iter++;
     double y = *iter++;
-    m_points.emplace_back(x, y, false);
+    seg.emplace_back(x, y, false);
   }
   update_bbox();
 }
@@ -137,12 +199,10 @@ bool Polyline::clockwise() const
     return false;
 
   double area = 0;
-  auto n = size();
-  for (std::size_t i = 0; i < n - 1; i++)
-    area += (m_points[i + 1].x - m_points[i].x) * (m_points[i].y + m_points[i + 1].y);
+  for_each_pair(m_segments,
+                [&](const Point& a, const Point& b) { area += (b.x - a.x) * (a.y + b.y); });
 
   // The true area is |area/2|, but we care only about the orientation
-
   // Treating zero-size polygons as anti-clockwise lead to troubled code elsewhere,
   // hence we use equality as well.
   return area >= 0;
@@ -151,59 +211,80 @@ bool Polyline::clockwise() const
 std::vector<double> Polyline::xcoordinates() const
 {
   std::vector<double> ret;
-  const auto n = m_points.size();
-  ret.reserve(n);
-  for (auto i = 0UL; i < n; i++)
-    ret.push_back(m_points[i].x);
+  ret.reserve(size());
+  for_each_point(m_segments, [&](const Point& p) { ret.push_back(p.x); });
   return ret;
 }
 
 std::vector<double> Polyline::ycoordinates() const
 {
   std::vector<double> ret;
-  const auto n = m_points.size();
-  ret.reserve(n);
-  for (auto i = 0UL; i < n; i++)
-    ret.push_back(m_points[i].y);
+  ret.reserve(size());
+  for_each_point(m_segments, [&](const Point& p) { ret.push_back(p.y); });
   return ret;
 }
 
 // Polygon exteriors and holes may share only singular vertices and not
 // whole edges. Hence any point along any edge should be inside an exterior
 // if the hole is inside it.
-
 std::pair<double, double> Polyline::inside_point() const
 {
-  const auto x = 0.5 * (m_points[0].x + m_points[1].x);
-  const auto y = 0.5 * (m_points[0].y + m_points[1].y);
+  const auto& seg = m_segments.front();
+  const auto x = 0.5 * (seg[0].x + seg[1].x);
+  const auto y = 0.5 * (seg[0].y + seg[1].y);
   return std::make_pair(x, y);
 }
 
-// Polyline exit angle
+// Polyline exit angle (between the last two unique points).
 double Polyline::end_angle() const
 {
-  if (m_points.size() < 2)
+  if (size() < 2)
     throw Fmi::Exception(BCP, "Cannot calculate polyline end angle when size < 2");
 
-  const auto n = m_points.size() - 2;
-
-  auto x1 = m_points[n].x;
-  auto y1 = m_points[n].y;
-  auto x2 = m_points[n + 1].x;
-  auto y2 = m_points[n + 1].y;
-  return atan2(y2 - y1, x2 - x1) * radian;
+  // The last two unique points: take the last two of the last segment if it has
+  // size >= 2, otherwise the previous segment's tail and this segment's tail.
+  const auto& last = m_segments.back();
+  Point p1{0, 0, false};
+  Point p2{0, 0, false};
+  if (last.size() >= 2)
+  {
+    p1 = last[last.size() - 2];
+    p2 = last.back();
+  }
+  else
+  {
+    // last segment has size 1 (just the duplicate). Reach into the previous segment.
+    const auto& prev = m_segments[m_segments.size() - 2];
+    p1 = prev.back();
+    p2 = last.back();
+    // p1 == p2 in this degenerate case, but the caller's contract assumes
+    // non-degenerate input — the above is a guard.
+  }
+  return atan2(p2.y - p1.y, p2.x - p1.x) * radian;
 }
 
-// Polyline start angle
+// Polyline start angle (between the first two unique points).
 double Polyline::start_angle() const
 {
-  if (m_points.size() < 2)
+  if (size() < 2)
     throw Fmi::Exception(BCP, "Cannot calculate polyline start angle when size < 2");
 
-  auto x1 = m_points[0].x;
-  auto y1 = m_points[0].y;
-  auto x2 = m_points[1].x;
-  auto y2 = m_points[1].y;
+  const auto& first = m_segments.front();
+  if (first.size() >= 2)
+  {
+    auto x1 = first[0].x;
+    auto y1 = first[0].y;
+    auto x2 = first[1].x;
+    auto y2 = first[1].y;
+    return atan2(y2 - y1, x2 - x1) * radian;
+  }
+  // first segment size 1 — use the next segment's [1] (or [0] if that's the dup).
+  const auto& next = m_segments[1];
+  auto x1 = first[0].x;
+  auto y1 = first[0].y;
+  // next[0] == first[0] by the duplicate-vertex invariant, so use next[1] if present.
+  auto x2 = next.size() >= 2 ? next[1].x : next[0].x;
+  auto y2 = next.size() >= 2 ? next[1].y : next[0].y;
   return atan2(y2 - y1, x2 - x1) * radian;
 }
 
@@ -212,7 +293,7 @@ bool Polyline::bbox_contains(const Polyline& other) const
   return bbox().contains(other.bbox());
 }
 
-// Does the (closed) polyline contain the other (closed) polyline
+// Does the (closed) polyline contain the other (closed) polyline.
 bool Polyline::contains(const Polyline& other) const
 {
   // Quick exit based on bounding box containment
@@ -231,40 +312,18 @@ bool Polyline::contains(const Polyline& other) const
   const auto x = test_point.first;
   const auto y = test_point.second;
 
-  // Refs 1-2 are for clarity since ref 3 only provides an idea for optimization by Stuart MacMartin
-  //
-  // 1: http://www.faqs.org/faqs/graphics/algorithms-faq/ question 2.03
-  // 2: https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
-  // 3: http://www.realtimerendering.com/resources/RTNews/html//rtnv5n3.html#art3
+  // pnpoly via consecutive-pair iteration. We cannot easily use the skip-runs
+  // optimization across segment boundaries, but each segment is contiguous so
+  // the inner loop still benefits from spatial coherence.
 
-  const auto n = m_points.size();
   bool inside = false;
-  for (std::size_t i = 1; i < n; i++)
-  {
-    // Skip continuously while below or above y
-    if (m_points[i - 1].y < y)
-    {
-      while (i < n && m_points[i].y < y)
-        i++;
-    }
-    else if (m_points[i - 1].y > y)
-    {
-      while (i < n && m_points[i].y > y)
-        i++;
-    }
-
-    if (i >= n)
-      break;  // reached end without crossing y
-
-    auto x1 = m_points[i - 1].x;
-    auto y1 = m_points[i - 1].y;
-    auto x2 = m_points[i].x;
-    auto y2 = m_points[i].y;
-    if ((y1 > y) != (y2 > y))
-      if (x < (x1 - x2) * (y - y2) / (y1 - y2) + x2)
-        inside = !inside;
-  }
-
+  for_each_pair(m_segments,
+                [&](const Point& a, const Point& b)
+                {
+                  if ((a.y > y) != (b.y > y))
+                    if (x < (a.x - b.x) * (y - b.y) / (a.y - b.y) + b.x)
+                      inside = !inside;
+                });
   return inside;
 }
 
@@ -272,27 +331,54 @@ bool Polyline::contains(const Polyline& other) const
 // such as an isoband range value appearing only in one corner of a grid cell.
 void Polyline::append(const Vertex& vertex)
 {
-  if (m_points.empty())
+  if (m_segments.empty())
   {
-    m_points.reserve(256);  // do not settle for a small initial allocation
-    m_points.emplace_back(vertex.x, vertex.y, vertex.ghost);
+    m_segments.emplace_back();
+    m_segments.back().reserve(256);  // do not settle for a small initial allocation
+    m_segments.back().emplace_back(vertex.x, vertex.y, vertex.ghost);
+    return;
   }
-  else if (m_points.back().x != vertex.x || m_points.back().y != vertex.y)  // ignore duplicates
-    m_points.emplace_back(vertex.x, vertex.y, vertex.ghost);
+
+  auto& last = m_segments.back();
+  if (last.empty() || last.back().x != vertex.x || last.back().y != vertex.y)
+    last.emplace_back(vertex.x, vertex.y, vertex.ghost);
 }
 
-// Append another polyline directly
+// Append another polyline by COPY. Used when the caller cannot relinquish
+// ownership of the source. Keeps the segmented invariant by appending segments.
 void Polyline::append(const Polyline& other)
 {
-  m_points.insert(m_points.end(), ++other.m_points.begin(), other.m_points.end());
+  if (other.m_segments.empty())
+    return;
+
+  // The first segment of `other` starts with the join vertex (= our last vertex).
+  // We push it as-is; the segmented iteration helpers will skip its leading dup.
+  for (const auto& seg : other.m_segments)
+    m_segments.push_back(seg);
 }
 
-// Reverse the winding order
+// Append another polyline by MOVE. The hot-path overload: ownership of each
+// source segment's heap allocation transfers into m_segments, so no point data
+// is memcopied. The cost reduces to growing the outer vector, which doubles
+// geometrically and is amortized O(K) over K joins.
+void Polyline::append(Polyline&& other)
+{
+  if (other.m_segments.empty())
+    return;
+
+  m_segments.reserve(m_segments.size() + other.m_segments.size());
+  for (auto& seg : other.m_segments)
+    m_segments.push_back(std::move(seg));
+  other.m_segments.clear();
+}
+
+// Reverse the winding order. Reverses each segment internally and reverses
+// the order of segments. The duplicate-at-boundary invariant is preserved.
 void Polyline::reverse()
 {
-  const auto n = size();
-  for (auto i = 0UL, j = n - 1; i < j; i++, j--)
-    std::swap(m_points[i], m_points[j]);
+  for (auto& seg : m_segments)
+    std::reverse(seg.begin(), seg.end());
+  std::reverse(m_segments.begin(), m_segments.end());
 }
 
 // Export normal WKT
@@ -307,14 +393,15 @@ std::string Polyline::wkt() const
 std::string Polyline::wkt_body() const
 {
   std::string ret = "(";
-
-  const auto n = size();
-  for (auto i = 0UL; i < n; i++)
-  {
-    if (i > 0)
-      ret += ',';
-    ret += fmt::format("{} {}", m_points[i].x, m_points[i].y);
-  }
+  bool first = true;
+  for_each_point(m_segments,
+                 [&](const Point& p)
+                 {
+                   if (!first)
+                     ret += ',';
+                   ret += fmt::format("{} {}", p.x, p.y);
+                   first = false;
+                 });
   ret += ')';
   return ret;
 }
@@ -332,50 +419,55 @@ void Polyline::wkb_body(std::ostringstream& out) const
   uint n = size();
   out.write((const char*)&n, sizeof(n));
 
-  for (uint i = 0; i < n; i++)
-  {
-    double x = m_points[i].x;
-    double y = m_points[i].y;
-
-    // printf("Point %f,%f\n",x,y);
-    out.write((const char*)&x, 8);
-    out.write((const char*)&y, 8);
-  }
+  for_each_point(m_segments,
+                 [&](const Point& p)
+                 {
+                   double x = p.x;
+                   double y = p.y;
+                   out.write((const char*)&x, 8);
+                   out.write((const char*)&y, 8);
+                 });
 }
 
-// Normalize coordinates to lexicographic order for testing purposes
+// Normalize coordinates to lexicographic order for testing purposes.
+// Test/debug-only path; flatten first to keep the implementation simple.
 Polyline& Polyline::normalize()
 {
+  flatten();
+  if (m_segments.empty() || m_segments[0].empty())
+    return *this;
+
+  auto& points = m_segments[0];
+
   if (!closed())
   {
-    const auto n = size() - 1;
+    const auto n = points.size() - 1;
     // Lexicographically smallest end vertex first
-    if (m_points[0].x > m_points[n].x ||
-        (m_points[0].x == m_points[n].x && m_points[0].y > m_points[n].y))
+    if (points[0].x > points[n].x || (points[0].x == points[n].x && points[0].y > points[n].y))
       reverse();
     return *this;
   }
 
   // Find lexicographically smallest element
 
-  auto n = size() - 1;  // minus one since the last vertex is the same as the first one
+  auto n = points.size() - 1;  // minus one since the last vertex is the same as the first one
   auto best = 0UL;
   for (auto i = 1UL; i < n; i++)
   {
-    if ((m_points[i].x < m_points[best].x) ||
-        (m_points[i].x == m_points[best].x && m_points[i].y < m_points[best].y))
+    if ((points[i].x < points[best].x) ||
+        (points[i].x == points[best].x && points[i].y < points[best].y))
       best = i;
   }
 
   // Rotate until it is the first element
   if (best != 0)
   {
-    auto pos = m_points.begin();
+    auto pos = points.begin();
     std::advance(pos, best);
-    std::rotate(m_points.begin(), pos, --m_points.end());
+    std::rotate(points.begin(), pos, --points.end());
 
     // Fix closing vertex
-    m_points[n] = m_points[0];
+    points[n] = points[0];
   }
   return *this;
 }
@@ -386,25 +478,50 @@ bool Polyline::operator<(const Polyline& other) const
   if (this == &other)
     return false;
 
-  const auto n = std::min(size(), other.size());
-  for (auto i = 0UL; i < n; i++)
+  // Lexicographic compare across segmented storage. Because both sides skip
+  // duplicate join vertices, we use for_each_point and pull pairs in lockstep.
+
+  // Materialize on demand. operator< is used for normalize/sort in tests; not
+  // a hot path, so flattening on the fly is acceptable.
+  std::vector<Point> a;
+  a.reserve(size());
+  for_each_point(m_segments, [&](const Point& p) { a.push_back(p); });
+
+  std::vector<Point> b;
+  b.reserve(other.size());
+  for_each_point(other.m_segments, [&](const Point& p) { b.push_back(p); });
+
+  const auto n = std::min(a.size(), b.size());
+  for (std::size_t i = 0; i < n; i++)
   {
-    if (m_points[i].x != other.m_points[i].x)
-      return m_points[i].x < other.m_points[i].x;
-    if (m_points[i].y != other.m_points[i].y)
-      return m_points[i].y < other.m_points[i].y;
+    if (a[i].x != b[i].x)
+      return a[i].x < b[i].x;
+    if (a[i].y != b[i].y)
+      return a[i].y < b[i].y;
   }
   return false;
 }
 
 void Polyline::update_bbox()
 {
-  m_bbox.init(m_points);
+  // BBox::init takes a Points reference. Build a flat view if needed.
+  if (m_segments.size() == 1)
+  {
+    m_bbox.init(m_segments[0]);
+    return;
+  }
+  Points flat;
+  flat.reserve(size());
+  for_each_point(m_segments, [&](const Point& p) { flat.push_back(p); });
+  m_bbox.init(flat);
 }
 
 bool Polyline::has_ghosts() const
 {
-  return std::any_of(m_points.begin(), m_points.end(), [](const Point& p) { return p.ghost; });
+  for (const auto& seg : m_segments)
+    if (std::any_of(seg.begin(), seg.end(), [](const Point& p) { return p.ghost; }))
+      return true;
+  return false;
 }
 
 struct ValidRange
@@ -434,20 +551,21 @@ std::optional<ValidRange> find_valid_range(const Points& points, std::size_t sta
 // precondition: has_ghosts is true, closed is true
 void Polyline::remove_ghosts(Polylines& new_polylines)
 {
-#if 0
-  std::cout << "Removing ghosts from " << wkt() << "\n";
-  for (auto i = 0UL; i < m_points.size(); i++)
-    std::cout << fmt::format(
-        "\t{} : {},{} {}\n", i, m_points[i].x, m_points[i].y, m_points[i].ghost ? "?" : "-");
-#endif
+  // The existing logic is index-based and operates on a single contiguous
+  // Points buffer; flatten first to reuse it unchanged.
+  flatten();
+  if (m_segments.empty())
+    return;
+
+  const auto& points = m_segments[0];
 
   // Extract valid ranges
   std::vector<ValidRange> ranges;
-  const auto n = m_points.size();
+  const auto n = points.size();
   auto startpos = 0UL;
   while (startpos < n)
   {
-    auto range = find_valid_range(m_points, startpos);
+    auto range = find_valid_range(points, startpos);
     if (!range)
       break;
     if (range->end - range->begin > 1)
@@ -466,35 +584,30 @@ void Polyline::remove_ghosts(Polylines& new_polylines)
   for (auto i = 0UL; i < sz; i++)
   {
     Polyline line;
+    line.m_segments.emplace_back();
+    auto& line_points = line.m_segments.back();
     const auto& range = ranges[i];
     if (i == 0 && wraparound)
     {
       const auto& range2 = ranges.back();
-      // std::cout << "Keeping wraparound range " << range2.begin << "..." << range2.end << "\n";
       for (auto j = range2.begin; j < range2.end - 1; j++)
-        line.m_points.push_back(m_points[j]);
+        line_points.push_back(points[j]);
     }
-    // std::cout << "Keeping  range " << range.begin << "..." << range.end << "\n";
     for (auto j = range.begin; j < range.end; j++)
-      line.m_points.push_back(m_points[j]);
+      line_points.push_back(points[j]);
     new_polylines.emplace_back(std::move(line));
   }
 }
 
-// Remove slivers, return true if no vertices remain (should be extremely rare)
+// Remove slivers, return true if no vertices remain (should be extremely rare).
+// Existing logic is in-place index arithmetic; flatten first then run unchanged.
 bool Polyline::desliver()
 {
   if (empty())
     return true;
 
-  // Look for a sequence of points p1-p2-p3 where p1 and p3 are extremely close. When found, keep
-  // only p1 or p3 based on lexicographic sort of coordinates so that the selection does not depend
-  // on the order of the vertices, and hence exteriors and holes will be handled identically. This
-  // is relevant since the exterior of any isoband is likely to be a hole hole in another isoband.
-  //
-  // If we have a sequence a-b-c-d where c is a sliver point, we may end up with a-b or a-d
-  // Since the number of points can only decrease, we to sliver removal in place, and just shrink
-  // the vector at the end if necessary.
+  flatten();
+  auto& points = m_segments[0];
 
   bool found_sliver = false;
   auto out_pos = 2UL;
@@ -502,49 +615,43 @@ bool Polyline::desliver()
   const bool was_closed = closed();
 
   // To simplify handling if the polyline is closed we duplicate the start of the polyline at the
-  // end and then just fix things if something was removed. This is easier than doing modular
-  // indexing or having more elaborate special code after the main loop
+  // end and then just fix things if something was removed.
 
-#if 0
-  for (auto i = 0UL; i < m_points.size(); i++)
-    std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);
-#endif
+  add_padding(points, was_closed);  // A-B-X-A ==> A-B-X-A-B
 
-  add_padding(m_points, was_closed);  // A-B-X-A ==> A-B-X-A-B
-
-  auto n = m_points.size();
+  auto n = points.size();
 
   for (auto pos = 2UL; pos < n; ++pos)
-    remove_sliver(m_points, found_sliver, pos, out_pos);
+    remove_sliver(points, found_sliver, pos, out_pos);
 
   // We never increase the size but the compiler does not know it and hence
   // requires a default constructor for Point. We avoid the error by providing
   // a useless dummy point for resize(n,point);
 
   if (found_sliver)
-    m_points.resize(out_pos, Point(0, 0, false));
+    points.resize(out_pos, Point(0, 0, false));
 
   if (!was_closed)
     return empty();
 
-  remove_padding(m_points);
+  remove_padding(points);
 
-#if 0
-  std::cout << "\nAfter:\n";
-  for (auto i = 0UL; i < m_points.size(); i++)
-    std::cout << fmt::format("{}\t{}\t{}\n", i, m_points[i].x, m_points[i].y);
-#endif
-
-  if (m_points.empty())
+  if (points.empty())
+  {
+    m_segments.clear();
     return true;
+  }
 
   // Necessary to keep the geometry valid for clipping or we may run into an eternal loop
   if (!closed())
     throw Fmi::Exception(BCP, "Failed to close polygon properly");
 
   // In case there was only a sliver to not leave a single vertex
-  if (m_points.size() < 2)
-    m_points.clear();
+  if (points.size() < 2)
+  {
+    points.clear();
+    m_segments.clear();
+  }
 
   return empty();
 }

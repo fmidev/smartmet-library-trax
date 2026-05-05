@@ -2,11 +2,11 @@
 
 #include "BBox.h"
 #include "Point.h"
-#include <deque>
 #include <initializer_list>
 #include <list>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace Trax
 {
@@ -22,13 +22,13 @@ class Polyline
   Polyline() = default;
   Polyline(std::initializer_list<double> init_list);
 
-  bool empty() const { return m_points.empty(); }
-  std::size_t size() const { return m_points.size(); }
+  bool empty() const;
+  std::size_t size() const;
 
-  double xbegin() const { return m_points[0].x; }
-  double ybegin() const { return m_points[0].y; }
-  double xend() const { return m_points.back().x; }
-  double yend() const { return m_points.back().y; }
+  double xbegin() const { return m_segments[0][0].x; }
+  double ybegin() const { return m_segments[0][0].y; }
+  double xend() const { return m_segments.back().back().x; }
+  double yend() const { return m_segments.back().back().y; }
 
   const BBox& bbox() const { return m_bbox; }
   bool bbox_contains(const Polyline& other) const;
@@ -62,6 +62,7 @@ class Polyline
   bool clockwise() const;
 
   void append(const Polyline& other);
+  void append(Polyline&& other);
 
   void reverse();
 
@@ -73,8 +74,18 @@ class Polyline
   void remove_ghosts(Polylines& new_polylines);
 
  private:
-  Points m_points;
+  // Segmented storage. Each segment is a contiguous run of points; segment[i+1]
+  // shares its first point with segment[i]'s last point (the join vertex). When
+  // iterating a polyline as a whole, the first vertex of every non-leading
+  // segment is skipped to avoid emitting the duplicate. This lets append(Polyline&&)
+  // move source segments into m_segments without touching point data.
+  std::vector<Points> m_segments;
   BBox m_bbox;
+
+  // Collapse all segments into a single segment in m_segments[0]. Used by methods
+  // whose existing logic depends on contiguous indexing (desliver, normalize,
+  // remove_ghosts).
+  void flatten();
 };
 
 }  // namespace Trax

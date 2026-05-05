@@ -341,6 +341,12 @@ BOOST_AUTO_TEST_CASE(isoband_debug)
   run_file_tests("data/isoband_debug.txt");
 }
 
+BOOST_AUTO_TEST_CASE(topology)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Builder::topology cases]");
+  run_file_tests("data/topology.txt");
+}
+
 // Run all data files with a fixed thread count or with automatic thread selection.
 // Results must be identical to the single-threaded runs above.
 
@@ -465,7 +471,8 @@ BOOST_AUTO_TEST_CASE(subdivide_peak_bilinear_curve)
   Trax::IsobandLimits limits;
   limits.add(1.0f, std::numeric_limits<float>::infinity());
 
-  auto area_for = [&](int n) {
+  auto area_for = [&](int n)
+  {
     Trax::Contour c;
     c.interpolation(Trax::InterpolationType::Linear);
     c.subdivide(n);

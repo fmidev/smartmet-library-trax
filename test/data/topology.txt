@@ -1,0 +1,151 @@
+# Topology correctness tests for build_polygons / hole-to-shell assignment.
+# These cover the cases that the rtree-replacement and segmented-Polyline
+# refactors must preserve:
+#   - saddle: two polygons touching at one point
+#   - donut: hole inside exterior
+#   - two holes inside one exterior (separated)
+#   - two holes touching each other at a vertex (interior-interior saddle)
+#   - hole touching exterior at one vertex (band-edge pinch)
+#   - degenerate split-by-saddle (one input "hole" becomes two touching shells)
+#   - U-shape (single shell, concave)
+#   - S-shape (single shell, S-curve)
+#   - adjacent saddles (low-precision meteorological data)
+#   - dense saddle field (every cell ambiguous)
+
+interpolation linear
+
+# ---- 1. Single-cell saddle: two polygons touching at the cell center
+bbox 0 0 10 10
+grid 2 2
+1 0
+0 1
+isoband 0.5 1.5 POLYGON ((0 5,0 10,5 10,10 5,10 0,5 0,0 5))
+
+# ---- 2. Single-cell saddle, opposite diagonal
+grid 2 2
+0 1
+1 0
+isoband 0.5 1.5 POLYGON ((0 0,0 5,5 10,10 10,10 5,5 0,0 0))
+
+# ---- 3. Donut: hole inside exterior
+bbox 0 0 40 40
+grid 5 5
+0 0 0 0 0
+0 1 1 1 0
+0 1 0 1 0
+0 1 1 1 0
+0 0 0 0 0
+isoband 0.5 1.5 POLYGON ((5 10,5 20,5 30,10 35,20 35,30 35,35 30,35 20,35 10,30 5,20 5,10 5,5 10),(15 20,20 15,25 20,20 25,15 20))
+
+# ---- 4. Two separated holes inside one exterior
+bbox 0 0 60 40
+grid 7 5
+0 0 0 0 0 0 0
+0 1 1 1 1 1 0
+0 1 0 1 0 1 0
+0 1 1 1 1 1 0
+0 0 0 0 0 0 0
+isoband 0.5 1.5 POLYGON ((5 10,5 20,5 30,10 35,20 35,30 35,40 35,50 35,55 30,55 20,55 10,50 5,40 5,30 5,20 5,10 5,5 10),(15 20,20 15,25 20,20 25,15 20),(35 20,40 15,45 20,40 25,35 20))
+
+# ---- 5. Two interior holes touching each other at a vertex (interior saddle).
+# Note: trax flattens the touching pair into a single non-convex shell with no
+# holes when the saddle pinches them together at a single grid vertex.
+bbox 0 0 60 40
+grid 7 5
+0 0 0 0 0 0 0
+0 1 1 1 1 1 0
+0 1 0 1 0 1 0
+0 1 0 1 0 1 0
+0 0 0 0 0 0 0
+isoband 0.5 1.5 POLYGON ((5 10,5 20,5 30,10 35,20 35,30 35,40 35,50 35,55 30,55 20,55 10,50 5,45 10,45 20,40 25,35 20,35 10,30 5,25 10,25 20,20 25,15 20,15 10,10 5,5 10))
+
+# ---- 6. Hole touching exterior at one vertex (band-edge pinch via saddle).
+bbox 0 0 40 40
+grid 5 5
+0 0 0 0 0
+0 1 1 1 0
+0 1 0 1 0
+0 1 1 0 0
+0 0 0 0 0
+isoband 0.5 1.5 POLYGON ((5 10,5 20,5 30,10 35,20 35,30 35,35 30,35 20,30 15,25 10,20 5,10 5,5 10),(15 20,20 15,25 20,20 25,15 20))
+
+# ---- 7. Plus-sign saddle pattern. The five 1s form a plus shape; trax produces
+# a single ring with an interior diamond hole.
+bbox 0 0 40 40
+grid 5 5
+0 0 1 0 0
+0 1 0 1 0
+1 0 0 0 1
+0 1 0 1 0
+0 0 1 0 0
+isoband 0.5 1.5 POLYGON ((0 15,0 20,0 25,5 30,10 35,15 40,20 40,25 40,30 35,35 30,40 25,40 20,40 15,35 10,30 5,25 0,20 0,15 0,10 5,5 10,0 15),(5 20,10 15,15 10,20 5,25 10,30 15,35 20,30 25,25 30,20 35,15 30,10 25,5 20))
+
+# ---- 8. U-shape: single shell, opens upward at top middle.
+bbox 0 0 20 20
+grid 3 3
+1 0 1
+1 0 1
+1 1 1
+isoband 0.5 1.5 POLYGON ((0 0,0 10,0 20,5 20,5 10,10 5,15 10,15 20,20 20,20 10,20 0,10 0,0 0))
+
+# ---- 9. S-shape: single shell, S-curve through grid.
+bbox 0 0 40 40
+grid 5 5
+0 1 1 0 0
+0 1 0 0 0
+0 1 1 1 0
+0 0 0 1 0
+0 0 1 1 0
+isoband 0.5 1.5 POLYGON ((5 20,5 30,5 40,10 40,20 40,25 40,20 35,15 30,20 25,30 25,35 20,35 10,35 0,30 0,20 0,15 0,20 5,25 10,20 15,10 15,5 20))
+
+# ---- 10. Adjacent saddles in a single row (5x2 grid). Two ambiguous cells
+# share the middle column; resolution must be consistent across the boundary.
+bbox 0 0 40 10
+grid 5 2
+1 0 1 0 1
+0 1 0 1 0
+isoband 0.5 1.5 POLYGON ((0 5,0 10,5 10,10 5,15 10,20 10,25 10,30 5,35 10,40 10,40 5,35 0,30 0,25 0,20 5,15 0,10 0,5 0,0 5))
+
+# ---- 11. Dense saddle field: 5x5 checkerboard, every interior cell is a saddle.
+# Mimics low-precision meteorological data where many corners share equal values.
+bbox 0 0 40 40
+grid 5 5
+0 1 0 1 0
+1 0 1 0 1
+0 1 0 1 0
+1 0 1 0 1
+0 1 0 1 0
+isoband 0.5 1.5 POLYGON ((0 5,0 10,0 15,5 20,0 25,0 30,0 35,5 40,10 40,15 40,20 35,25 40,30 40,35 40,40 35,40 30,40 25,35 20,40 15,40 10,40 5,35 0,30 0,25 0,20 5,15 0,10 0,5 0,0 5),(5 10,10 5,15 10,10 15,5 10),(5 30,10 25,15 30,10 35,5 30),(15 20,20 15,25 20,20 25,15 20),(25 10,30 5,35 10,30 15,25 10),(25 30,30 25,35 30,30 35,25 30))
+
+# ---- 12. Two donuts side by side, distinct exteriors with one hole each.
+bbox 0 0 80 40
+grid 9 5
+0 0 0 0 0 0 0 0 0
+0 1 1 1 0 1 1 1 0
+0 1 0 1 0 1 0 1 0
+0 1 1 1 0 1 1 1 0
+0 0 0 0 0 0 0 0 0
+isoband 0.5 1.5 MULTIPOLYGON (((5 10,5 20,5 30,10 35,20 35,30 35,35 30,35 20,35 10,30 5,20 5,10 5,5 10),(15 20,20 15,25 20,20 25,15 20)),((45 10,45 20,45 30,50 35,60 35,70 35,75 30,75 20,75 10,70 5,60 5,50 5,45 10),(55 20,60 15,65 20,60 25,55 20)))
+
+# ---- 13. Donut with a small island inside the hole (nested band level).
+# Outer ring of 2s, middle ring of 0s, inner single-2 — band [1.5, 2.5] yields
+# the outer ring shell+hole AND a small separate shell for the inner 2.
+bbox 0 0 60 60
+grid 7 7
+0 0 0 0 0 0 0
+0 2 2 2 2 2 0
+0 2 0 0 0 2 0
+0 2 0 2 0 2 0
+0 2 0 0 0 2 0
+0 2 2 2 2 2 0
+0 0 0 0 0 0 0
+isoband 1.5 2.5 MULTIPOLYGON (((7.5 10,7.5 20,7.5 30,7.5 40,7.5 50,10 52.5,20 52.5,30 52.5,40 52.5,50 52.5,52.5 50,52.5 40,52.5 30,52.5 20,52.5 10,50 7.5,40 7.5,30 7.5,20 7.5,10 7.5,7.5 10),(12.5 20,20 12.5,30 12.5,40 12.5,47.5 20,47.5 30,47.5 40,40 47.5,30 47.5,20 47.5,12.5 40,12.5 30,12.5 20)),((27.5 30,30 32.5,32.5 30,30 27.5,27.5 30)))
+
+# ---- 14. Touching saddles forming a chain: every cell in row 0 and row 1 is
+# a saddle, all sharing column boundaries.
+bbox 0 0 60 20
+grid 7 3
+1 0 1 0 1 0 1
+0 1 0 1 0 1 0
+1 0 1 0 1 0 1
+isoband 0.5 1.5 POLYGON ((0 0,0 5,5 10,0 15,0 20,5 20,10 15,15 20,20 20,25 20,30 15,35 20,40 20,45 20,50 15,55 20,60 20,60 15,55 10,60 5,60 0,55 0,50 5,45 0,40 0,35 0,30 5,25 0,20 0,15 0,10 5,5 0,0 0),(15 10,20 5,25 10,20 15,15 10),(35 10,40 5,45 10,40 15,35 10))
