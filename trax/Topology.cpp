@@ -276,7 +276,7 @@ Polylines extract_right_turning_sequence(Joint* joint, bool strict, bool verbose
         if (polyline.size() > 1)
         {
           polylines.emplace_back(std::move(polyline));
-          polyline = Polyline{vertex.x, vertex.y};
+          polyline = Polyline(vertex);
         }
 
         // Note that we do not remove the best joint from the sequence of alternatives
@@ -379,39 +379,9 @@ void extract_left_turning_sequence(Polylines& polylines, Polylines& shells, Hole
   }
 }
 
-// Find the smallest-bbox shell that geometrically contains the hole.
-// Strategy: collect all shells whose bbox contains the hole's bbox into a
-// SmallVector (allocation-free in the common case), sort ascending by bbox
-// area, then pnpoly-verify in order. The smallest-bbox-first ordering is a
-// strong heuristic that almost always succeeds on the first candidate, but a
-// non-convex shell (C/U/S-shape) can have its bbox accidentally contain a
-// hole it does not geometrically contain, so the contains() verify is
-// required for correctness.
-Polygons::iterator find_containing_shell(Polygons& polygons, const Polyline& hole)
+double bbox_area(const BBox& b)
 {
-  using Candidate = Polygons::iterator;
-  SmallVector<Candidate, 8UL> candidates;
-
-  const auto& hole_bbox = hole.bbox();
-  for (auto it = polygons.begin(), end = polygons.end(); it != end; ++it)
-    if (it->exterior().bbox().contains(hole_bbox))
-      candidates.push_back(it);
-
-  if (candidates.empty())
-    return polygons.end();
-
-  auto area = [](const BBox& b) { return (b.xmax() - b.xmin()) * (b.ymax() - b.ymin()); };
-
-  std::sort(candidates.begin(),
-            candidates.end(),
-            [&area](Candidate a, Candidate b)
-            { return area(a->exterior().bbox()) < area(b->exterior().bbox()); });
-
-  for (auto candidate : candidates)
-    if (candidate->contains(hole))
-      return candidate;
-
-  return polygons.end();
+  return (b.xmax() - b.xmin()) * (b.ymax() - b.ymin());
 }
 
 }  // namespace
@@ -492,71 +462,113 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
 }
 
 /*
- * Assign holes to polygons utilizing bbox information for speed.
- * If a hole is in multiple polygons, we must choose the innermost
- * polygon to obey topology rules for polygons. Note that in isoline
- * mode there may be unassigned holes if the exterior is cut at the
- * grid borders.
+ * Assign holes to shells via closure order.
+ *
+ * Insight: when an exterior shell closes (its topmost row has been swept),
+ * every hole it contains must already be closed (a hole's vertices lie
+ * inside the shell's, so the hole's max_row <= the shell's max_row). And
+ * any *other* exterior that also contains the hole must enclose this
+ * just-closed exterior too — that outer one is bigger and is still pending.
+ * So the first geometric fit at shell-close time is the innermost
+ * containing shell: no bbox-area sort, no rtree.
+ *
+ * Algorithm: tag each ring with (max_row, orientation, bbox_area), sort,
+ * sweep once. Holes go into a pending pool; each closing shell drains the
+ * pool of holes it geometrically contains. The pool stays small in
+ * realistic workloads (its size at any moment is roughly the number of
+ * features in flight at that row, not the global hole count).
+ *
+ * In isoline mode an exterior may be cut at the grid borders and the
+ * surviving fragments are CCW; such holes end up unparented in the pool
+ * and are emitted as reversed-orientation shells, matching the old code.
  */
+
+namespace
+{
+struct RingRef
+{
+  Polyline* ring;     // points into the source Polylines/Holes list (std::list, iterator-stable)
+  int max_row;        // close-order key
+  double bbox_area;   // tiebreaker
+  bool is_shell;      // true = CW exterior, false = CCW hole
+};
+}  // namespace
 
 void build_polygons(Polygons& polygons, Polylines& shells, Holes& holes)
 {
   try
   {
-#if 0
-    int counter = 0;
-    std::cout << fmt::format(
-        "{} : Assigning {} holes to {} polygons\n", ++counter, holes.size(), shells.size());
+    // Collect all sufficiently large rings, computing the sort keys once.
+    std::vector<RingRef> rings;
+    rings.reserve(shells.size() + holes.size());
 
-    auto i = 0UL;
-    for (const auto& shell : shells)
-      std::cout << "Shell " << i++ << " " << shell.wkt() << "\n\tbbox = " << shell.bbox().wkt()
-                << "\n";
-    i = 0UL;
-    for (const auto& hole : holes)
-      std::cout << "Hole " << i++ << " " << hole.wkt() << "\n\tbbox = " << hole.bbox().wkt()
-                << "\n";
-    counter = 0;
-#endif
+    for (auto& shell : shells)
+      if (shell.size() >= 4)
+        rings.push_back({&shell, shell.max_row(), bbox_area(shell.bbox()), true});
+    for (auto& hole : holes)
+      if (hole.size() >= 4)
+        rings.push_back({&hole, hole.max_row(), bbox_area(hole.bbox()), false});
 
-    for (auto&& shell : shells)
+    // Sort by (max_row asc, holes before shells at same row, bbox_area asc).
+    // Holes-before-shells at the same row guarantees a hole that closes on the
+    // same row as its parent is in the pool when the parent drains. Smaller
+    // bbox first among shells gives inside-out shell processing at ties.
+    std::sort(rings.begin(),
+              rings.end(),
+              [](const RingRef& a, const RingRef& b)
+              {
+                if (a.max_row != b.max_row)
+                  return a.max_row < b.max_row;
+                if (a.is_shell != b.is_shell)
+                  return !a.is_shell;  // hole (false) before shell (true)
+                return a.bbox_area < b.bbox_area;
+              });
+
+    // Pending unassigned holes. Order within the pool does not affect
+    // correctness (first geometric fit wins regardless), so swap-and-pop on
+    // erase keeps removal O(1).
+    std::vector<Polyline*> pool;
+
+    for (const auto& ref : rings)
     {
-      if (shell.size() >= 4)  // discard too small shells
-        polygons.emplace_back(shell);
+      if (!ref.is_shell)
+      {
+        pool.push_back(ref.ring);
+        continue;
+      }
+
+      // Construct the polygon (this consumes the shell ring).
+      Polygon polygon(std::move(*ref.ring));
+
+      if (!pool.empty())
+      {
+        const auto& shell_bbox = polygon.exterior().bbox();
+        for (std::size_t i = 0; i < pool.size();)
+        {
+          auto* hole = pool[i];
+          if (shell_bbox.contains(hole->bbox()) && polygon.exterior().contains(*hole))
+          {
+            polygon.hole(std::move(*hole));
+            pool[i] = pool.back();
+            pool.pop_back();
+          }
+          else
+          {
+            ++i;
+          }
+        }
+      }
+
+      polygons.emplace_back(std::move(polygon));
     }
 
-    if (holes.empty())
-      return;
-
-    for (auto it = holes.begin(); it != holes.end();)
+    // Leftover holes are unparented (can happen for isolines where the
+    // exterior was cut at the grid boundary). Emit each as a reversed-
+    // orientation shell, matching the previous implementation's fallback.
+    for (auto* hole : pool)
     {
-      auto& hole = *it;  // shorthand variable
-
-      if (hole.size() < 4)  // discard too small holes
-      {
-        ++it;
-      }
-      else
-      {
-        auto polygon = find_containing_shell(polygons, hole);
-        if (polygon == polygons.end())
-        {
-          ++it;  // isolated hole; can happen at grid boundaries with isolines
-        }
-        else
-        {
-          polygon->hole(hole);
-          it = holes.erase(it);
-        }
-      }
-    }
-
-    // Convert any remaining holes to shells. This can happen when an exterior shell has
-    // been stripped of ghost lines when calculating isolines.
-    for (auto&& hole : holes)
-    {
-      hole.reverse();
-      polygons.emplace_back(std::move(hole));
+      hole->reverse();
+      polygons.emplace_back(std::move(*hole));
     }
   }
   catch (...)

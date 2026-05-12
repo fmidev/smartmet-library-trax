@@ -21,9 +21,15 @@ class Polyline
  public:
   Polyline() = default;
   Polyline(std::initializer_list<double> init_list);
+  explicit Polyline(const Vertex& vertex);
 
   bool empty() const;
   std::size_t size() const;
+
+  // Highest grid row touched by any appended Vertex. Used as a close-order key
+  // by Topology::build_polygons to assign holes to shells without a global
+  // bbox/rtree scan. Returns -1 if no Vertex has ever been appended.
+  int max_row() const { return m_max_row; }
 
   double xbegin() const { return m_segments[0][0].x; }
   double ybegin() const { return m_segments[0][0].y; }
@@ -81,6 +87,7 @@ class Polyline
   // move source segments into m_segments without touching point data.
   std::vector<Points> m_segments;
   BBox m_bbox;
+  int m_max_row = -1;
 
   // Collapse all segments into a single segment in m_segments[0]. Used by methods
   // whose existing logic depends on contiguous indexing (desliver, normalize,

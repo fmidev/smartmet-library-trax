@@ -184,6 +184,15 @@ Polyline::Polyline(std::initializer_list<double> init_list)
   update_bbox();
 }
 
+// Begin a new polyline at a single Vertex. Captures the vertex's row so the
+// close-order key is correct even if no subsequent vertices are appended.
+Polyline::Polyline(const Vertex& vertex) : m_max_row(vertex.row)
+{
+  m_segments.emplace_back();
+  m_segments.back().reserve(256);
+  m_segments.back().emplace_back(vertex.x, vertex.y, vertex.ghost);
+}
+
 // A polyline is closed if it contains at least 3 points and the end points are equal
 bool Polyline::closed() const
 {
@@ -331,6 +340,9 @@ bool Polyline::contains(const Polyline& other) const
 // such as an isoband range value appearing only in one corner of a grid cell.
 void Polyline::append(const Vertex& vertex)
 {
+  if (vertex.row > m_max_row)
+    m_max_row = vertex.row;
+
   if (m_segments.empty())
   {
     m_segments.emplace_back();
@@ -351,6 +363,9 @@ void Polyline::append(const Polyline& other)
   if (other.m_segments.empty())
     return;
 
+  if (other.m_max_row > m_max_row)
+    m_max_row = other.m_max_row;
+
   // The first segment of `other` starts with the join vertex (= our last vertex).
   // We push it as-is; the segmented iteration helpers will skip its leading dup.
   for (const auto& seg : other.m_segments)
@@ -365,6 +380,9 @@ void Polyline::append(Polyline&& other)
 {
   if (other.m_segments.empty())
     return;
+
+  if (other.m_max_row > m_max_row)
+    m_max_row = other.m_max_row;
 
   m_segments.reserve(m_segments.size() + other.m_segments.size());
   for (auto& seg : other.m_segments)
