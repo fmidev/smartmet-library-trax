@@ -36,3 +36,8 @@ test: $(PROG)
 
 $(PROG) : % : %.cpp Makefile ../libsmartmet-trax.so
 	$(CXX) $(CFLAGS) $(DEFINES) -o $@ $@.cpp $(INCLUDES) $(LIBS)
+
+# Optimized benchmark, not built or run by `make test`.
+# Run on each branch to compare contouring speed.
+Benchmark: Benchmark.cpp Makefile ../libsmartmet-trax.so
+	$(CXX) -std=$(CXX_STD) -O3 -g $(DEFINES) -o $@ Benchmark.cpp $(INCLUDES) $(LIBS)
