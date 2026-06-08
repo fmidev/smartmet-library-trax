@@ -16,6 +16,12 @@ double Grid::shell() const
   return std::numeric_limits<double>::quiet_NaN();
 }
 
+std::size_t Grid::xperiod() const
+{
+  // Not periodic in x by default
+  return 0UL;
+}
+
 // For a 2x2 grid we can iterate only through cell at coordinate 0,0
 
 std::array<long, 4> Grid::bbox() const
