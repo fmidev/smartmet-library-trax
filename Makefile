@@ -47,6 +47,7 @@ OBJS = $(patsubst $(SUBNAME)/%.cpp,obj/%.o,$(SRCS))
 # Headers to install for development
 
 HDRS =	$(SUBNAME)/BBox.h \
+	$(SUBNAME)/BufferGrid.h \
 	$(SUBNAME)/Contour.h \
 	$(SUBNAME)/Cell.h \
 	$(SUBNAME)/GeometryCollection.h \
@@ -60,7 +61,9 @@ HDRS =	$(SUBNAME)/BBox.h \
 	$(SUBNAME)/Point.h \
 	$(SUBNAME)/Polygon.h \
 	$(SUBNAME)/Polyline.h \
-	$(SUBNAME)/Range.h
+	$(SUBNAME)/Range.h \
+	$(SUBNAME)/SmoothOptions.h \
+	$(SUBNAME)/Smoother.h
 
 .PHONY: test rpm
 
