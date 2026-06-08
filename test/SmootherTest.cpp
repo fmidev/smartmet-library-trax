@@ -38,6 +38,22 @@ std::shared_ptr<PeriodicGrid> make_periodic(long nx, long ny, std::size_t period
   return std::make_shared<PeriodicGrid>(nx, ny, period);
 }
 
+// A TestGrid whose operator() returns a sentinel for indices outside
+// [0,width) x [0,height), mimicking a grid (such as the contour engine's
+// PaddedGrid) that exposes a bbox extending beyond its value dimensions.
+class PaddedTestGrid : public Trax::TestGrid
+{
+ public:
+  static constexpr float kPad = -999.0F;
+  PaddedTestGrid(long nx, long ny) : Trax::TestGrid(nx, ny, 0.0, 0.0, nx - 1.0, ny - 1.0) {}
+  float operator()(long i, long j) const override
+  {
+    if (i < 0 || j < 0 || i >= static_cast<long>(width()) || j >= static_cast<long>(height()))
+      return kPad;
+    return Trax::TestGrid::operator()(i, j);
+  }
+};
+
 Trax::SmoothOptions box(int radius, int passes, Trax::SmoothBoundary boundary, bool preserve)
 {
   Trax::SmoothOptions o;
@@ -232,6 +248,28 @@ BOOST_AUTO_TEST_CASE(geometry_is_shared)
       BOOST_CHECK_CLOSE(out->x(i, j), g->x(i, j), 1e-6);
       BOOST_CHECK_CLOSE(out->y(i, j), g->y(i, j), 1e-6);
     }
+}
+
+BOOST_AUTO_TEST_CASE(buffergrid_delegates_out_of_range_reads)
+{
+  BOOST_TEST_MESSAGE("+ [the smoothed grid delegates out-of-range reads to the source]");
+  // A source whose bbox extends past its value dimensions must keep its
+  // padding/virtual-cell behaviour: the BufferGrid may not index past its
+  // value buffer for those cells, it must defer to the source.
+  auto g = std::make_shared<PaddedTestGrid>(5, 5);
+  for (long j = 0; j < 5; j++)
+    for (long i = 0; i < 5; i++)
+      g->set(i, j, 10.0F);
+
+  auto out = Trax::smooth(g, box(1, 1, Trax::SmoothBoundary::Normalized, true));
+
+  // In-range cells carry the smoothed value (all 10 -> 10).
+  BOOST_CHECK_CLOSE((*out)(2, 2), 10.0F, 1e-3);
+  // Out-of-range cells are delegated to the source sentinel, not read OOB.
+  BOOST_CHECK_CLOSE((*out)(-1, 0), PaddedTestGrid::kPad, 1e-3);
+  BOOST_CHECK_CLOSE((*out)(5, 0), PaddedTestGrid::kPad, 1e-3);
+  BOOST_CHECK_CLOSE((*out)(0, 5), PaddedTestGrid::kPad, 1e-3);
+  BOOST_CHECK_CLOSE((*out)(0, -1), PaddedTestGrid::kPad, 1e-3);
 }
 
 // --------------------------------------------------------------------------

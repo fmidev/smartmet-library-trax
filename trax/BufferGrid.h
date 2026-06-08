@@ -33,7 +33,19 @@ class BufferGrid : public Grid
   double x(long i, long j) const override { return m_source->x(i, j); }
   double y(long i, long j) const override { return m_source->y(i, j); }
 
-  float operator()(long i, long j) const override { return m_values[i + m_width * j]; }
+  // Only the in-range region [0,width) x [0,height) carries smoothed values.
+  // A source may expose a bbox() that extends beyond it and handle those
+  // indices specially in its own operator() (e.g. a grid that pads its borders
+  // with out-of-range NaN cells for missing-value contouring). Delegate such
+  // out-of-range reads to the source so that padding/virtual cells keep their
+  // original behaviour instead of indexing past the value buffer.
+  float operator()(long i, long j) const override
+  {
+    if (i < 0 || j < 0 || static_cast<std::size_t>(i) >= m_width ||
+        static_cast<std::size_t>(j) >= m_height)
+      return (*m_source)(i, j);
+    return m_values[i + m_width * j];
+  }
   void set(long i, long j, float z) override { m_values[i + m_width * j] = z; }
 
   bool valid(long i, long j) const override { return m_source->valid(i, j); }
