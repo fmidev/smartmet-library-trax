@@ -62,6 +62,7 @@ HDRS =	$(SUBNAME)/BBox.h \
 	$(SUBNAME)/Polygon.h \
 	$(SUBNAME)/Polyline.h \
 	$(SUBNAME)/Range.h \
+	$(SUBNAME)/SavitzkyGolay.h \
 	$(SUBNAME)/SmoothOptions.h \
 	$(SUBNAME)/Smoother.h
 

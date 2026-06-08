@@ -88,6 +88,15 @@ Trax::SmoothOptions morph(
   o.preserve_missing = preserve;
   return o;
 }
+
+Trax::SmoothOptions savgol(int size, int degree)
+{
+  Trax::SmoothOptions o;
+  o.method = Trax::SmoothMethod::SavitzkyGolay;
+  o.radius = size;  // window half-width
+  o.degree = degree;
+  return o;
+}
 }  // namespace
 
 test_suite* init_unit_test_suite(int argc, char* argv[])
@@ -455,4 +464,76 @@ BOOST_AUTO_TEST_CASE(morphology_periodic_duplicate_wrap_column)
       g, morph(1, 1, Trax::MorphologyOp::OpenClose, Trax::SmoothBoundary::Normalized, true));
   for (long j = 0; j < 3; j++)
     BOOST_CHECK_CLOSE((*out)(4, j), (*out)(0, j), 1e-3);
+}
+
+// --------------------------------------------------------------------------
+// Savitzky-Golay (legacy method)
+// --------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(savgol_inactive_returns_same_grid)
+{
+  BOOST_TEST_MESSAGE("+ [degree 0 is inactive and returns the source grid unchanged]");
+  auto in = make_grid(5, 5, 1.0F);
+  BOOST_CHECK(Trax::smooth(in, savgol(2, 0)) == in);  // no degree -> no work
+}
+
+BOOST_AUTO_TEST_CASE(savgol_constant_field_is_preserved)
+{
+  BOOST_TEST_MESSAGE("+ [every Savitzky-Golay kernel reproduces a constant field exactly]");
+  // The integer kernels are normalized so their coefficients sum to the
+  // denominator; a constant field is therefore a fixed point for any (size,
+  // degree), including across the mirror boundary.
+  auto g = make_grid(9, 9, 42.0F);
+  for (int size = 1; size <= 3; ++size)
+    for (int degree = 1; degree <= 5; ++degree)
+    {
+      auto out = Trax::smooth(g, savgol(size, degree));
+      for (long j = 0; j < 9; j++)
+        for (long i = 0; i < 9; i++)
+          BOOST_CHECK_CLOSE((*out)(i, j), 42.0F, 1e-3);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(savgol_degree1_is_box_average)
+{
+  BOOST_TEST_MESSAGE("+ [degree 1 reduces to a plain 3x3 box average]");
+  // Flat zero field with a single 9 at the centre. A degree-1, size-1 kernel is
+  // all ones over 9 cells, so the spike's energy spreads to 9/9 = 1 across its
+  // 3x3 neighbourhood and cells whose window misses the centre stay 0.
+  auto g = make_grid(5, 5, 0.0F);
+  g->set(2, 2, 9.0F);
+
+  auto out = Trax::smooth(g, savgol(1, 1));
+  BOOST_CHECK_CLOSE((*out)(2, 2), 1.0F, 1e-3);  // centre averaged down
+  BOOST_CHECK_CLOSE((*out)(1, 1), 1.0F, 1e-3);  // diagonal neighbour sees the spike
+  BOOST_CHECK_CLOSE((*out)(0, 0), 0.0F, 1e-3);  // window does not reach the spike
+}
+
+BOOST_AUTO_TEST_CASE(savgol_rejects_windows_touching_nan)
+{
+  BOOST_TEST_MESSAGE("+ [a NaN centre stays NaN; a window touching NaN keeps its original value]");
+  // Background 10, a 100 spike at (1,1), and a NaN at (2,2). The spike's 3x3
+  // window includes the NaN, so it is rejected and the original 100 is kept
+  // (a fill would have averaged it down) -- the distinctive legacy behaviour.
+  auto g = make_grid(5, 5, 10.0F);
+  g->set(1, 1, 100.0F);
+  g->set(2, 2, std::numeric_limits<float>::quiet_NaN());
+
+  auto out = Trax::smooth(g, savgol(1, 1));
+  BOOST_CHECK(std::isnan((*out)(2, 2)));          // NaN centre preserved
+  BOOST_CHECK_CLOSE((*out)(1, 1), 100.0F, 1e-3);  // window touched NaN -> original kept
+  BOOST_CHECK_CLOSE((*out)(0, 4), 10.0F, 1e-3);   // far from NaN -> smoothed constant
+}
+
+BOOST_AUTO_TEST_CASE(savgol_unsupported_kernel_passes_through)
+{
+  BOOST_TEST_MESSAGE("+ [a (size,degree) with no kernel returns the values unchanged]");
+  // The 3x3 window only defines degrees 1 and 2; degree 3 has no kernel, so the
+  // legacy filter (and this port) leaves the data untouched.
+  auto g = make_grid(5, 5, 0.0F);
+  g->set(2, 2, 9.0F);
+
+  auto out = Trax::smooth(g, savgol(1, 3));
+  BOOST_CHECK_CLOSE((*out)(2, 2), 9.0F, 1e-3);  // spike intact
+  BOOST_CHECK_CLOSE((*out)(1, 1), 0.0F, 1e-3);  // background intact
 }

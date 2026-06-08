@@ -1,5 +1,6 @@
 #include "Smoother.h"
 #include "BufferGrid.h"
+#include "SavitzkyGolay.h"
 #include <macgyver/Exception.h>
 #include <algorithm>
 #include <cmath>
@@ -505,6 +506,11 @@ std::shared_ptr<const Grid> smooth(std::shared_ptr<const Grid> source, const Smo
       break;
     case SmoothMethod::Morphology:
       values = run_morphology(*source, w, h, opts, period, missing);
+      break;
+    case SmoothMethod::SavitzkyGolay:
+      // Legacy method with its own mirror boundary and reject-on-NaN window; it
+      // ignores boundary/preserve_missing/passes and the periodic x-wrap.
+      values = savitzky_golay(*source, w, h, opts.radius, opts.degree);
       break;
     case SmoothMethod::Pyramid:
       throw Fmi::Exception(BCP, "Trax::smooth: the Pyramid method is not implemented");

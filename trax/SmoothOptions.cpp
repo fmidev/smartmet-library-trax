@@ -16,6 +16,8 @@ SmoothMethod to_smooth_method(const std::string& str)
     return SmoothMethod::Morphology;
   if (str == "pyramid")
     return SmoothMethod::Pyramid;
+  if (str == "savitzky-golay" || str == "savitzkygolay" || str == "savgol")
+    return SmoothMethod::SavitzkyGolay;
   throw Fmi::Exception(BCP, "Unknown smoothing method '" + str + "'");
 }
 
@@ -56,6 +58,8 @@ std::size_t SmoothOptions::hash() const
   Fmi::hash_combine(h, Fmi::hash_value(levels));
   if (method == SmoothMethod::Morphology)
     Fmi::hash_combine(h, Fmi::hash_value(static_cast<int>(morphology)));
+  if (method == SmoothMethod::SavitzkyGolay)
+    Fmi::hash_combine(h, Fmi::hash_value(degree));
   Fmi::hash_combine(h, Fmi::hash_value(preserve_missing));
   return h;
 }
