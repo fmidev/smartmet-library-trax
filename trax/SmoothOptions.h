@@ -39,16 +39,27 @@
 //
 // All methods are NaN- and boundary-aware and honour preserve_missing and the
 // periodic x-wrap exactly like Box.
+//
+// SavitzkyGolay is a verbatim port of the contour engine's legacy 2D
+// Savitzky-Golay filter, kept for backward compatibility for an unspecified
+// transition period. It is the odd one out: it fits a local 2D polynomial via
+// fixed integer kernels (preserving peak height/width better than a moving
+// average, but able to overshoot the data range near steep edges), uses a
+// fixed odd-reflection (mirror) boundary, and rejects any window touching a
+// NaN. It therefore does NOT honour `boundary`, `passes` or the periodic
+// x-wrap, and preserves the missing-data footprint unconditionally. Prefer the
+// methods above for new code.
 
 namespace Trax
 {
 enum class SmoothMethod : std::uint8_t
 {
-  None,        // no smoothing (the default-constructed state)
-  Box,         // repeated separable box blur via running sums (Gaussian approx)
-  Median,      // per-window median: extremum/edge-preserving spike removal
-  Morphology,  // grayscale opening/closing via separable running min/max
-  Pyramid      // factor-2 reduce/expand pyramid for very large radii
+  None,          // no smoothing (the default-constructed state)
+  Box,           // repeated separable box blur via running sums (Gaussian approx)
+  Median,        // per-window median: extremum/edge-preserving spike removal
+  Morphology,    // grayscale opening/closing via separable running min/max
+  Pyramid,       // factor-2 reduce/expand pyramid for very large radii
+  SavitzkyGolay  // legacy 2D Savitzky-Golay polynomial filter (see note above)
 };
 
 // Which morphological operation Morphology performs. A flat box structuring
@@ -97,6 +108,12 @@ struct SmoothOptions
   // radius roughly doubles per level, so levels = ceil(log2(radius)).
   int levels = 0;
 
+  // SavitzkyGolay method: polynomial degree, clamped to 1..5 (degree 1 reduces
+  // to a plain box average). The window half-width is taken from `radius`,
+  // clamped to 1..6 (windows 3x3..13x13). Note that for 2D Savitzky-Golay the
+  // smoothing kernel is identical for degrees 2 and 3, and for degrees 4 and 5.
+  int degree = 0;
+
   // Preserve the original missing-data footprint: cells that were NaN in the
   // input stay NaN in the output even if the kernel could have filled them
   // from valid neighbours. Recommended so smoothing does not bleed data
@@ -111,6 +128,8 @@ struct SmoothOptions
       return radius > 0 && passes > 0;
     if (method == SmoothMethod::Pyramid)
       return levels > 0;
+    if (method == SmoothMethod::SavitzkyGolay)
+      return radius > 0 && degree > 0;
     return false;
   }
 
