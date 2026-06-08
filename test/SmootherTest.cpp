@@ -1,5 +1,5 @@
-#include "Smoother.h"
 #include "SmoothOptions.h"
+#include "Smoother.h"
 #include "TestGrid.h"
 #include <boost/test/included/unit_test.hpp>
 #include <cmath>
@@ -45,6 +45,30 @@ Trax::SmoothOptions box(int radius, int passes, Trax::SmoothBoundary boundary, b
   o.boundary = boundary;
   o.radius = radius;
   o.passes = passes;
+  o.preserve_missing = preserve;
+  return o;
+}
+
+Trax::SmoothOptions median(int radius, int passes, Trax::SmoothBoundary boundary, bool preserve)
+{
+  Trax::SmoothOptions o;
+  o.method = Trax::SmoothMethod::Median;
+  o.boundary = boundary;
+  o.radius = radius;
+  o.passes = passes;
+  o.preserve_missing = preserve;
+  return o;
+}
+
+Trax::SmoothOptions morph(
+    int radius, int passes, Trax::MorphologyOp op, Trax::SmoothBoundary boundary, bool preserve)
+{
+  Trax::SmoothOptions o;
+  o.method = Trax::SmoothMethod::Morphology;
+  o.boundary = boundary;
+  o.radius = radius;
+  o.passes = passes;
+  o.morphology = op;
   o.preserve_missing = preserve;
   return o;
 }
@@ -208,4 +232,189 @@ BOOST_AUTO_TEST_CASE(geometry_is_shared)
       BOOST_CHECK_CLOSE(out->x(i, j), g->x(i, j), 1e-6);
       BOOST_CHECK_CLOSE(out->y(i, j), g->y(i, j), 1e-6);
     }
+}
+
+// --------------------------------------------------------------------------
+// Median
+// --------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(median_removes_isolated_spike)
+{
+  BOOST_TEST_MESSAGE("+ [median erases an isolated spike instead of spreading it]");
+  // A single tall spike on a flat field: its window is dominated by the
+  // background, so the median replaces it outright (a box filter would instead
+  // smear the spike's energy across the neighbourhood).
+  auto g = make_grid(5, 5, 10.0F);
+  g->set(2, 2, 100.0F);
+
+  auto out = Trax::smooth(g, median(1, 1, Trax::SmoothBoundary::Normalized, true));
+  for (long j = 0; j < 5; j++)
+    for (long i = 0; i < 5; i++)
+      BOOST_CHECK_CLOSE((*out)(i, j), 10.0F, 1e-3);
+}
+
+BOOST_AUTO_TEST_CASE(median_preserves_step_edge)
+{
+  BOOST_TEST_MESSAGE("+ [median keeps a step edge sharp, inventing no intermediate values]");
+  // Left half 0, right half 10. Every window is a majority of one side, so no
+  // output value ever lands strictly between the two levels.
+  auto g = make_grid(6, 3, 0.0F);
+  for (long j = 0; j < 3; j++)
+    for (long i = 3; i < 6; i++)
+      g->set(i, j, 10.0F);
+
+  auto out = Trax::smooth(g, median(1, 1, Trax::SmoothBoundary::Normalized, true));
+  for (long j = 0; j < 3; j++)
+    for (long i = 0; i < 6; i++)
+    {
+      const float v = (*out)(i, j);
+      BOOST_CHECK(std::abs(v - 0.0F) < 1e-3F || std::abs(v - 10.0F) < 1e-3F);  // never in between
+      BOOST_CHECK_CLOSE(v, (i < 3 ? 0.0F : 10.0F), 1e-3);  // step stays in place
+    }
+}
+
+BOOST_AUTO_TEST_CASE(median_nan_is_isolated)
+{
+  BOOST_TEST_MESSAGE("+ [median preserves the missing footprint and ignores NaN neighbours]");
+  auto g = make_grid(5, 5, 10.0F);
+  g->set(2, 2, std::numeric_limits<float>::quiet_NaN());
+
+  auto kept = Trax::smooth(g, median(1, 1, Trax::SmoothBoundary::Normalized, true));
+  BOOST_CHECK(std::isnan((*kept)(2, 2)));
+  for (long j = 0; j < 5; j++)
+    for (long i = 0; i < 5; i++)
+      if (!(i == 2 && j == 2))
+        BOOST_CHECK_CLOSE((*kept)(i, j), 10.0F, 1e-3);
+
+  // Without preserve_missing the hole is filled from the valid neighbours.
+  auto filled = Trax::smooth(g, median(1, 1, Trax::SmoothBoundary::Normalized, false));
+  BOOST_CHECK_CLOSE((*filled)(2, 2), 10.0F, 1e-3);
+}
+
+BOOST_AUTO_TEST_CASE(median_periodic_duplicate_wrap_column)
+{
+  BOOST_TEST_MESSAGE("+ [median wraps in x and keeps a duplicate wrap column consistent]");
+  // width 5, period 4: column 4 duplicates column 0 and must match it on output.
+  auto g = make_periodic(5, 3, 4);
+  for (long j = 0; j < 3; j++)
+  {
+    g->set(0, j, 1.0F);
+    g->set(1, j, 5.0F);
+    g->set(2, j, 9.0F);
+    g->set(3, j, 5.0F);
+    g->set(4, j, 1.0F);  // duplicate of column 0
+  }
+  auto out = Trax::smooth(g, median(1, 1, Trax::SmoothBoundary::Normalized, true));
+  for (long j = 0; j < 3; j++)
+    BOOST_CHECK_CLOSE((*out)(4, j), (*out)(0, j), 1e-3);
+}
+
+// --------------------------------------------------------------------------
+// Morphology
+// --------------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(morphology_open_preserves_plateau)
+{
+  BOOST_TEST_MESSAGE(
+      "+ [opening preserves a peak broader than the structuring element, value intact]");
+  // A 3x3 plateau of 100 equals the (2r+1)x(2r+1) element for r=1, so opening
+  // returns it unchanged at full magnitude -- the property a box blur lacks.
+  auto g = make_grid(7, 7, 0.0F);
+  for (long j = 2; j <= 4; j++)
+    for (long i = 2; i <= 4; i++)
+      g->set(i, j, 100.0F);
+
+  auto out =
+      Trax::smooth(g, morph(1, 1, Trax::MorphologyOp::Open, Trax::SmoothBoundary::Replicate, true));
+  for (long j = 0; j < 7; j++)
+    for (long i = 0; i < 7; i++)
+    {
+      const float expected = (i >= 2 && i <= 4 && j >= 2 && j <= 4) ? 100.0F : 0.0F;
+      BOOST_CHECK_CLOSE((*out)(i, j), expected, 1e-3);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(morphology_open_removes_bright_spike)
+{
+  BOOST_TEST_MESSAGE("+ [opening removes a bright feature smaller than the element]");
+  auto g = make_grid(7, 7, 0.0F);
+  g->set(3, 3, 100.0F);  // single-cell spike, smaller than the 3x3 element
+
+  auto out =
+      Trax::smooth(g, morph(1, 1, Trax::MorphologyOp::Open, Trax::SmoothBoundary::Replicate, true));
+  for (long j = 0; j < 7; j++)
+    for (long i = 0; i < 7; i++)
+      BOOST_CHECK_CLOSE((*out)(i, j), 0.0F, 1e-3);
+}
+
+BOOST_AUTO_TEST_CASE(morphology_close_fills_pit)
+{
+  BOOST_TEST_MESSAGE("+ [closing fills a dark pit smaller than the element]");
+  auto g = make_grid(7, 7, 100.0F);
+  g->set(3, 3, 0.0F);  // single-cell pit
+
+  auto out = Trax::smooth(
+      g, morph(1, 1, Trax::MorphologyOp::Close, Trax::SmoothBoundary::Replicate, true));
+  for (long j = 0; j < 7; j++)
+    for (long i = 0; i < 7; i++)
+      BOOST_CHECK_CLOSE((*out)(i, j), 100.0F, 1e-3);
+}
+
+BOOST_AUTO_TEST_CASE(morphology_no_overshoot_and_constant_preserved)
+{
+  BOOST_TEST_MESSAGE("+ [open-close stays within range and leaves a constant field untouched]");
+  // Constant field is a fixed point of every morphological operation.
+  auto cg = make_grid(6, 5, 7.0F);
+  auto cout = Trax::smooth(
+      cg, morph(2, 1, Trax::MorphologyOp::OpenClose, Trax::SmoothBoundary::Normalized, true));
+  for (long j = 0; j < 5; j++)
+    for (long i = 0; i < 6; i++)
+      BOOST_CHECK_CLOSE((*cout)(i, j), 7.0F, 1e-3);
+
+  // Open-close never produces a value outside the input range.
+  auto g = make_grid(9, 9, 3.0F);
+  g->set(4, 4, 50.0F);
+  g->set(2, 6, -20.0F);
+  auto out = Trax::smooth(
+      g, morph(1, 2, Trax::MorphologyOp::OpenClose, Trax::SmoothBoundary::Normalized, true));
+  for (long j = 0; j < 9; j++)
+    for (long i = 0; i < 9; i++)
+    {
+      const float v = (*out)(i, j);
+      BOOST_CHECK(v >= -20.0F - 1e-3F && v <= 50.0F + 1e-3F);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(morphology_nan_is_isolated)
+{
+  BOOST_TEST_MESSAGE("+ [morphology preserves the missing footprint without poisoning neighbours]");
+  auto g = make_grid(5, 5, 10.0F);
+  g->set(2, 2, std::numeric_limits<float>::quiet_NaN());
+
+  auto out = Trax::smooth(
+      g, morph(1, 1, Trax::MorphologyOp::OpenClose, Trax::SmoothBoundary::Normalized, true));
+  BOOST_CHECK(std::isnan((*out)(2, 2)));
+  for (long j = 0; j < 5; j++)
+    for (long i = 0; i < 5; i++)
+      if (!(i == 2 && j == 2))
+        BOOST_CHECK_CLOSE((*out)(i, j), 10.0F, 1e-3);
+}
+
+BOOST_AUTO_TEST_CASE(morphology_periodic_duplicate_wrap_column)
+{
+  BOOST_TEST_MESSAGE("+ [morphology wraps in x and keeps a duplicate wrap column consistent]");
+  // width 5, period 4: column 4 duplicates column 0 and must match it on output.
+  auto g = make_periodic(5, 3, 4);
+  for (long j = 0; j < 3; j++)
+  {
+    g->set(0, j, 8.0F);
+    g->set(1, j, 2.0F);
+    g->set(2, j, 0.0F);
+    g->set(3, j, 2.0F);
+    g->set(4, j, 8.0F);  // duplicate of column 0
+  }
+  auto out = Trax::smooth(
+      g, morph(1, 1, Trax::MorphologyOp::OpenClose, Trax::SmoothBoundary::Normalized, true));
+  for (long j = 0; j < 3; j++)
+    BOOST_CHECK_CLOSE((*out)(4, j), (*out)(0, j), 1e-3);
 }
