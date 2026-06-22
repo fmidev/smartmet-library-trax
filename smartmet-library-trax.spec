@@ -18,7 +18,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 26.4.22
+Version: 26.6.22
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -90,6 +90,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Mon Jun 22 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.6.22-1.fmi
+- Fixed cell subdivision to not self-intersect in saddle cells with an asymptote between the edge intersections
+
 * Wed Apr 22 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.4.22-1.fmi
 - Added optional cell subdivision by bilinear interpolation
 

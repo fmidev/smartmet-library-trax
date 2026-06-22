@@ -515,6 +515,63 @@ BOOST_AUTO_TEST_CASE(subdivide_peak_bilinear_curve)
   BOOST_CHECK_CLOSE(a10, bilinear_ref, 2.0);
 }
 
+// Regression test for a bilinear-subdivision self-intersection (FMI WMS clipping bug).
+//
+// This 12x12 field is a window of real FMI radar PrecipitationRate data around a
+// rain cell. Contouring the 0.2..0.5 isoband with bilinear subdivision >= 4 used to
+// emit a self-intersecting (OGC-invalid) polygon: in saddle cells the bilinear level
+// curve has an asymptote between the two edge intersections, and stepping the
+// dominant parameter linearly across it made an interior sample diverge and clamp
+// onto a cell corner, producing a spurious spike. The invalid polygon then made
+// downstream rectangle clipping (Fmi::OGR::polyclip) fill the whole map tile.
+//
+// densify() now falls back to the straight marching-squares segment whenever the
+// asymptote lies inside the segment, so every subdivide level stays valid.
+BOOST_AUTO_TEST_CASE(subdivide_saddle_stays_valid)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Contour subdivision keeps saddle isobands valid]");
+
+  // clang-format off
+  static const float Z[12][12] = {
+    {0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f},
+    {0.039f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.000f},
+    {0.000f,0.039f,0.000f,0.031f,0.000f,0.000f,0.039f,0.000f,0.000f,0.000f,0.000f,0.000f},
+    {0.083f,0.000f,0.077f,0.071f,0.053f,0.097f,0.045f,0.049f,0.000f,0.000f,0.000f,0.000f},
+    {0.066f,0.113f,0.121f,0.239f,0.131f,0.206f,0.049f,0.049f,0.017f,0.000f,0.000f,0.000f},
+    {0.191f,0.438f,0.278f,0.349f,0.349f,0.164f,0.090f,0.018f,0.000f,0.000f,0.000f,0.000f},
+    {0.592f,0.929f,0.741f,0.406f,0.258f,0.131f,0.045f,0.000f,0.000f,0.000f,0.000f,0.000f},
+    {0.549f,0.862f,0.376f,0.191f,0.141f,0.061f,0.049f,0.000f,0.000f,0.021f,0.000f,0.036f},
+    {0.206f,0.239f,0.152f,0.090f,0.053f,0.000f,0.000f,0.049f,0.020f,0.033f,0.036f,0.045f},
+    {0.104f,0.029f,0.000f,0.053f,0.045f,0.036f,0.000f,0.021f,0.036f,0.071f,0.066f,0.042f},
+    {0.000f,0.000f,0.000f,0.000f,0.000f,0.045f,0.029f,0.057f,0.121f,0.045f,0.029f,0.018f},
+    {0.000f,0.000f,0.000f,0.000f,0.000f,0.000f,0.042f,0.077f,0.036f,0.000f,0.018f,0.000f},
+  };
+  // clang-format on
+
+  const int nx = 12;
+  const int ny = 12;
+  Trax::TestGrid grid(nx, ny, 0.0, 0.0, static_cast<double>(nx - 1), static_cast<double>(ny - 1));
+  for (int j = 0; j < ny; ++j)
+    for (int i = 0; i < nx; ++i)
+      grid.set(i, j, Z[j][i]);
+
+  Trax::IsobandLimits limits;
+  limits.add(0.2f, 0.5f);
+
+  for (int n : {0, 1, 2, 3, 4, 6, 8, 10})
+  {
+    Trax::Contour c;
+    c.interpolation(Trax::InterpolationType::Linear);
+    c.closed_range(true);
+    c.subdivide(n);
+    auto result = c.isobands(grid, limits);
+    BOOST_REQUIRE_EQUAL(result.size(), 1u);
+    auto err = validate(result[0]);
+    BOOST_TEST_INFO("subdivide=" << n);
+    BOOST_CHECK_MESSAGE(err.empty(), "subdivide=" << n << " produced an invalid isoband: " << err);
+  }
+}
+
 // #define RUN_REALLY_BIG_TESTS 1
 #ifdef RUN_REALLY_BIG_TESTS
 BOOST_AUTO_TEST_CASE(isoband_4x3)

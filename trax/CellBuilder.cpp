@@ -347,6 +347,25 @@ void JointBuilder<Logarithmic>::densify(const Cell& c, Edge ea, Edge eb, float l
   const bool u_dominant = std::abs(ub - ua) >= std::abs(vb - va);
   const bool ghost = (static_cast<double>(limit) != static_cast<double>(m_range.lo()));
 
+  // Bail out if the bilinear level curve has an asymptote between the two edge
+  // intersections. We solve one coordinate from the other via
+  //   v = (zc - z1 - B*u) / (C + D*u)   (u dominant), or
+  //   u = (zc - z1 - C*v) / (B + D*v)   (v dominant),
+  // and step the dominant variable linearly from a to b. If the denominator
+  // changes sign across [a..b] the curve diverges to +-infinity inside the
+  // segment: the two endpoints sit on different hyperbola branches (a saddle
+  // cell), so no single in-cell arc connects them. Linearly stepped samples
+  // would jump across the asymptote and clamp onto a cell corner, producing a
+  // spurious spike that self-intersects the polygon. Fall back to the straight
+  // marching-squares segment (no interior samples) exactly as the linear
+  // |D|~0 case above does; the endpoints the caller emits stay valid.
+  {
+    const double denom_a = u_dominant ? (C + D * ua) : (B + D * va);
+    const double denom_b = u_dominant ? (C + D * ub) : (B + D * vb);
+    if (denom_a * denom_b < 0.0)
+      return;
+  }
+
   // Unique (column, row) per interior sample. Vertex equality is integer-based on
   // (column, row, type), and VertexType::Interior plus sentinel columns keep these
   // out of collision range of any cell-edge vertex in the same pool.
