@@ -43,6 +43,15 @@ struct PoolHolder
 std::mutex g_pool_mutex;
 PoolHolder g_pool_holder;
 
+// True once set_worker_threads has enabled the shared pool. When false, band-parallel
+// contouring has no workers to dispatch to, so callers fall back to the single-threaded
+// engine instead of paying the band-decomposition overhead for no parallel gain.
+bool worker_pool_enabled()
+{
+  std::lock_guard<std::mutex> lock(g_pool_mutex);
+  return g_pool_holder.pool != nullptr;
+}
+
 // Run a set of band tasks. Task 0 always runs on the calling thread; the rest are dispatched
 // to the shared pool when one exists (otherwise they run inline, keeping behaviour identical
 // to single-threaded). Blocks until all bands finish and rethrows the first band's exception.
@@ -532,8 +541,10 @@ GeometryCollections Contour::Impl::isobands_parallel(const Grid& grid,
   const auto jmax = bbox[3];
   const long n_rows = jmax - jmin + 1;
 
+  // Fall back to the single-threaded engine when there is nothing to gain: only one band, or no
+  // worker pool has been enabled (so bands would just run serially with extra overhead).
   const int b = band_count(n_rows);
-  if (b <= 1)
+  if (b <= 1 || !worker_pool_enabled())
     return isobands_impl(grid, bbox, nx, ny);
 
   // Full level set in sorted order, so each band's m_builders[L] maps to sorted level L and
@@ -689,8 +700,10 @@ GeometryCollections Contour::Impl::isolines_parallel(const Grid& grid,
   const auto jmax = bbox[3];
   const long n_rows = jmax - jmin + 1;
 
+  // Fall back to the single-threaded engine when there is nothing to gain: only one band, or no
+  // worker pool has been enabled (so bands would just run serially with extra overhead).
   const int b = band_count(n_rows);
-  if (b <= 1)
+  if (b <= 1 || !worker_pool_enabled())
     return isolines_impl(grid, bbox, nx, ny);
 
   // Full level set in sorted order so each band's m_builders[L] maps to sorted level L.
