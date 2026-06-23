@@ -71,4 +71,9 @@ class JointMerger
   std::int32_t m_maxrow = 0;  // maximum row number in the data so far in the topmost finished row
 };
 
+// Stitch the top boundary row of `lower` onto the bottom boundary row of `upper` (one level),
+// linking joints across the two pools so that following next/prev/alt traverses both as one
+// ring set. Same matching as merge_row. Both mergers must outlive ring building.
+void join_boundary(JointMerger& lower, JointMerger& upper);
+
 }  // namespace Trax

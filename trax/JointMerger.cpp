@@ -473,4 +473,40 @@ void JointMerger::merge_row()
 #endif
 }
 
+// Stitch two adjacent bands along their shared data-row. `lower`'s top boundary row and
+// `upper`'s bottom boundary row are the same data-row, each computed independently by its
+// band; this is exactly the situation one merge_row resolves, applied across the two pools.
+void join_boundary(JointMerger& lower, JointMerger& upper)
+{
+  auto lower_top = lower.top_row();        // shared data-row, joints in lower's pool
+  auto upper_bottom = upper.bottom_row();  // same data-row, joints in upper's pool
+
+  const auto begin = lower_top.first;
+  const auto end = lower_top.second;
+  if (begin == end)
+    return;  // lower's top row is empty: nothing to stitch onto
+
+  auto hint = begin;
+  for (auto it = upper_bottom.first; it != upper_bottom.second; ++it)
+  {
+    auto* joint = *it;
+    const auto& vertex = joint->vertex;
+
+    // Same gate as merge_row, minus the explicit row check. The only data-row shared between
+    // lower's top row and upper's bottom row is the boundary row itself, and find_match
+    // compares the full vertex (column,row,type) -- so only genuine boundary duplicates can
+    // match. Vertices internal to a band were already marked used by its own merge_row, and
+    // vertical / densification vertices never lie on a horizontal boundary.
+    if (!joint->used && !is_vertical(vertex.type) && !is_interior(vertex.type))
+    {
+      auto match_iter = find_match(vertex, hint, begin, end);
+      if (match_iter != end)
+      {
+        merge_joint(joint, *match_iter);
+        hint = match_iter;
+      }
+    }
+  }
+}
+
 }  // namespace Trax
