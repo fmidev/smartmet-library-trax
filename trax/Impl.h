@@ -48,6 +48,10 @@ class Contour::Impl
   void finish_isolines();
   void finish_isobands();
 
+  // Contour cell-rows [bbox.jmin..bbox.jmax] into m_builders without finalizing.
+  // Shared by the single-threaded engine and by each parallel band.
+  void contour_rows(const Grid& grid, const std::array<long, 4>& bbox, long nx, bool isobands);
+
   // Grid loop helpers: single-threaded and parallel
   GeometryCollections isobands_impl(const Grid& grid, const std::array<long, 4>& bbox, long nx, long ny);
   GeometryCollections isobands_parallel(const Grid& grid, const std::array<long, 4>& bbox, long nx, long ny);

@@ -368,10 +368,13 @@ void fill_buffers(const Grid& grid,
 }  // namespace
 
 // Single-threaded grid loop for isobands; caller handles desliver/validate
-GeometryCollections Contour::Impl::isobands_impl(const Grid& grid,
-                                                  const std::array<long, 4>& bbox,
-                                                  long nx,
-                                                  long ny)
+// Contour the cell-rows [bbox.jmin..bbox.jmax] into m_builders. This is the shared grid
+// loop used both by the single-threaded engine and by each parallel band; it stops short
+// of finalizing so that bands can be stitched together before rings are built.
+void Contour::Impl::contour_rows(const Grid& grid,
+                                 const std::array<long, 4>& bbox,
+                                 long nx,
+                                 bool isobands)
 {
   const auto imin = bbox[0];
   const auto jmin = bbox[1];
@@ -404,14 +407,27 @@ GeometryCollections Contour::Impl::isobands_impl(const Grid& grid,
     {
       for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
         if (grid.valid(imin + i, j))
-          isoband(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
+        {
+          Cell cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j);
+          if (isobands)
+            isoband(cell);
+          else
+            isoline(cell);
+        }
       ishift = loop_limits[k + 1];
     }
 
     finish_row();
     std::swap(row1, row2);  // roll down the coordinates to the bottom row
   }
+}
 
+GeometryCollections Contour::Impl::isobands_impl(const Grid& grid,
+                                                  const std::array<long, 4>& bbox,
+                                                  long nx,
+                                                  long /* ny */)
+{
+  contour_rows(grid, bbox, nx, true);
   finish_isobands();
   return result();
 }
@@ -546,46 +562,9 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
 GeometryCollections Contour::Impl::isolines_impl(const Grid& grid,
                                                   const std::array<long, 4>& bbox,
                                                   long nx,
-                                                  long ny)
+                                                  long /* ny */)
 {
-  const auto imin = bbox[0];
-  const auto jmin = bbox[1];
-  const auto imax = bbox[2];
-  const auto jmax = bbox[3];
-
-  long shift = grid.shift();
-  const auto imid = shift - imin;
-  const auto needs_two_passes = (shift != 0 && shift > imin && shift < imax);
-
-  // Accessing data through grid is sometimes slow, so we buffer the values into vectors
-  // and just swap them after each row to avoid unnecessary copying.
-  std::vector<GridPoint> row1(nx);
-  std::vector<GridPoint> row2(nx);
-  fill_buffers(grid, bbox, jmin, row1);
-
-  std::vector<long> loop_limits;
-  if (!needs_two_passes)
-    loop_limits = {0, nx - 1};
-  else
-    loop_limits = {imid, nx - 1, 0, imid - 1};
-
-  for (auto j = jmin; j <= jmax; j++)
-  {
-    fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
-
-    // Keep Cell i,j coordinates continuous by applying a shift in the second loop
-    auto ishift = 0;
-    for (auto k = 0UL; k < loop_limits.size(); k += 2)
-    {
-      for (auto i = loop_limits[k]; i < loop_limits[k + 1]; i++)
-        if (grid.valid(imin + i, j))
-          isoline(Cell(row1[i], row2[i], row2[i + 1], row1[i + 1], imin + i + ishift, j));
-      ishift = loop_limits[k + 1];
-    }
-    finish_row();
-    std::swap(row1, row2);  // roll down the coordinates to the bottom row
-  }
-
+  contour_rows(grid, bbox, nx, false);
   finish_isolines();
   return result();
 }
