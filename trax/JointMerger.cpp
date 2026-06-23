@@ -202,6 +202,9 @@ JointMerger::JointMerger(JointMerger&& other) noexcept
     : m_pool(std::move(other.m_pool)),
       m_row_start(other.m_row_start),
       m_row_end(other.m_row_end),
+      m_bottom_start(other.m_bottom_start),
+      m_bottom_end(other.m_bottom_end),
+      m_bottom_captured(other.m_bottom_captured),
       m_cell_merge_end(other.m_cell_merge_end),
       m_maxrow(other.m_maxrow)
 
@@ -447,6 +450,16 @@ void JointMerger::merge_row()
   m_row_end = m_pool.end();
 
   m_maxrow = new_maxrow;
+
+  // The first finished row is this band's bottom boundary: the joints on the band's lowest
+  // data-row, which a parallel join must later stitch onto the band below. Capture it once;
+  // later rows advance m_row_start past it. (For a single-row band bottom == top == this row.)
+  if (!m_bottom_captured)
+  {
+    m_bottom_start = m_row_start;
+    m_bottom_end = m_row_end;
+    m_bottom_captured = true;
+  }
 
   // No cell yet on the next row to be processed
   m_last_cell_start = m_pool.end();

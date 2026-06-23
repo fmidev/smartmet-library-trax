@@ -2,6 +2,7 @@
 
 #include "JointPool.h"
 #include <cstdint>
+#include <utility>
 
 namespace Trax
 {
@@ -47,6 +48,12 @@ class JointMerger
   // Merge new row of elements to the previous one
   void merge_row();
 
+  // Band-join boundaries: the topmost finished row (this band's top edge) and the first
+  // finished row (this band's bottom edge). Used to stitch adjacent bands; see join_boundary.
+  using Range = std::pair<JointPool::iterator, JointPool::iterator>;
+  Range top_row() { return {m_row_start, m_row_end}; }
+  Range bottom_row() { return {m_bottom_start, m_bottom_end}; }
+
  private:
   // Find match from the previous row [minpos...maxpos] and a search hint
   // Joint* find_match(const Vertex& vertex, std::size_t minpos, std::size_t maxpos, std::size_t
@@ -55,6 +62,9 @@ class JointMerger
   JointPool m_pool;                                     // joints from one or more merged rows
   JointPool::iterator m_row_start{m_pool.end()};        // start position of topmost finished row
   JointPool::iterator m_row_end{m_pool.end()};          // end position of topmost finished row
+  JointPool::iterator m_bottom_start{m_pool.end()};     // start of first finished row (bottom edge)
+  JointPool::iterator m_bottom_end{m_pool.end()};       // end of first finished row (bottom edge)
+  bool m_bottom_captured = false;                       // has the bottom boundary been captured yet
   JointPool::iterator m_last_cell_start{m_pool.end()};  // range of last cell
   JointPool::iterator m_last_cell_end{m_pool.end()};    // merge may include last cell plus one ring
   JointPool::iterator m_cell_merge_end{m_pool.end()};  // from current cell, this iterator tracks it
