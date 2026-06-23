@@ -68,9 +68,28 @@ The pipeline flows: **Grid** -> **CellBuilder** -> **JointMerger** -> **Topology
 
 4. **Output**: `GeometryCollection` holds the resulting polygons (isobands) or polylines (isolines) and provides WKT/WKB serialization.
 
-### Multi-threading
+### Multi-threading (band-parallel)
 
-`Contour::threads(n)` enables parallel contouring (0 = auto, 1 = single-threaded default, N>1 = N threads). The sorted isoband/isoline levels are split into chunks across threads, each running an independent `Impl` with its own `Builder` objects. Results are mapped back to original positions after completion. Uses `std::async` with `std::launch::async`.
+Contouring is parallelized over **horizontal row-bands**, not contour levels. The grid's
+cell-rows are split into contiguous bands; each band is contoured independently into its own
+sub-`Impl` (one `JointMerger`/`JointPool` per level) over a row sub-range via `Impl::contour_rows`
+— so the grid is traversed exactly once. Adjacent bands are then stitched along their single
+shared boundary row by `join_boundary` (a cross-pool application of `merge_row`'s matching), after
+which each level's rings are assembled across all band pools by the multi-pool `build_rings` +
+`build_polygons`. This scales with grid height and parallelizes single-level products (the old
+level-split scheme could not, and was capped at the level count). Output is byte-identical to
+single-threaded — bands are joined and scanned in fixed order.
+
+Concurrency is bounded by a **process-wide worker pool**, injected once by the host via the static
+`Contour::set_worker_threads(n)` (n = pool size; **n == 0 disables the pool, forcing
+single-threaded** regardless of the per-request `threads()`). Reuses `Fmi::ThreadPool`. Per request,
+`Contour::threads(k)` requests `k` row-bands; band 0 runs on the calling thread and the rest are
+dispatched to the shared pool (`run_bands`), so total contour threads never exceed the pool size no
+matter how many requests run concurrently. The server should size the pool from a fraction of
+`hardware_concurrency` and pass a small per-request `k` (≈3–8: contouring is only one phase of a
+request, so more bands give diminishing end-to-end benefit).
+
+See `docs/contouring-performance.md` for optimization strategies that were tried and rejected.
 
 ### Key Design Details
 
