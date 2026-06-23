@@ -365,13 +365,19 @@ void run_all_file_tests(int threads)
 BOOST_AUTO_TEST_CASE(all_tests_4_threads)
 {
   BOOST_TEST_MESSAGE("+ [Trax::Contour all tests with 4 threads]");
+  // Enable a real worker pool so bands are dispatched across threads (not just run inline),
+  // exercising the cross-pool join and parallel execution. Results must still match.
+  Trax::Contour::set_worker_threads(4);
   run_all_file_tests(4);
+  Trax::Contour::set_worker_threads(0);
 }
 
 BOOST_AUTO_TEST_CASE(all_tests_auto_threads)
 {
   BOOST_TEST_MESSAGE("+ [Trax::Contour all tests with automatic thread selection]");
+  Trax::Contour::set_worker_threads(8);
   run_all_file_tests(0);
+  Trax::Contour::set_worker_threads(0);
 }
 
 // Radar-style test: a single peak of 10 surrounded by zeros. Linear interpolation
