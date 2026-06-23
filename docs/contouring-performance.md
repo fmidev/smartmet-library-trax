@@ -103,37 +103,26 @@ total), stitch adjacent bands along their one shared boundary row (`join_boundar
 `merge_row`), then assemble rings across band pools. Concurrency is bounded by a server-injected
 shared `Fmi::ThreadPool` (see `CLAUDE.md` → Multi-threading).
 
+Two phases use the worker pool: **contour** (one task per band) and **assembly** (one task per
+level — levels are independent, each touching only its own per-band pools). The **join** between
+them is serial but negligible (<1 ms even at 24 bands).
+
 Measured scaling, 24-core box, same benchmark (pool sized to thread count):
 
 | threads | 2 | 4 | 8 | 16 | 24 |
 |---|---|---|---|---|---|
-| speedup | 1.60× | 2.53× | 3.30× | 4.63× | 5.12× |
+| speedup (contour parallel only) | 1.60× | 2.53× | 3.30× | 4.63× | 5.12× |
+| **speedup (+ parallel assembly)** | **1.91×** | **3.92×** | **6.75×** | **8.31×** | **11.5×** |
 
-Parallelizes single-level products, byte-identical output (verified under ThreadSanitizer and
-AddressSanitizer, and across 1–100 bands).
+Parallelizing the assembly was decisive: a phase profile of the contour-only version showed the
+serial per-level assembly (`build_rings` + `build_polygons`) did not scale and even *grew* with
+band count (each level's `build_rings` scans all band pools), overtaking the contour phase at ≥16
+threads and capping speedup near 5×. Dispatching the per-level assembly to the same pool removed
+that tail and lifted 24-thread speedup to ~11.5×. Byte-identical output, verified under
+ThreadSanitizer and AddressSanitizer across both parallel phases, and across 1–100 bands.
 
-### Phase profile (what limits scaling)
-
-Per-phase wall time on the benchmark (pool sized to thread count):
-
-| threads | contour (parallel) | join | **assemble (serial)** | total |
-|--------:|----:|----:|----:|----:|
-| 4  | 117.4 ms | 0.09 | 44.7 ms | 162 ms |
-| 8  | 69.4 ms | 0.24 | 54.9 ms | 125 ms |
-| 16 | 35.8 ms | 0.46 | 55.8 ms | 92 ms |
-| 24 | 29.2 ms | 0.78 | **64.8 ms** | 95 ms |
-
-The **contour phase scales near-linearly**; the **join is negligible** (<1 ms even at 24 bands).
-The bottleneck is the **serial per-level assembly** (`build_rings` + `build_polygons`, run once per
-level after the join): it does not parallelize and even *grows* with band count (each level's
-`build_rings` scans all band pools), overtaking the contour phase at ≥16 threads. This is why
-total saturates ~92 ms and speedup tops out near 5× rather than continuing to climb.
-
-**The clear next lever is to parallelize the per-level assembly across the worker pool** — the
-levels are independent, so each level's `build_rings`+`build_polygons` can be its own task. With
-~11 levels that should largely remove the serial tail (rough estimate: ~36 ms total at 24 threads,
-~13× instead of ~5×). Deferred from the initial rewrite to keep it reviewable. (The benchmark also
-spends ~17 % in its own serial WKT fingerprinting, which a real consumer using WKB/OGR avoids.)
+The remaining tail is the serial join (tiny) plus, in the benchmark only, ~17 % spent in its own
+WKT fingerprinting — which a real consumer using WKB/OGR avoids.
 
 ## Where to look next (untried, plausible)
 

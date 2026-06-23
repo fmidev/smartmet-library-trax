@@ -577,28 +577,37 @@ GeometryCollections Contour::Impl::isobands_parallel(const Grid& grid,
     for (std::size_t k = 0; k + 1 < bands.size(); k++)
       join_boundary(bands[k]->m_builders[L].merger(), bands[k + 1]->m_builders[L].merger());
 
-  // Assemble each level's rings across all band pools (rings may span several pools).
+  // Assemble each level's rings across all band pools (rings may span several pools). Levels are
+  // independent -- level L touches only the per-band pools for L -- so the assembly runs on the
+  // same worker pool, one task per level (the calling thread takes level 0).
   GeometryCollections final_result(n);
+  std::vector<std::function<void()>> finalize_tasks;
+  finalize_tasks.reserve(n);
   for (auto L = 0UL; L < n; L++)
   {
-    std::vector<JointPool*> pools;
-    pools.reserve(bands.size());
-    for (auto& band : bands)
-      pools.push_back(&band->m_builders[L].merger().pool());
+    finalize_tasks.emplace_back(
+        [this, L, &bands, &final_result]()
+        {
+          std::vector<JointPool*> pools;
+          pools.reserve(bands.size());
+          for (auto& band : bands)
+            pools.push_back(&band->m_builders[L].merger().pool());
 
-    try
-    {
-      bands[0]->m_builders[L].finish_isobands(pools, m_strict);
-    }
-    catch (...)
-    {
-      Fmi::Exception ex(BCP, "Failed to finish isoband", nullptr);
-      ex.addParameter("lolimit", fmt::format("{}", m_isoband_limits[L].lo()));
-      ex.addParameter("hilimit", fmt::format("{}", m_isoband_limits[L].hi()));
-      throw ex;
-    }
-    final_result[m_isoband_limits.original_position(L)] = bands[0]->m_builders[L].result();
+          try
+          {
+            bands[0]->m_builders[L].finish_isobands(pools, m_strict);
+          }
+          catch (...)
+          {
+            Fmi::Exception ex(BCP, "Failed to finish isoband", nullptr);
+            ex.addParameter("lolimit", fmt::format("{}", m_isoband_limits[L].lo()));
+            ex.addParameter("hilimit", fmt::format("{}", m_isoband_limits[L].hi()));
+            throw ex;
+          }
+          final_result[m_isoband_limits.original_position(L)] = bands[0]->m_builders[L].result();
+        });
   }
+  run_bands(finalize_tasks);
   return final_result;
 }
 
@@ -723,18 +732,26 @@ GeometryCollections Contour::Impl::isolines_parallel(const Grid& grid,
     for (std::size_t k = 0; k + 1 < bands.size(); k++)
       join_boundary(bands[k]->m_builders[L].merger(), bands[k + 1]->m_builders[L].merger());
 
-  // Assemble each level's lines across all band pools (chains may span several pools).
+  // Assemble each level's lines across all band pools (chains may span several pools). Levels are
+  // independent, so assembly runs on the same worker pool, one task per level.
   GeometryCollections final_result(n);
+  std::vector<std::function<void()>> finalize_tasks;
+  finalize_tasks.reserve(n);
   for (auto L = 0UL; L < n; L++)
   {
-    std::vector<JointPool*> pools;
-    pools.reserve(bands.size());
-    for (auto& band : bands)
-      pools.push_back(&band->m_builders[L].merger().pool());
+    finalize_tasks.emplace_back(
+        [this, L, &bands, &final_result]()
+        {
+          std::vector<JointPool*> pools;
+          pools.reserve(bands.size());
+          for (auto& band : bands)
+            pools.push_back(&band->m_builders[L].merger().pool());
 
-    bands[0]->m_builders[L].finish_isolines(pools, m_strict);
-    final_result[m_isoline_values.original_position(L)] = bands[0]->m_builders[L].result();
+          bands[0]->m_builders[L].finish_isolines(pools, m_strict);
+          final_result[m_isoline_values.original_position(L)] = bands[0]->m_builders[L].result();
+        });
   }
+  run_bands(finalize_tasks);
   return final_result;
 }
 
