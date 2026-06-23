@@ -27,12 +27,20 @@ class Contour
   void strict(bool flag);
   void validate(bool flag);
   void desliver(bool flag);
-  void threads(int n);  // per request: desired number of row-bands (1 = single-threaded)
+  // Per request: desired number of row-bands to split contouring into (1 = single-threaded).
+  // This has an effect ONLY when a worker pool has also been enabled via set_worker_threads();
+  // with no pool (or n <= 1) the request runs single-threaded. Both settings are required for
+  // parallelism — see set_worker_threads.
+  void threads(int n);
 
-  // Size of the process-wide worker pool that band tasks are dispatched to. Inject this
-  // once at startup (e.g. the server sets it from a percentage of hardware_concurrency).
-  // n == 0 disables the pool entirely: contouring then runs single-threaded regardless of
-  // the per-request threads() value. Call before any contouring begins.
+  // Size of the process-wide worker pool that band tasks are dispatched to. Inject this once at
+  // startup (e.g. the server sets it from a percentage of hardware_concurrency); n == 0 disables
+  // the pool. Call before any contouring begins.
+  //
+  // BOTH settings are required for parallelism, and they are independent:
+  //   - set_worker_threads(N>0) alone does nothing unless a request also calls threads(k>1);
+  //   - threads(k>1) alone runs single-threaded unless the pool has been enabled here.
+  // Any combination is safe — when either is missing, contouring simply runs single-threaded.
   static void set_worker_threads(std::size_t n);
 
   // Interior densification count per cell-level-curve segment.
