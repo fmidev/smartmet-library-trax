@@ -34,13 +34,13 @@ Builder::Builder(Builder&& other) noexcept
 
 Builder::Builder(std::size_t /* width */, std::size_t /* height */) {}
 
-void Builder::finish_isolines(bool strict)
+void Builder::finish_isolines(const std::vector<JointPool*>& pools, bool strict)
 {
   try
   {
     Polylines shells;
     Holes holes;
-    build_rings(shells, holes, m_merger.pool(), strict);
+    build_rings(shells, holes, pools, strict);
 
     // We do not build multipolygons out of the shells and holes since
     // the algorithm does not guarantee there will not be nested shells
@@ -63,13 +63,18 @@ void Builder::finish_isolines(bool strict)
   }
 }
 
-void Builder::finish_isobands(bool strict)
+void Builder::finish_isolines(bool strict)
+{
+  finish_isolines(std::vector<JointPool*>{&m_merger.pool()}, strict);
+}
+
+void Builder::finish_isobands(const std::vector<JointPool*>& pools, bool strict)
 {
   try
   {
     Polylines shells;
     Holes holes;
-    build_rings(shells, holes, m_merger.pool(), strict);
+    build_rings(shells, holes, pools, strict);
 
     Polygons polygons;
     build_polygons(polygons, shells, holes);
@@ -81,6 +86,11 @@ void Builder::finish_isobands(bool strict)
   {
     throw Fmi::Exception::Trace(BCP, "Failed to finish isobands");
   }
+}
+
+void Builder::finish_isobands(bool strict)
+{
+  finish_isobands(std::vector<JointPool*>{&m_merger.pool()}, strict);
 }
 
 void Builder::finish_row()

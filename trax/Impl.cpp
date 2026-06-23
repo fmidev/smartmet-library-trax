@@ -432,72 +432,96 @@ GeometryCollections Contour::Impl::isobands_impl(const Grid& grid,
   return result();
 }
 
-// Parallel isoband contouring: split sorted levels across threads, merge results.
+// Number of contiguous row-bands for parallel contouring. Auto (0) uses hardware
+// concurrency; otherwise the requested thread count. Never more bands than cell-rows.
+int Contour::Impl::band_count(long n_rows) const
+{
+  if (n_rows < 2)
+    return 1;
+  unsigned hw = std::thread::hardware_concurrency();
+  unsigned requested = (m_threads <= 0) ? std::max(1U, hw) : static_cast<unsigned>(m_threads);
+  long bands = std::min<long>(requested, n_rows);
+  return (bands < 1) ? 1 : static_cast<int>(bands);
+}
+
+// Parallel isoband contouring by horizontal row-bands.
 //
-// All isoband levels have already been sorted by init(). We divide the finite
-// levels (skipping the NaN range at index 0, if any) across N threads. Thread 0
-// also takes the NaN range so that m_contour_missing works correctly in its slice.
-// Each thread runs an independent isobands_impl() on its slice and returns results
-// in sorted order. The parent maps those back to global original positions.
+// The grid's cell-rows are split into contiguous bands, each contoured independently into
+// its own sub-Impl (one JointMerger/JointPool per level). Adjacent bands are then stitched
+// along their single shared boundary row (join_boundary), after which each level's rings are
+// assembled across all band pools. This traverses the grid once and scales with grid height
+// rather than the number of levels. (Band tasks run serially here; see set_worker_threads for
+// pooled parallel dispatch.)
 GeometryCollections Contour::Impl::isobands_parallel(const Grid& grid,
                                                       const std::array<long, 4>& bbox,
                                                       long nx,
                                                       long ny)
 {
   const auto n = m_isoband_limits.size();
-  const auto n0 = m_contour_missing ? 1UL : 0UL;  // index of first finite level
-  const auto n_finite = n - n0;
+  const auto jmin = bbox[1];
+  const auto jmax = bbox[3];
+  const long n_rows = jmax - jmin + 1;
 
-  // Resolve thread count: auto (0) uses hardware concurrency, capped to level count
-  auto hw = std::thread::hardware_concurrency();
-  auto n_threads = (m_threads == 0) ? std::max(1U, hw) : (unsigned)m_threads;
-  n_threads = (unsigned)std::min((std::size_t)n_threads, n_finite);
-
-  // Not enough levels to benefit from splitting – fall back to single-threaded
-  if (n_threads <= 1)
+  const int b = band_count(n_rows);
+  if (b <= 1)
     return isobands_impl(grid, bbox, nx, ny);
 
-  const auto chunk = (n_finite + n_threads - 1) / n_threads;  // ceiling division
+  // Full level set in sorted order, so each band's m_builders[L] maps to sorted level L and
+  // the parent's original_position(L) maps L back to the caller's order.
+  IsobandLimits sub_limits;
+  for (auto i = 0UL; i < n; i++)
+    sub_limits.add(m_isoband_limits[i].lo(), m_isoband_limits[i].hi());
 
-  std::vector<std::future<GeometryCollections>> futures;
-  std::vector<std::size_t> slice_starts;
-
-  for (auto t = 0U; t < n_threads; t++)
+  // Split cell-rows into b contiguous bands and contour each into its own sub-Impl.
+  std::vector<std::shared_ptr<Impl>> bands;
+  bands.reserve(b);
+  const long chunk = (n_rows + b - 1) / b;  // ceiling division
+  for (int k = 0; k < b; k++)
   {
-    // Thread 0 starts at 0 to include the NaN range (if any); others start at n0 + t*chunk
-    const auto start = (t == 0) ? 0UL : n0 + t * chunk;
-    const auto end = std::min(n0 + (t + 1) * chunk, n);
-    slice_starts.push_back(start);
+    const long band_jmin = jmin + static_cast<long>(k) * chunk;
+    if (band_jmin > jmax)
+      break;
+    const long band_jmax = std::min(band_jmin + chunk - 1, jmax);
 
-    // Build a sub-IsobandLimits from the already sorted and adjusted full limits.
-    // Ranges are added in sorted order, so sort() inside init() is an identity permutation
-    // and original_position(i)==i, meaning isobands_impl() returns results in sorted order.
-    // closed_range is left at its default (false) since ranges are already adjusted.
-    IsobandLimits sub_limits;
-    for (auto i = start; i < end; i++)
-      sub_limits.add(m_isoband_limits[i].lo(), m_isoband_limits[i].hi());
-
-    // Create a sub-Impl with the same contouring settings for this slice
     auto sub = std::make_shared<Impl>();
     sub->m_itype = m_itype;
     sub->m_strict = m_strict;
+    sub->m_closed_range = m_closed_range;
     sub->m_shell = m_shell;
     sub->m_subdivide = m_subdivide;
     sub->init(sub_limits, nx, ny);
 
-    futures.push_back(std::async(std::launch::async, [sub, &grid, &bbox, nx, ny]() {
-      return sub->isobands_impl(grid, bbox, nx, ny);
-    }));
+    const std::array<long, 4> band_bbox{bbox[0], band_jmin, bbox[2], band_jmax};
+    sub->contour_rows(grid, band_bbox, nx, true);
+    bands.push_back(std::move(sub));
   }
 
-  // Collect partial results and place them at their global original positions
+  // Stitch adjacent bands along their shared boundary row, per level.
+  for (auto L = 0UL; L < n; L++)
+    for (std::size_t k = 0; k + 1 < bands.size(); k++)
+      join_boundary(bands[k]->m_builders[L].merger(), bands[k + 1]->m_builders[L].merger());
+
+  // Assemble each level's rings across all band pools (rings may span several pools).
   GeometryCollections final_result(n);
-  for (auto t = 0U; t < n_threads; t++)
+  for (auto L = 0UL; L < n; L++)
   {
-    auto partial = futures[t].get();
-    const auto start = slice_starts[t];
-    for (auto i = 0UL; i < partial.size(); i++)
-      final_result[m_isoband_limits.original_position(start + i)] = std::move(partial[i]);
+    std::vector<JointPool*> pools;
+    pools.reserve(bands.size());
+    for (auto& band : bands)
+      pools.push_back(&band->m_builders[L].merger().pool());
+
+    try
+    {
+      bands[0]->m_builders[L].finish_isobands(pools, m_strict);
+    }
+    catch (...)
+    {
+      Fmi::Exception ex(BCP, "Failed to finish isoband", nullptr);
+      ex.addParameter("lolimit", fmt::format("{}", m_isoband_limits[L].lo()));
+      ex.addParameter("hilimit", fmt::format("{}", m_isoband_limits[L].hi()));
+      throw ex;
+    }
+    final_result[m_isoband_limits.original_position(L)] = bands[0]->m_builders[L].result();
   }
   return final_result;
 }
@@ -569,37 +593,36 @@ GeometryCollections Contour::Impl::isolines_impl(const Grid& grid,
   return result();
 }
 
-// Parallel isoline contouring: same split strategy as isobands_parallel
+// Parallel isoline contouring by horizontal row-bands (see isobands_parallel).
 GeometryCollections Contour::Impl::isolines_parallel(const Grid& grid,
                                                       const std::array<long, 4>& bbox,
                                                       long nx,
                                                       long ny)
 {
   const auto n = m_isoline_values.size();
-  const auto n0 = m_contour_missing ? 1UL : 0UL;  // index of first finite level
-  const auto n_finite = n - n0;
+  const auto jmin = bbox[1];
+  const auto jmax = bbox[3];
+  const long n_rows = jmax - jmin + 1;
 
-  auto hw = std::thread::hardware_concurrency();
-  auto n_threads = (m_threads == 0) ? std::max(1U, hw) : (unsigned)m_threads;
-  n_threads = (unsigned)std::min((std::size_t)n_threads, n_finite);
-
-  if (n_threads <= 1)
+  const int b = band_count(n_rows);
+  if (b <= 1)
     return isolines_impl(grid, bbox, nx, ny);
 
-  const auto chunk = (n_finite + n_threads - 1) / n_threads;
+  // Full level set in sorted order so each band's m_builders[L] maps to sorted level L.
+  IsolineValues sub_values;
+  for (auto i = 0UL; i < n; i++)
+    sub_values.add(m_isoline_values[i]);
 
-  std::vector<std::future<GeometryCollections>> futures;
-  std::vector<std::size_t> slice_starts;
-
-  for (auto t = 0U; t < n_threads; t++)
+  // Split cell-rows into b contiguous bands and contour each into its own sub-Impl.
+  std::vector<std::shared_ptr<Impl>> bands;
+  bands.reserve(b);
+  const long chunk = (n_rows + b - 1) / b;  // ceiling division
+  for (int k = 0; k < b; k++)
   {
-    const auto start = (t == 0) ? 0UL : n0 + t * chunk;
-    const auto end = std::min(n0 + (t + 1) * chunk, n);
-    slice_starts.push_back(start);
-
-    IsolineValues sub_values;
-    for (auto i = start; i < end; i++)
-      sub_values.add(m_isoline_values[i]);
+    const long band_jmin = jmin + static_cast<long>(k) * chunk;
+    if (band_jmin > jmax)
+      break;
+    const long band_jmax = std::min(band_jmin + chunk - 1, jmax);
 
     auto sub = std::make_shared<Impl>();
     sub->m_itype = m_itype;
@@ -608,18 +631,27 @@ GeometryCollections Contour::Impl::isolines_parallel(const Grid& grid,
     sub->m_subdivide = m_subdivide;
     sub->init(sub_values, nx, ny);
 
-    futures.push_back(std::async(std::launch::async, [sub, &grid, &bbox, nx, ny]() {
-      return sub->isolines_impl(grid, bbox, nx, ny);
-    }));
+    const std::array<long, 4> band_bbox{bbox[0], band_jmin, bbox[2], band_jmax};
+    sub->contour_rows(grid, band_bbox, nx, false);
+    bands.push_back(std::move(sub));
   }
 
+  // Stitch adjacent bands along their shared boundary row, per level.
+  for (auto L = 0UL; L < n; L++)
+    for (std::size_t k = 0; k + 1 < bands.size(); k++)
+      join_boundary(bands[k]->m_builders[L].merger(), bands[k + 1]->m_builders[L].merger());
+
+  // Assemble each level's lines across all band pools (chains may span several pools).
   GeometryCollections final_result(n);
-  for (auto t = 0U; t < n_threads; t++)
+  for (auto L = 0UL; L < n; L++)
   {
-    auto partial = futures[t].get();
-    const auto start = slice_starts[t];
-    for (auto i = 0UL; i < partial.size(); i++)
-      final_result[m_isoline_values.original_position(start + i)] = std::move(partial[i]);
+    std::vector<JointPool*> pools;
+    pools.reserve(bands.size());
+    for (auto& band : bands)
+      pools.push_back(&band->m_builders[L].merger().pool());
+
+    bands[0]->m_builders[L].finish_isolines(pools, m_strict);
+    final_result[m_isoline_values.original_position(L)] = bands[0]->m_builders[L].result();
   }
   return final_result;
 }

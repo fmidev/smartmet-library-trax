@@ -35,6 +35,11 @@ class Builder
   void finish_isolines(bool strict);
   void finish_isobands(bool strict);
 
+  // Finalize across several band pools (the rings span all of them); the result is
+  // accumulated into this builder's geometry. The single-pool variants delegate here.
+  void finish_isolines(const std::vector<JointPool*>& pools, bool strict);
+  void finish_isobands(const std::vector<JointPool*>& pools, bool strict);
+
   JointMerger& merger() { return m_merger; }
 
  private:

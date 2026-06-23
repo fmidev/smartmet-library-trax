@@ -52,6 +52,9 @@ class Contour::Impl
   // Shared by the single-threaded engine and by each parallel band.
   void contour_rows(const Grid& grid, const std::array<long, 4>& bbox, long nx, bool isobands);
 
+  // Number of contiguous row-bands to split into for parallel contouring (>= 1).
+  int band_count(long n_rows) const;
+
   // Grid loop helpers: single-threaded and parallel
   GeometryCollections isobands_impl(const Grid& grid, const std::array<long, 4>& bbox, long nx, long ny);
   GeometryCollections isobands_parallel(const Grid& grid, const std::array<long, 4>& bbox, long nx, long ny);
