@@ -5,12 +5,15 @@
 #include <geos/operation/valid/IsValidOp.h>
 #include <macgyver/Exception.h>
 #include <macgyver/StringConversion.h>
-#include <algorithm>  // std::minmax
-#include <cmath>      // std::min and std::max
-#include <future>     // std::async
-#include <memory>     // std::make_shared
-#include <thread>     // std::thread::hardware_concurrency
-#include <utility>    // std::pair and std::make_pair
+#include <macgyver/ThreadPool.h>
+#include <algorithm>   // std::minmax
+#include <cmath>       // std::min and std::max
+#include <functional>  // std::function
+#include <future>      // std::packaged_task / std::future
+#include <memory>      // std::make_shared
+#include <mutex>       // std::mutex guarding the shared pool
+#include <thread>      // std::thread::hardware_concurrency
+#include <utility>     // std::pair and std::make_pair
 
 #include <fmt/format.h>
 
@@ -23,6 +26,57 @@ namespace Trax
 {
 namespace
 {
+// Process-wide worker pool that band tasks are dispatched to. It is null until
+// set_worker_threads enables it; while null every band runs on the calling thread, so
+// contouring is single-threaded. The pool is sized once at startup by the host application.
+// PoolHolder's destructor shuts the pool down (joining workers) before it is destroyed.
+struct PoolHolder
+{
+  std::unique_ptr<Fmi::ThreadPool::ThreadPool<>> pool;
+  ~PoolHolder()
+  {
+    if (pool)
+      pool->shutdown();
+  }
+};
+
+std::mutex g_pool_mutex;
+PoolHolder g_pool_holder;
+
+// Run a set of band tasks. Task 0 always runs on the calling thread; the rest are dispatched
+// to the shared pool when one exists (otherwise they run inline, keeping behaviour identical
+// to single-threaded). Blocks until all bands finish and rethrows the first band's exception.
+void run_bands(std::vector<std::function<void()>>& tasks)
+{
+  Fmi::ThreadPool::ThreadPool<>* pool = nullptr;
+  {
+    std::lock_guard<std::mutex> lock(g_pool_mutex);
+    pool = g_pool_holder.pool.get();
+  }
+
+  if (pool == nullptr || tasks.size() <= 1)
+  {
+    for (auto& task : tasks)
+      task();
+    return;
+  }
+
+  std::vector<std::future<void>> futures;
+  futures.reserve(tasks.size() - 1);
+  for (std::size_t i = 1; i < tasks.size(); i++)
+  {
+    auto task = std::make_shared<std::packaged_task<void()>>(std::move(tasks[i]));
+    futures.push_back(task->get_future());
+    if (!pool->schedule([task]() { (*task)(); }))
+      (*task)();  // scheduler full: run inline rather than drop the work
+  }
+
+  tasks[0]();  // the calling thread contributes one band
+
+  for (auto& future : futures)
+    future.get();  // wait for the dispatched bands and rethrow any exception
+}
+
 std::string validate_geom(const Trax::GeometryCollection& geom)
 {
   const auto factory = geos::geom::GeometryFactory::create();
@@ -115,6 +169,22 @@ std::list<std::string> validate_isolines(const GeometryCollections& geoms,
 }
 
 }  // namespace
+
+// Size (or disable) the process-wide band worker pool. Call once at startup.
+void Contour::set_worker_threads(std::size_t n)
+{
+  std::lock_guard<std::mutex> lock(g_pool_mutex);
+  if (g_pool_holder.pool)
+  {
+    g_pool_holder.pool->shutdown();  // join existing workers before replacing
+    g_pool_holder.pool.reset();
+  }
+  if (n > 0)
+  {
+    g_pool_holder.pool = std::make_unique<Fmi::ThreadPool::ThreadPool<>>(n);
+    g_pool_holder.pool->start();
+  }
+}
 
 // Prepare for isoline calculations
 void Contour::Impl::init(const IsolineValues& values, std::size_t width, std::size_t height)
@@ -472,9 +542,11 @@ GeometryCollections Contour::Impl::isobands_parallel(const Grid& grid,
   for (auto i = 0UL; i < n; i++)
     sub_limits.add(m_isoband_limits[i].lo(), m_isoband_limits[i].hi());
 
-  // Split cell-rows into b contiguous bands and contour each into its own sub-Impl.
+  // Split cell-rows into b contiguous bands, each with its own sub-Impl.
   std::vector<std::shared_ptr<Impl>> bands;
+  std::vector<std::function<void()>> tasks;
   bands.reserve(b);
+  tasks.reserve(b);
   const long chunk = (n_rows + b - 1) / b;  // ceiling division
   for (int k = 0; k < b; k++)
   {
@@ -492,9 +564,13 @@ GeometryCollections Contour::Impl::isobands_parallel(const Grid& grid,
     sub->init(sub_limits, nx, ny);
 
     const std::array<long, 4> band_bbox{bbox[0], band_jmin, bbox[2], band_jmax};
-    sub->contour_rows(grid, band_bbox, nx, true);
+    auto* raw = sub.get();
+    tasks.emplace_back([raw, &grid, band_bbox, nx]() { raw->contour_rows(grid, band_bbox, nx, true); });
     bands.push_back(std::move(sub));
   }
+
+  // Contour the bands (band 0 on this thread, the rest on the shared pool if any).
+  run_bands(tasks);
 
   // Stitch adjacent bands along their shared boundary row, per level.
   for (auto L = 0UL; L < n; L++)
@@ -613,9 +689,11 @@ GeometryCollections Contour::Impl::isolines_parallel(const Grid& grid,
   for (auto i = 0UL; i < n; i++)
     sub_values.add(m_isoline_values[i]);
 
-  // Split cell-rows into b contiguous bands and contour each into its own sub-Impl.
+  // Split cell-rows into b contiguous bands, each with its own sub-Impl.
   std::vector<std::shared_ptr<Impl>> bands;
+  std::vector<std::function<void()>> tasks;
   bands.reserve(b);
+  tasks.reserve(b);
   const long chunk = (n_rows + b - 1) / b;  // ceiling division
   for (int k = 0; k < b; k++)
   {
@@ -632,9 +710,13 @@ GeometryCollections Contour::Impl::isolines_parallel(const Grid& grid,
     sub->init(sub_values, nx, ny);
 
     const std::array<long, 4> band_bbox{bbox[0], band_jmin, bbox[2], band_jmax};
-    sub->contour_rows(grid, band_bbox, nx, false);
+    auto* raw = sub.get();
+    tasks.emplace_back([raw, &grid, band_bbox, nx]() { raw->contour_rows(grid, band_bbox, nx, false); });
     bands.push_back(std::move(sub));
   }
+
+  // Contour the bands (band 0 on this thread, the rest on the shared pool if any).
+  run_bands(tasks);
 
   // Stitch adjacent bands along their shared boundary row, per level.
   for (auto L = 0UL; L < n; L++)
