@@ -18,7 +18,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 26.6.22
+Version: 26.6.23
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -90,6 +90,10 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Tue Jun 23 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.6.23-1.fmi
+- Parallelize contouring over horizontal row-bands instead of contour levels, scaling with grid height (~11x on 24 cores) and parallelizing single-level products
+- Added Contour::set_worker_threads to inject a process-wide worker pool; threads() now selects the per-request band count
+
 * Mon Jun 22 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.6.22-1.fmi
 - Fixed cell subdivision to not self-intersect in saddle cells with an asymptote between the edge intersections
 
