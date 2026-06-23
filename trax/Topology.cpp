@@ -476,39 +476,42 @@ Polygons::iterator innermost_polygon(const std::list<Polygons::iterator>& polygo
  * output is polygons and holes which were not in contact with any exterior.
  */
 
-void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict)
+void build_rings(Polylines& shells, Holes& holes, const std::vector<JointPool*>& pools, bool strict)
 {
-  const bool verbose = (joints.size() < 256);
+  std::size_t total = 0;
+  for (auto* pool : pools)
+    total += pool->size();
+  const bool verbose = (total < 256);
   try
   {
-#if 0
-    std::cout << "Joint map at start of building rings:\n" << Trax::to_string(joints);
-#endif
-
     // Some joints are bad first candidates since we cannot decide which path turns most to the left
     // if there is no prior point.
     std::list<Joint*> skipped_joints;
 
-    for (auto* joint : joints)
-    {
-      // Skip fully used joints
-      if (joint->used)
-        continue;
-
-      // If the next vertex has duplicates, we cannot calculate the angle from which to turn most
-      // to the right. On the other hand, if the first vertex has duplicates, we are free to
-      // choose any continuation we want, no need to select the rightmost turn.
-
-      if (has_duplicates(joint->next))
-        skipped_joints.push_back(joint);
-      else
+    // Scan candidate seed joints across all band pools, in band order. extract_*_turning_sequence
+    // follows next/prev/alt pointers which may cross pool boundaries (stitched by join_boundary);
+    // JointPool addresses are stable, so cross-pool traversal is safe while the pools live.
+    for (auto* pool : pools)
+      for (auto* joint : *pool)
       {
-        auto polylines = extract_right_turning_sequence(joint, strict, verbose);
+        // Skip fully used joints
+        if (joint->used)
+          continue;
 
-        if (!polylines.empty())  // the sequence may have been discarded due to a problem
-          extract_left_turning_sequence(polylines, shells, holes);  // separate holes touching shell
+        // If the next vertex has duplicates, we cannot calculate the angle from which to turn most
+        // to the right. On the other hand, if the first vertex has duplicates, we are free to
+        // choose any continuation we want, no need to select the rightmost turn.
+
+        if (has_duplicates(joint->next))
+          skipped_joints.push_back(joint);
+        else
+        {
+          auto polylines = extract_right_turning_sequence(joint, strict, verbose);
+
+          if (!polylines.empty())  // the sequence may have been discarded due to a problem
+            extract_left_turning_sequence(polylines, shells, holes);  // separate holes touching shell
+        }
       }
-    }
 
     // Make sure skipped joints were processed
     for (auto* joint : skipped_joints)
@@ -524,10 +527,11 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
   catch (...)
   {
     Fmi::Exception ex(BCP, "Failed to build rings", nullptr);
-    ex.addParameter("Number of joints", std::to_string(joints.size()));
+    ex.addParameter("Number of joints", std::to_string(total));
     if (verbose)
     {
-      ex.addParameter("Joints", "\n" + to_string(joints, true));
+      for (auto* pool : pools)
+        ex.addParameter("Joints", "\n" + to_string(*pool, true));
       auto i = 0UL;
       for (const auto& shell : shells)
         ex.addParameter(fmt::format("Shell {}", ++i).c_str(), shell.wkt());
@@ -537,6 +541,12 @@ void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict
     }
     throw ex;
   }
+}
+
+void build_rings(Polylines& shells, Holes& holes, JointPool& joints, bool strict)
+{
+  std::vector<JointPool*> pools{&joints};
+  build_rings(shells, holes, pools, strict);
 }
 
 /*
