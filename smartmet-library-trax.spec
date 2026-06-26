@@ -19,7 +19,7 @@
 Summary: Trax library
 Name: %{SPECNAME}
 Version: 26.6.26
-Release: 1%{?dist}.fmi
+Release: 2%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
 URL: https://github.com/fmidev/smartmet-library-trax
@@ -90,6 +90,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Fri Jun 26 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> 26.6.26-2.fmi
+- Thread naming: Use ThreadPool worker naming to label contour workers trax-1..N
+
 * Fri Jun 26 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.6.26-1.fmi
 - Name the band-parallel worker threads "Trax 1" ... "Trax N" so they are identifiable in top/htop/gdb
 
