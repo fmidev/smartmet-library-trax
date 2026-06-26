@@ -88,6 +88,10 @@ size no matter how many requests run concurrently. The server should size the po
 of `hardware_concurrency` and pass a small per-request `k` (≈3–8: contouring is only one phase of a
 request, so more bands give diminishing end-to-end benefit).
 
+Each shared-pool worker names itself `Trax 1` … `Trax N` (via `pthread_setname_np` on its first band
+task) so the band-parallel threads are identifiable in `top`/`htop`/`gdb`. The host's calling thread
+runs band 0 inline and is never renamed.
+
 **Both settings are required for parallelism** — they are independent knobs, and contouring runs
 single-threaded unless *both* are in effect:
 

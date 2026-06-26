@@ -17,6 +17,11 @@
 
 #include <fmt/format.h>
 
+#ifdef __linux__
+#include <atomic>     // worker-naming counter
+#include <pthread.h>  // pthread_setname_np
+#endif
+
 #if 0
 #include <fmt/format.h>
 #include <iostream>
@@ -52,6 +57,24 @@ bool worker_pool_enabled()
   return g_pool_holder.pool != nullptr;
 }
 
+// Give each shared-pool worker a stable, human-readable name ("Trax 1" ... "Trax N") so the
+// band-parallel workers are identifiable in top/htop/gdb. Pool workers are long-lived, so each
+// thread names itself once on its first band task and keeps that name. The host's calling thread
+// is never named here: it runs band 0 inline (see run_bands) and never reaches this wrapper.
+void name_this_worker()
+{
+#ifdef __linux__
+  static std::atomic<unsigned> counter{1};
+  thread_local bool named = false;
+  if (named)
+    return;
+  named = true;
+  // Linux caps thread names at 16 bytes incl. NUL; "Trax N" fits comfortably for any real pool.
+  const auto name = fmt::format("Trax {}", counter++);
+  pthread_setname_np(pthread_self(), name.c_str());
+#endif
+}
+
 // Run a set of band tasks. Task 0 always runs on the calling thread; the rest are dispatched
 // to the shared pool when one exists (otherwise they run inline, keeping behaviour identical
 // to single-threaded). Blocks until all bands finish and rethrows the first band's exception.
@@ -76,7 +99,10 @@ void run_bands(std::vector<std::function<void()>>& tasks)
   {
     auto task = std::make_shared<std::packaged_task<void()>>(std::move(tasks[i]));
     futures.push_back(task->get_future());
-    if (!pool->schedule([task]() { (*task)(); }))
+    if (!pool->schedule([task]() {
+          name_this_worker();
+          (*task)();
+        }))
       (*task)();  // scheduler full: run inline rather than drop the work
   }
 
