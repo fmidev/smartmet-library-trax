@@ -28,7 +28,7 @@ Trax is a high-performance C++ library for generating **isobands** (filled conto
    - [Special case: NaN corner — triangular contouring](#special-case-nan-corner--triangular-contouring)
 7. [Output Integration (OGR / GEOS)](#output-integration-ogr--geos)
 8. [Performance Design](#performance-design)
-   - [Parallel level-subset processing](#parallel-level-subset-processing)
+   - [Parallel row-band processing](#parallel-row-band-processing)
 9. [Build and Dependencies](#build-and-dependencies)
 
 ---
@@ -194,6 +194,7 @@ public:
     void desliver(bool flag);                     // default: false
     void threads(int n);                          // default: 1 (see below)
     void subdivide(int n);                        // default: 0 (off, see below), max 10
+    static void set_worker_threads(std::size_t n); // process-wide pool, default: none
 
     // Computation
     GeometryCollections isobands(const Grid& grid, const IsobandLimits& limits);
@@ -209,15 +210,18 @@ public:
 
 **`subdivide(n)`** enables bilinear densification of cell level-curve segments. The default `0` keeps the classic linear marching-squares output (one straight segment between each pair of edge intersections). A non-zero `n` splits every interior level-curve segment into `n` sub-segments and inserts `n-1` samples on the true bilinear level curve between the edge intersections. The edge intersections themselves stay bit-identical so adjacent cells still stitch together correctly. See [Bilinear cell subdivision](#bilinear-cell-subdivision) for details. Clamped to the range `[0, 10]`; `1` is a valid but no-op value.
 
-**`threads(n)`** controls how many threads are used to parallelise contouring across isoband/isoline levels:
+**`threads(n)`** sets how many horizontal row-bands the grid is split into for parallel
+contouring:
 
 | Value | Meaning |
 |---|---|
 | `1` | Single-threaded (default) |
-| `N > 1` | Use exactly N threads |
-| `0` | Auto: use `std::thread::hardware_concurrency()` threads |
+| `N > 1` | N row-bands (at most one per cell-row) |
+| `0` | Auto: `std::thread::hardware_concurrency()` bands |
 
-See [Parallel level-subset processing](#parallel-level-subset-processing) for details.
+The bands run in parallel only if the process-wide worker pool has been enabled with the
+static `Contour::set_worker_threads(n)`; without it, contouring stays single-threaded
+whatever `threads()` says. See [Parallel row-band processing](#parallel-row-band-processing).
 
 The `Contour` object is not copyable or movable. It is safe to call `isobands()` / `isolines()` multiple times on the same object with different grids or limits.
 
@@ -599,17 +603,19 @@ Because adjacent cells on a meteorological grid have similar values, the window 
 
 The isoband levels are sorted internally to make this sliding-window approach work. The original order supplied by the caller is recorded beforehand and restored when assembling the output, so `results[i]` always corresponds to the `i`-th `add()` call.
 
-### Parallel level-subset processing
+### Parallel row-band processing
 
-When `threads(N)` or `threads(0)` is set, the sorted isoband or isoline levels are divided into N equal-sized slices. Each slice is processed by an independent `std::async` task that runs a complete grid pass for its subset of levels. The grid is shared read-only across all threads.
+With `threads(k)` (k > 1) and a worker pool enabled by `Contour::set_worker_threads(n)`,
+the grid's cell-rows are split into k contiguous bands. Each band is contoured by its own
+sub-`Impl` (one `JointMerger` and `JointPool` per level) over its row range, so the grid is
+traversed once and even a single-level product is parallelised. Band 0 runs on the calling
+thread and the rest on the shared pool (threads named `trax-1` … `trax-N`), so the total
+number of contouring threads never exceeds the pool size however many requests run at once.
 
-The NaN/missing range (always sorted to index 0) is assigned entirely to thread 0's slice, so `m_contour_missing` logic is preserved within that thread without any cross-thread coordination.
-
-Each thread works with its own `Builder`, `JointMerger`, and `JointPool` instances — there is no shared mutable state between threads during the grid pass. After all threads complete, the partial results are merged back into the final `GeometryCollections` using the global `original_position()` mapping, restoring the user's original level order.
-
-If the resolved thread count exceeds the number of finite levels, it is capped so that every thread has at least one level to process. If the cap reduces the count to 1, the single-threaded path is taken with no threading overhead.
-
-The `validate` and `desliver` steps are applied to the merged result after all threads finish, not per-thread.
+Adjacent bands are then stitched along their shared boundary row (`join_boundary`), and each
+level's rings are assembled across all band pools. Bands are joined and scanned in a fixed
+order, so the output is byte-identical to single-threaded contouring. The `validate` and
+`desliver` steps run on the final result.
 
 ### Row buffering with swap
 

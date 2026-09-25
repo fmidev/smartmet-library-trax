@@ -16,3 +16,5 @@ Key features:
 ## Documentation
 
 - [Full API and usage guide](docs/trax.md)
+- [Developer guide](docs/developer-guide.md)
+- [Contouring performance notes](docs/contouring-performance.md)
