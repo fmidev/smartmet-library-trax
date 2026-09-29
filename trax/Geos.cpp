@@ -5,7 +5,7 @@
 #include <geos/geom/LineString.h>
 #include <geos/geom/LinearRing.h>
 #include <geos/geom/Polygon.h>
-#include <smartmet/macgyver/Exception.h>
+#include <macgyver/Exception.h>
 
 namespace gg = geos::geom;
 

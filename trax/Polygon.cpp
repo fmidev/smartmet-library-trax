@@ -1,6 +1,6 @@
 #include "Polygon.h"
 #include "Endian.h"
-#include <smartmet/macgyver/Exception.h>
+#include <macgyver/Exception.h>
 #include <algorithm>
 
 namespace Trax

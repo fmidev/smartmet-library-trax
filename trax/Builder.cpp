@@ -4,7 +4,7 @@
 #include "Range.h"
 #include "Topology.h"
 #include <fmt/format.h>
-#include <smartmet/macgyver/Exception.h>
+#include <macgyver/Exception.h>
 #include <stdexcept>
 
 namespace Trax

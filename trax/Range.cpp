@@ -1,6 +1,6 @@
 #include "Range.h"
 #include <fmt/format.h>
-#include <smartmet/macgyver/Exception.h>
+#include <macgyver/Exception.h>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>

@@ -6,7 +6,7 @@
 #include <boost/geometry/index/rtree.hpp>
 #include <boost/math/constants/constants.hpp>
 #include <fmt/format.h>
-#include <smartmet/macgyver/Exception.h>
+#include <macgyver/Exception.h>
 
 #if 0
 #include <iostream>

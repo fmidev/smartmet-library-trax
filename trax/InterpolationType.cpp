@@ -1,5 +1,5 @@
 #include "InterpolationType.h"
-#include <smartmet/macgyver/Exception.h>
+#include <macgyver/Exception.h>
 #include <stdexcept>
 
 namespace Trax
