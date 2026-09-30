@@ -298,8 +298,9 @@ std::vector<float> savitzky_golay(const Grid& grid, long w, long h, int size, in
     for (long i = 0; i < w; ++i)
     {
       const float v = grid(i, j);
+      // infinities are missing values too
       val[static_cast<std::size_t>(i) + static_cast<std::size_t>(w) * j] =
-          std::isnan(v) ? kNaN : static_cast<double>(v);
+          std::isfinite(v) ? static_cast<double>(v) : kNaN;
     }
 
   // Clamp to the supported kernel ranges, matching the legacy filter.
