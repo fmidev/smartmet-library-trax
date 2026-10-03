@@ -93,10 +93,8 @@ changes.
 
 ## 7. Known pitfalls
 
-* **Infinite values produce NaN coordinates.** Only NaN is treated as missing: a grid
-  value of `+inf` or `-inf` gives vertices with NaN coordinates in isobands, and isolines
-  crossing such cells go missing. `Grid` implementations must return NaN for missing or
-  non-finite values.
+* **Infinite grid values are missing values.** `+inf` and `-inf` are treated like NaN when
+  contouring and smoothing; infinite isoband limits are not affected.
 * **Midpoint isolines are not supported**; `isolines()` with `InterpolationType::Midpoint`
   returns nothing.
 * **Both threading settings are needed** for parallel contouring (§4).
