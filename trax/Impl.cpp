@@ -435,7 +435,8 @@ void Contour::Impl::isoline(int index, const Cell& c)
 
 namespace
 {
-// Extract data from grid valid area
+// Extract data from grid valid area. Infinite values are treated as missing
+// like NaN, interpolating towards them would produce NaN coordinates.
 void fill_buffers(const Grid& grid,
                   const std::array<long, 4>& area,
                   std::size_t j,
@@ -445,7 +446,10 @@ void fill_buffers(const Grid& grid,
   for (auto i = 0UL; i < points.size(); i++)
   {
     auto ii = i + imin;
-    points[i] = GridPoint(grid.x(ii, j), grid.y(ii, j), grid(ii, j));
+    float z = grid(ii, j);
+    if (std::isinf(z))
+      z = std::numeric_limits<float>::quiet_NaN();
+    points[i] = GridPoint(grid.x(ii, j), grid.y(ii, j), z);
   }
 }
 }  // namespace

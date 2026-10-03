@@ -586,3 +586,54 @@ BOOST_AUTO_TEST_CASE(isoband_4x3)
   run_file_tests("data/isoband_4x3.txt");
 }
 #endif
+
+namespace
+{
+bool all_finite(const std::vector<double>& values)
+{
+  for (auto v : values)
+    if (!std::isfinite(v))
+      return false;
+  return true;
+}
+}  // namespace
+
+BOOST_AUTO_TEST_CASE(infinite_values_are_missing)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Contour infinite grid values are treated as missing]");
+
+  // A 4x4 ramp with one +inf and one -inf value
+  const int nx = 4;
+  const int ny = 4;
+  Trax::TestGrid grid(nx, ny, 0.0, 0.0, 30.0, 30.0);
+  for (int j = 0; j < ny; ++j)
+    for (int i = 0; i < nx; ++i)
+      grid.set(i, j, static_cast<float>(i + j));
+  grid.set(1, 1, std::numeric_limits<float>::infinity());
+  grid.set(2, 2, -std::numeric_limits<float>::infinity());
+
+  Trax::IsobandLimits limits;
+  limits.add(0.5f, 3.5f);
+  limits.add(3.5f, std::numeric_limits<float>::infinity());
+
+  Trax::IsolineValues values;
+  values.add(1.5f);
+  values.add(4.5f);
+
+  Trax::Contour contourer;
+  contourer.interpolation(Trax::InterpolationType::Linear);
+
+  for (const auto& geom : contourer.isobands(grid, limits))
+    for (const auto& polygon : geom.polygons())
+    {
+      BOOST_CHECK(all_finite(polygon.exterior().xcoordinates()));
+      BOOST_CHECK(all_finite(polygon.exterior().ycoordinates()));
+    }
+
+  for (const auto& geom : contourer.isolines(grid, values))
+    for (const auto& line : geom.polylines())
+    {
+      BOOST_CHECK(all_finite(line.xcoordinates()));
+      BOOST_CHECK(all_finite(line.ycoordinates()));
+    }
+}

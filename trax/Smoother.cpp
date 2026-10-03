@@ -167,7 +167,7 @@ void materialize(const Grid& grid,
     {
       const auto idx = static_cast<std::size_t>(i) + static_cast<std::size_t>(w) * j;
       const float v = grid(i, j);
-      const bool nan = std::isnan(v);
+      const bool nan = !std::isfinite(v);  // infinities are missing values too
       num[idx] = nan ? 0.0 : v;
       den[idx] = nan ? 0.0 : 1.0;
       if (!missing.empty())
@@ -206,9 +206,10 @@ void materialize_values(
     {
       const auto idx = static_cast<std::size_t>(i) + static_cast<std::size_t>(w) * j;
       const float v = grid(i, j);
-      val[idx] = std::isnan(v) ? kNaN : static_cast<double>(v);
+      const bool nan = !std::isfinite(v);  // infinities are missing values too
+      val[idx] = nan ? kNaN : static_cast<double>(v);
       if (!missing.empty())
-        missing[idx] = std::isnan(v) ? 1 : 0;
+        missing[idx] = nan ? 1 : 0;
     }
 }
 
