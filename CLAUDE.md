@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
+Full developer documentation: `docs/developer-guide.md`, `docs/trax.md` and `docs/contouring-performance.md`.
+
 **smartmet-library-trax** is a high-performance C++ library for generating isolines (contour lines) and isobands (filled contour polygons) from 2D gridded scalar data using marching squares. Part of the SmartMet Server ecosystem by the Finnish Meteorological Institute (FMI). All types live in the `Trax` namespace.
 
 ## Build Commands
