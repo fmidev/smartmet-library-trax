@@ -18,8 +18,8 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 26.6.26
-Release: 2%{?dist}.fmi
+Version: 26.10.3
+Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
 URL: https://github.com/fmidev/smartmet-library-trax
@@ -27,14 +27,14 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 26.6.15
+BuildRequires: smartmet-library-macgyver-devel >= 26.10.3
 BuildRequires: make
 BuildRequires: rpm-build
 BuildRequires: gdal312-devel
 BuildRequires: geos313-devel
 BuildRequires: %{smartmet_fmt_devel}
 BuildRequires: libcurl-devel >= 7.68.0
-Requires: smartmet-library-macgyver >= 26.6.15
+Requires: smartmet-library-macgyver >= 26.10.3
 Requires: gdal312
 Requires: geos313
 Requires: %{smartmet_fmt}
@@ -46,8 +46,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos313-devel
 #TestRequires: gdal312-devel
-#TestRequires: smartmet-library-macgyver-devel >= 26.6.15
-
+#TestRequires: smartmet-library-macgyver-devel >= 26.10.3
 %description
 Isoline/isoband calculation library.
 
@@ -90,6 +89,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Sat Oct 03 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.3-1.fmi
+- Treat infinite grid values as missing
+
 * Fri Jun 26 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> 26.6.26-2.fmi
 - Thread naming: Use ThreadPool worker naming to label contour workers trax-1..N
 
