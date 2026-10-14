@@ -7,6 +7,7 @@
 #include "Vertex.h"
 #include <fmt/format.h>
 #include <limits>
+#include <cmath>
 
 #if 0
 #include <fmt/format.h>
@@ -126,7 +127,7 @@ point JointBuilder<Logarithmic>::intersect(
 
   if (p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y))  // lexicographic sorting to guarantee the same
   {  // result even if input x1,y1 and x2,y2 are swapped
-    double s;
+    double s = NAN;
     if constexpr (Logarithmic)
       s = (std::log1p(z) - get_lz(p2)) / (get_lz(p1) - get_lz(p2));
     else
@@ -147,7 +148,7 @@ point JointBuilder<Logarithmic>::intersect(
     return {x, y, type, 0, 0};
   }
 
-  double s;
+  double s = NAN;
   if constexpr (Logarithmic)
     s = (std::log1p(z) - get_lz(p1)) / (get_lz(p2) - get_lz(p1));
   else
@@ -249,11 +250,11 @@ void JointBuilder<Logarithmic>::densify(const Cell& c, Edge ea, Edge eb, float l
     return;
 
   // Corner values in the chosen space (raw or log1p).
-  double z1;
-  double z2;
-  double z3;
-  double z4;
-  double zc;
+  double z1 = NAN;
+  double z2 = NAN;
+  double z3 = NAN;
+  double z4 = NAN;
+  double zc = NAN;
   if constexpr (Logarithmic)
   {
     z1 = get_lz(c.p1);
@@ -375,8 +376,8 @@ void JointBuilder<Logarithmic>::densify(const Cell& c, Edge ea, Edge eb, float l
   for (int k = 1; k < m_subdivide; ++k)
   {
     const double t = static_cast<double>(k) / static_cast<double>(m_subdivide);
-    double u;
-    double v;
+    double u = NAN;
+    double v = NAN;
     if (u_dominant)
     {
       u = ua + t * (ub - ua);
