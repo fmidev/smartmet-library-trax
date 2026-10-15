@@ -52,7 +52,7 @@ PoolHolder g_pool_holder;
 // engine instead of paying the band-decomposition overhead for no parallel gain.
 bool worker_pool_enabled()
 {
-  std::lock_guard<std::mutex> lock(g_pool_mutex);
+  std::scoped_lock lock(g_pool_mutex);
   return g_pool_holder.pool != nullptr;
 }
 
@@ -63,7 +63,7 @@ void run_bands(std::vector<std::function<void()>>& tasks)
 {
   Fmi::ThreadPool::ThreadPool<>* pool = nullptr;
   {
-    std::lock_guard<std::mutex> lock(g_pool_mutex);
+    std::scoped_lock lock(g_pool_mutex);
     pool = g_pool_holder.pool.get();
   }
 
@@ -186,7 +186,7 @@ std::list<std::string> validate_isolines(const GeometryCollections& geoms,
 // Size (or disable) the process-wide band worker pool. Call once at startup.
 void Contour::set_worker_threads(std::size_t n)
 {
-  std::lock_guard<std::mutex> lock(g_pool_mutex);
+  std::scoped_lock lock(g_pool_mutex);
   if (g_pool_holder.pool)
   {
     g_pool_holder.pool->shutdown();  // join existing workers before replacing
