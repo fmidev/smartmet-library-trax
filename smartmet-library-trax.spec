@@ -18,7 +18,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 26.10.14
+Version: 26.10.15
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -27,14 +27,14 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
-BuildRequires: smartmet-library-macgyver-devel >= 26.10.3
+BuildRequires: smartmet-library-macgyver-devel >= 26.10.15
 BuildRequires: make
 BuildRequires: rpm-build
 BuildRequires: gdal312-devel
 BuildRequires: geos313-devel
 BuildRequires: %{smartmet_fmt_devel}
 BuildRequires: libcurl-devel >= 7.68.0
-Requires: smartmet-library-macgyver >= 26.10.3
+Requires: smartmet-library-macgyver >= 26.10.15
 Requires: gdal312
 Requires: geos313
 Requires: %{smartmet_fmt}
@@ -46,7 +46,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos313-devel
 #TestRequires: gdal312-devel
-#TestRequires: smartmet-library-macgyver-devel >= 26.10.3
+#TestRequires: smartmet-library-macgyver-devel >= 26.10.15
 %description
 Isoline/isoband calculation library.
 
@@ -89,7 +89,7 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
-* Wed Oct 14 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.14-1.fmi
+* Thu Oct 15 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.15-1.fmi
 - Fixed mechanical clang-tidy findings (internal linkage, unused parameters, initialization, redundant code), no functional changes
 - Fixed clang-tidy correctness findings (member initialization, rule of five, printf formats, dead stores)
 
