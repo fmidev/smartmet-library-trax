@@ -41,7 +41,7 @@ class SmallVector
 
  private:
   std::size_t m_size = 0;
-  std::array<T, Dim> m_data;
+  std::array<T, Dim> m_data{};
 };
 
 }  // namespace Trax

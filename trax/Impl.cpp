@@ -39,6 +39,9 @@ struct PoolHolder
     if (pool)
       pool->shutdown();
   }
+  PoolHolder() = default;
+  PoolHolder(const PoolHolder&) = delete;
+  PoolHolder& operator=(const PoolHolder&) = delete;
 };
 
 std::mutex g_pool_mutex;

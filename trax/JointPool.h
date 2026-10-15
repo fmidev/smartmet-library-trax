@@ -81,7 +81,7 @@ class JointPool
   std::size_t m_blocks = 0;           // number of allocated blocks
   std::size_t m_block = 0;            // current block being allocated from next
   std::size_t m_next = 0;             // block element being allocated next
-  std::array<Joint*, 27UL> m_buffer;  // ... for a total of (5+27)*8 = 32*8 = 256 bytes
+  std::array<Joint*, 27UL> m_buffer{};  // ... for a total of (5+27)*8 = 32*8 = 256 bytes
 };
 
 std::string to_string(JointPool& pool, bool print_used = false);
