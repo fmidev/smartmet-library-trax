@@ -243,6 +243,84 @@ double JointBuilder<Logarithmic>::get_lz(const GridPoint& p) const
 // is unaffected. Interior vertices get sentinel (column, row) that cannot collide
 // with any edge-intersection key and a VertexType::Interior that merge predicates
 // skip explicitly.
+// Edge parameter s along the directed edge (value from za to zb).
+double edge_s(Edge e, double z1, double z2, double z3, double z4, double zc)
+{
+  double za = 0;
+  double zb = 0;
+  switch (e)
+  {
+    case Edge::Left:
+      za = z1;
+      zb = z2;
+      break;
+    case Edge::Top:
+      za = z2;
+      zb = z3;
+      break;
+    case Edge::Right:
+      za = z4;
+      zb = z3;
+      break;
+    case Edge::Bottom:
+      za = z1;
+      zb = z4;
+      break;
+  }
+  if (za == zb)
+    return 0.0;
+  double s = (zc - za) / (zb - za);
+  if (s < 0.0)
+    s = 0.0;
+  else if (s > 1.0)
+    s = 1.0;
+  return s;
+}
+
+// The (u,v) cell coordinates of edge parameter s along the edge
+void edge_uv(Edge e, double s, double& u, double& v)
+{
+  switch (e)
+  {
+    case Edge::Left:
+      u = 0.0;
+      v = s;
+      break;
+    case Edge::Top:
+      u = s;
+      v = 1.0;
+      break;
+    case Edge::Right:
+      u = 1.0;
+      v = s;
+      break;
+    case Edge::Bottom:
+      u = s;
+      v = 0.0;
+      break;
+  }
+}
+
+// Solve the other coordinate of the bilinear level curve z1 + P*w + Q*x + D*w*x == zc
+// given the dominant coordinate w, using the linear fallback if the denominator vanishes
+double solve_other(double w, double fallback, double Q, double P, double z1, double zc, double D)
+{
+  const double denom = Q + D * w;
+  if (std::abs(denom) < 1e-20)
+    return fallback;
+  return (zc - z1 - P * w) / denom;
+}
+
+// Clamp the value to [0,1] (NaN is passed through)
+double clamp_unit(double value)
+{
+  if (value < 0.0)
+    return 0.0;
+  if (value > 1.0)
+    return 1.0;
+  return value;
+}
+
 template <bool Logarithmic>
 void JointBuilder<Logarithmic>::densify(const Cell& c, Edge ea, Edge eb, float limit)
 {
@@ -283,67 +361,12 @@ void JointBuilder<Logarithmic>::densify(const Cell& c, Edge ea, Edge eb, float l
   if (std::abs(D) < 1e-20)
     return;
 
-  // Edge parameter s along the directed edge (value from za to zb).
-  auto edge_s = [&](Edge e) {
-    double za = 0;
-    double zb = 0;
-    switch (e)
-    {
-      case Edge::Left:
-        za = z1;
-        zb = z2;
-        break;
-      case Edge::Top:
-        za = z2;
-        zb = z3;
-        break;
-      case Edge::Right:
-        za = z4;
-        zb = z3;
-        break;
-      case Edge::Bottom:
-        za = z1;
-        zb = z4;
-        break;
-    }
-    if (za == zb)
-      return 0.0;
-    double s = (zc - za) / (zb - za);
-    if (s < 0.0)
-      s = 0.0;
-    else if (s > 1.0)
-      s = 1.0;
-    return s;
-  };
-
-  auto edge_uv = [](Edge e, double s, double& u, double& v) {
-    switch (e)
-    {
-      case Edge::Left:
-        u = 0.0;
-        v = s;
-        break;
-      case Edge::Top:
-        u = s;
-        v = 1.0;
-        break;
-      case Edge::Right:
-        u = 1.0;
-        v = s;
-        break;
-      case Edge::Bottom:
-        u = s;
-        v = 0.0;
-        break;
-    }
-  };
-
   double ua = 0;
   double va = 0;
   double ub = 0;
   double vb = 0;
-  edge_uv(ea, edge_s(ea), ua, va);
-  edge_uv(eb, edge_s(eb), ub, vb);
+  edge_uv(ea, edge_s(ea, z1, z2, z3, z4, zc), ua, va);
+  edge_uv(eb, edge_s(eb, z1, z2, z3, z4, zc), ub, vb);
 
   const bool u_dominant = std::abs(ub - ua) >= std::abs(vb - va);
   const bool ghost = (static_cast<double>(limit) != static_cast<double>(m_range.lo()));
@@ -381,30 +404,16 @@ void JointBuilder<Logarithmic>::densify(const Cell& c, Edge ea, Edge eb, float l
     if (u_dominant)
     {
       u = ua + t * (ub - ua);
-      const double denom = C + D * u;
-      if (std::abs(denom) < 1e-20)
-        v = va + t * (vb - va);
-      else
-        v = (zc - z1 - B * u) / denom;
+      v = solve_other(u, va + t * (vb - va), C, B, z1, zc, D);
     }
     else
     {
       v = va + t * (vb - va);
-      const double denom = B + D * v;
-      if (std::abs(denom) < 1e-20)
-        u = ua + t * (ub - ua);
-      else
-        u = (zc - z1 - C * v) / denom;
+      u = solve_other(v, ua + t * (ub - ua), B, C, z1, zc, D);
     }
 
-    if (u < 0.0)
-      u = 0.0;
-    else if (u > 1.0)
-      u = 1.0;
-    if (v < 0.0)
-      v = 0.0;
-    else if (v > 1.0)
-      v = 1.0;
+    u = clamp_unit(u);
+    v = clamp_unit(v);
 
     // Spatial bilinear mapping from (u, v) to world coords. Supports curvilinear cells.
     const double omu = 1.0 - u;
