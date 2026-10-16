@@ -63,6 +63,22 @@ class JointBuilder
   void densify(const Cell& c, Edge ea, Edge eb, float limit);
 
  private:
+  // Saddle point cases of build_linear
+  void build_saddle_AIAI(const Cell& c);
+  void build_saddle_BIBI(const Cell& c);
+  void build_saddle_IAIA(const Cell& c);
+  void build_saddle_IBIB(const Cell& c);
+  void build_saddle_BIBA(const Cell& c);
+  void build_saddle_AIAB(const Cell& c);
+  void build_saddle_BABI(const Cell& c);
+  void build_saddle_ABAI(const Cell& c);
+  void build_saddle_IBAB(const Cell& c);
+  void build_saddle_IABA(const Cell& c);
+  void build_saddle_ABIB(const Cell& c);
+  void build_saddle_BAIA(const Cell& c);
+  void build_saddle_BABA(const Cell& c);
+  void build_saddle_ABAB(const Cell& c);
+
   void build_edge(VertexType type,
                   int di,
                   int dj,
@@ -1555,539 +1571,51 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
     // Saddle point cases need to be resolved by the value at the center of the
     // grid cell.
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Above, Place::Inside):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
-      const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
-
-      add(c.i, c.j, p1, m_range.hi());              // I----A   I----A
-      add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
-      add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/|
-      if (cc != Place::Inside && !melt)             // |\***|   |  /*|
-      {                                             // A----I   A----I
-        densify(c, Edge::Top, Edge::Left, m_range.hi());
-        close();
-      }
-      else
-      {
-        densify(c, Edge::Top, Edge::Right, m_range.hi());
-      }
-      add(c.i + 1, c.j, p3, m_range.hi());
-      add(c.i + 1, c.j, VertexType::Corner, c.p4);
-      add(c.i, c.j, p4, m_range.hi());
-      if (cc != Place::Inside && !melt)
-        densify(c, Edge::Bottom, Edge::Right, m_range.hi());
-      else
-        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
-      close();
+      build_saddle_AIAI(c);
       break;
-    }
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Inside):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
-      add(c.i, c.j, p1, m_range.lo());              // I----B   I----B
-      add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
-      add(c.i, c.j + 1, p2, m_range.lo());          // |**I*|   |/ B/|
-      if (cc != Place::Inside)                      // |\***|   |  /*|
-      {                                             // B----I   B----I
-        densify(c, Edge::Top, Edge::Left, m_range.lo()); // ring1 curve p2->p1 via wrap
-        close();
-      }
-      else
-      {
-        densify(c, Edge::Top, Edge::Right, m_range.lo()); // connected hexagon: p2->p3 curve
-      }
-      add(c.i + 1, c.j, p3, m_range.lo());
-      add(c.i + 1, c.j, VertexType::Corner, c.p4);
-      add(c.i, c.j, p4, m_range.lo());
-      if (cc != Place::Inside)
-        densify(c, Edge::Bottom, Edge::Right, m_range.lo()); // ring2 curve p4->p3 via wrap
-      else
-        densify(c, Edge::Bottom, Edge::Left, m_range.lo()); // hexagon curve p4->p1 via wrap
-      close();
+      build_saddle_BIBI(c);
       break;
-    }
 
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Inside, Place::Above):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
-      const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
-      if (cc == Place::Inside || melt)
-      {
-        add(c.i, c.j, VertexType::Corner, c.p1);          // A----I
-        add(c.i, c.j, p1, m_range.hi());                  // |/***|
-        densify(c, Edge::Left, Edge::Top, m_range.hi());
-        add(c.i, c.j + 1, p2, m_range.hi());              // |**I*|
-        add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |***/|
-        add(c.i + 1, c.j, p3, m_range.hi());              // I----A
-        densify(c, Edge::Right, Edge::Bottom, m_range.hi());
-        add(c.i, c.j, p4, m_range.hi());
-        close();
-      }
-      else
-      {
-        add(c.i, c.j, VertexType::Corner, c.p1);  // A----I
-        add(c.i, c.j, p1, m_range.hi());          // |  \*|
-        densify(c, Edge::Left, Edge::Bottom, m_range.hi());
-        add(c.i, c.j, p4, m_range.hi());          // |\ A\|
-        close();                                  // |*\  |
-        add(c.i, c.j + 1, p2, m_range.hi());      // I----A
-        add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
-        add(c.i + 1, c.j, p3, m_range.hi());
-        densify(c, Edge::Right, Edge::Top, m_range.hi()); // wraps back to p2
-        close();
-      }
+      build_saddle_IAIA(c);
       break;
-    }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Inside, Place::Below):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
-      if (cc == Place::Inside)
-      {
-        add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
-        add(c.i, c.j, p1, m_range.lo());                  // | /**|
-        densify(c, Edge::Left, Edge::Top, m_range.lo());
-        add(c.i, c.j + 1, p2, m_range.lo());              // |/*I/|
-        add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |**/ |
-        add(c.i + 1, c.j, p3, m_range.lo());              // I----B
-        densify(c, Edge::Right, Edge::Bottom, m_range.lo());
-        add(c.i, c.j, p4, m_range.lo());
-        close();
-      }
-      else
-      {
-        add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
-        add(c.i, c.j, p1, m_range.lo());                  // |  \*|
-        densify(c, Edge::Left, Edge::Bottom, m_range.lo());
-        add(c.i, c.j, p4, m_range.lo());                  // |\ B\|
-        close();                                          // |*\  |
-        add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // I----B
-        add(c.i + 1, c.j, p3, m_range.lo());
-        densify(c, Edge::Right, Edge::Top, m_range.lo());
-        add(c.i, c.j + 1, p2, m_range.lo());
-        close();
-      }
+      build_saddle_IBIB(c);
       break;
-    }
 
     case TRAX_RECT_HASH(Place::Below, Place::Inside, Place::Below, Place::Above):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p3 = intersect_right(c, VertexType::Vertical_lo);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
-      add(c.i, c.j, p1, m_range.lo());              // I----B    I----B
-      add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|    |*/  |
-      add(c.i, c.j + 1, p2, m_range.lo());          // |\*I*|    |/ X/|  X = A or B
-      if (cc != Place::Inside)                      // | \*/|    |  //|
-      {                                             // B----A    B----A
-        densify(c, Edge::Top, Edge::Left, m_range.lo());
-        close();
-      }
-      else
-      {
-        densify(c, Edge::Top, Edge::Right, m_range.lo());
-      }
-      add(c.i + 1, c.j, p3, m_range.lo());
-      add(c.i + 1, c.j, p4, m_range.hi());
-      densify(c, Edge::Right, Edge::Bottom, m_range.hi());
-      add(c.i, c.j, p5, m_range.hi());
-      add(c.i, c.j, p6, m_range.lo());
-      if (cc != Place::Inside)
-        densify(c, Edge::Bottom, Edge::Right, m_range.lo());
-      else
-        densify(c, Edge::Bottom, Edge::Left, m_range.lo());
-      close();
+      build_saddle_BIBA(c);
       break;
-    }
     case TRAX_RECT_HASH(Place::Above, Place::Inside, Place::Above, Place::Below):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p3 = intersect_right(c, VertexType::Vertical_hi);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
-      const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
-      add(c.i, c.j, p1, m_range.hi());              // I----A   I----A
-      add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
-      add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/| X = A or B
-      if (cc != Place::Inside && !melt)             // |\**/|   |  //|
-      {                                             // A----B   A----B
-        densify(c, Edge::Top, Edge::Left, m_range.hi());
-        close();
-      }
-      else
-      {
-        densify(c, Edge::Top, Edge::Right, m_range.hi());
-      }
-      add(c.i + 1, c.j, p3, m_range.hi());
-      add(c.i + 1, c.j, p4, m_range.lo());
-      densify(c, Edge::Right, Edge::Bottom, m_range.lo());
-      add(c.i, c.j, p5, m_range.lo());
-      add(c.i, c.j, p6, m_range.hi());
-      if (cc != Place::Inside && !melt)
-        densify(c, Edge::Bottom, Edge::Right, m_range.hi());
-      else
-        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
-      close();
+      build_saddle_AIAB(c);
       break;
-    }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Below, Place::Inside):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p5 = intersect_right(c, VertexType::Vertical_lo);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
-      add(c.i, c.j, p1, m_range.lo());      // A----B    A----B
-      add(c.i, c.j, p2, m_range.hi());      // |/**\|    |//  |
-      densify(c, Edge::Left, Edge::Top, m_range.hi());
-      add(c.i, c.j + 1, p3, m_range.hi());  // |**I*|    |/ X/| X = A or B
-      add(c.i, c.j + 1, p4, m_range.lo());  // |\***|    |  /*|
-      if (cc != Place::Inside)              // B----I    B----I
-      {
-        densify(c, Edge::Top, Edge::Left, m_range.lo());
-        close();
-      }
-      else
-      {
-        densify(c, Edge::Top, Edge::Right, m_range.lo());
-      }
-      add(c.i + 1, c.j, p5, m_range.lo());
-      add(c.i + 1, c.j, VertexType::Corner, c.p4);
-      add(c.i, c.j, p6, m_range.lo());
-      if (cc != Place::Inside)
-        densify(c, Edge::Bottom, Edge::Right, m_range.lo());
-      else
-        densify(c, Edge::Bottom, Edge::Left, m_range.lo());
-      close();
+      build_saddle_BABI(c);
       break;
-    }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Above, Place::Inside):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p5 = intersect_right(c, VertexType::Vertical_hi);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
-      const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
-      add(c.i, c.j, p1, m_range.hi());      // B----A    B----A
-      add(c.i, c.j, p2, m_range.lo());      // |/**\|    |//  |
-      densify(c, Edge::Left, Edge::Top, m_range.lo());
-      add(c.i, c.j + 1, p3, m_range.lo());  // |**I*|    |/ X/| X = A or B
-      add(c.i, c.j + 1, p4, m_range.hi());  // |\***|    |  /*|
-      if (cc != Place::Inside && !melt)     // A----I    A----I
-      {
-        densify(c, Edge::Top, Edge::Left, m_range.hi());
-        close();
-      }
-      else
-      {
-        densify(c, Edge::Top, Edge::Right, m_range.hi());
-      }
-      add(c.i + 1, c.j, p5, m_range.hi());
-      add(c.i + 1, c.j, VertexType::Corner, c.p4);
-      add(c.i, c.j, p6, m_range.hi());
-      if (cc != Place::Inside && !melt)
-        densify(c, Edge::Bottom, Edge::Right, m_range.hi());
-      else
-        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
-      close();
+      build_saddle_ABAI(c);
       break;
-    }
     case TRAX_RECT_HASH(Place::Inside, Place::Below, Place::Above, Place::Below):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
-      const auto p5 = intersect_right(c, VertexType::Vertical_lo);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
-      if (cc == Place::Inside)
-      {
-        add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
-        add(c.i, c.j, p1, m_range.lo());          // |/*\ |
-        densify(c, Edge::Left, Edge::Top, m_range.lo());
-        add(c.i, c.j + 1, p2, m_range.lo());      // |**I\|
-        add(c.i, c.j + 1, p3, m_range.hi());      // |***/|
-        densify(c, Edge::Top, Edge::Right, m_range.hi());
-        add(c.i + 1, c.j, p4, m_range.hi());      // I----B
-        add(c.i + 1, c.j, p5, m_range.lo());
-        densify(c, Edge::Right, Edge::Bottom, m_range.lo());
-        add(c.i, c.j, p6, m_range.lo());
-        close();
-      }
-      else
-      {
-        add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
-        add(c.i, c.j, p1, m_range.lo());          // |  \\|
-        densify(c, Edge::Left, Edge::Bottom, m_range.lo());
-        add(c.i, c.j, p6, m_range.lo());          // |\ X\| X = A or B
-        close();                                  // |*\  |
-        add(c.i, c.j + 1, p2, m_range.lo());      // I----B
-        add(c.i, c.j + 1, p3, m_range.hi());
-        densify(c, Edge::Top, Edge::Right, m_range.hi());
-        add(c.i + 1, c.j, p4, m_range.hi());
-        add(c.i + 1, c.j, p5, m_range.lo());
-        densify(c, Edge::Right, Edge::Top, m_range.lo());
-        close();
-      }
+      build_saddle_IBAB(c);
       break;
-    }
     case TRAX_RECT_HASH(Place::Inside, Place::Above, Place::Below, Place::Above):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
-      const auto p5 = intersect_right(c, VertexType::Vertical_hi);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
-      const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
-      if (cc == Place::Inside || melt)
-      {
-        add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
-        add(c.i, c.j, p1, m_range.hi());          // |/**\|
-        densify(c, Edge::Left, Edge::Top, m_range.hi());
-        add(c.i, c.j + 1, p2, m_range.hi());      // |**I*|
-        add(c.i, c.j + 1, p3, m_range.lo());      // |***/|
-        densify(c, Edge::Top, Edge::Right, m_range.lo());
-        add(c.i + 1, c.j, p4, m_range.lo());      // I----A
-        add(c.i + 1, c.j, p5, m_range.hi());
-        densify(c, Edge::Right, Edge::Bottom, m_range.hi());
-        add(c.i, c.j, p6, m_range.hi());
-        close();
-      }
-      else
-      {
-        add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
-        add(c.i, c.j, p1, m_range.hi());          // |  \\|
-        densify(c, Edge::Left, Edge::Bottom, m_range.hi());
-        add(c.i, c.j, p6, m_range.hi());          // |\ X\| X = A or B
-        close();                                  // |*\  |
-        add(c.i, c.j + 1, p2, m_range.hi());      // I----A
-        add(c.i, c.j + 1, p3, m_range.lo());
-        densify(c, Edge::Top, Edge::Right, m_range.lo());
-        add(c.i + 1, c.j, p4, m_range.lo());
-        add(c.i + 1, c.j, p5, m_range.hi());
-        densify(c, Edge::Right, Edge::Top, m_range.hi());
-        close();
-      }
+      build_saddle_IABA(c);
       break;
-    }
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Inside, Place::Below):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p4 = intersect_right(c, VertexType::Vertical_lo);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
-      if (cc == Place::Inside)
-      {
-        add(c.i, c.j, p1, m_range.hi());                  // B----I
-        add(c.i, c.j, p2, m_range.lo());                  // |/***|
-        densify(c, Edge::Left, Edge::Top, m_range.lo());
-        add(c.i, c.j + 1, p3, m_range.lo());              // |**I*|
-        add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\**/|
-        add(c.i + 1, c.j, p4, m_range.lo());              // A----B
-        densify(c, Edge::Right, Edge::Bottom, m_range.lo());
-        add(c.i, c.j, p5, m_range.lo());
-        add(c.i, c.j, p6, m_range.hi());
-        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
-        close();
-      }
-      else
-      {
-        add(c.i, c.j, p1, m_range.hi());  // B----I
-        add(c.i, c.j, p2, m_range.lo());  // |  \*|
-        densify(c, Edge::Left, Edge::Bottom, m_range.lo());
-        add(c.i, c.j, p5, m_range.lo());  // |\ X\| X = A or B
-        add(c.i, c.j, p6, m_range.hi());  // |\\  |
-        densify(c, Edge::Bottom, Edge::Left, m_range.hi());
-        close();                          // A----B
-        add(c.i, c.j + 1, p3, m_range.lo());
-        add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
-        add(c.i + 1, c.j, p4, m_range.lo());
-        densify(c, Edge::Right, Edge::Top, m_range.lo());
-        close();
-      }
+      build_saddle_ABIB(c);
       break;
-    }
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Inside, Place::Above):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p4 = intersect_right(c, VertexType::Vertical_hi);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
-      const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
-      if (cc == Place::Inside || melt)
-      {
-        add(c.i, c.j, p1, m_range.lo());                  // A----I
-        add(c.i, c.j, p2, m_range.hi());                  // |/***|
-        densify(c, Edge::Left, Edge::Top, m_range.hi());
-        add(c.i, c.j + 1, p3, m_range.hi());              // |**I*|
-        add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\**/|
-        add(c.i + 1, c.j, p4, m_range.hi());              // B----A
-        densify(c, Edge::Right, Edge::Bottom, m_range.hi());
-        add(c.i, c.j, p5, m_range.hi());
-        add(c.i, c.j, p6, m_range.lo());
-        densify(c, Edge::Bottom, Edge::Left, m_range.lo());
-        close();
-      }
-      else
-      {
-        add(c.i, c.j, p1, m_range.lo());  // A----I
-        add(c.i, c.j, p2, m_range.hi());  // |  \*|
-        densify(c, Edge::Left, Edge::Bottom, m_range.hi());
-        add(c.i, c.j, p5, m_range.hi());  // |\ X\| X = A or B
-        add(c.i, c.j, p6, m_range.lo());  // |\\  |
-        densify(c, Edge::Bottom, Edge::Left, m_range.lo());
-        close();                          // B----A
-        add(c.i, c.j + 1, p3, m_range.hi());
-        add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
-        add(c.i + 1, c.j, p4, m_range.hi());
-        densify(c, Edge::Right, Edge::Top, m_range.hi());
-        close();
-      }
+      build_saddle_BAIA(c);
       break;
-    }
 
     case TRAX_RECT_HASH(Place::Below, Place::Above, Place::Below, Place::Above):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p2 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi);
-      const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
-      const auto p5 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p6 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p7 = intersect_right(c, VertexType::Vertical_lo);
-      const auto p8 = intersect_right(c, VertexType::Vertical_hi);
-      const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
-      if (cc == Place::Inside || melt)
-      {
-        add(c.i, c.j, p1, m_range.lo());      // A----B
-        add(c.i, c.j, p2, m_range.hi());      // |***\|
-        add(c.i, c.j + 1, p5, m_range.hi());  // |\*I\| or A=H
-        add(c.i, c.j + 1, p6, m_range.lo());  // | \**|
-        add(c.i + 1, c.j, p7, m_range.hi());  // B----A
-        add(c.i + 1, c.j, p8, m_range.lo());
-        add(c.i, c.j, p3, m_range.lo());
-        add(c.i, c.j, p4, m_range.hi());
-        close();
-      }
-      else if (cc == Place::Below)
-      {
-        add(c.i, c.j, p1, m_range.lo());      // A----B
-        add(c.i, c.j, p2, m_range.hi());      // |//  |
-        add(c.i, c.j + 1, p5, m_range.hi());  // |/ B/|
-        add(c.i, c.j + 1, p6, m_range.lo());  // |  //|
-        close();                              // B----A
-        add(c.i + 1, c.j, p7, m_range.lo());
-        add(c.i + 1, c.j, p8, m_range.hi());
-        add(c.i, c.j, p3, m_range.hi());
-        add(c.i, c.j, p4, m_range.lo());
-        close();
-      }
-      else
-      {
-        add(c.i, c.j, p1, m_range.lo());  // A----B
-        add(c.i, c.j, p2, m_range.hi());  // |  \\|
-        add(c.i, c.j, p3, m_range.hi());  // |\ A\|
-        add(c.i, c.j, p4, m_range.lo());  // |\\  |
-        close();                          // B----A
-        add(c.i, c.j + 1, p5, m_range.hi());
-        add(c.i, c.j + 1, p6, m_range.lo());
-        add(c.i + 1, c.j, p7, m_range.lo());
-        add(c.i + 1, c.j, p8, m_range.hi());
-        close();
-      }
+      build_saddle_BABA(c);
       break;
-    }
 
     case TRAX_RECT_HASH(Place::Above, Place::Below, Place::Above, Place::Below):
-    {
-      const auto cc = center_place(c);
-      const auto p1 = intersect_left(c, VertexType::Vertical_hi);
-      const auto p2 = intersect_left(c, VertexType::Vertical_lo);
-      const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
-      const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
-      const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
-      const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
-      const auto p7 = intersect_right(c, VertexType::Vertical_hi);
-      const auto p8 = intersect_right(c, VertexType::Vertical_lo);
-      const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
-      if (cc == Place::Inside)
-      {
-        add(c.i, c.j, p1, m_range.hi());      // B----A
-        add(c.i, c.j, p2, m_range.lo());      // |***\|
-        add(c.i, c.j + 1, p3, m_range.lo());  // |\*I\|
-        add(c.i, c.j + 1, p4, m_range.hi());  // | \**|
-        add(c.i + 1, c.j, p7, m_range.hi());  // A----B
-        add(c.i + 1, c.j, p8, m_range.lo());
-        add(c.i, c.j, p5, m_range.lo());
-        add(c.i, c.j, p6, m_range.hi());
-        close();
-      }
-      else if (cc == Place::Below)
-      {
-        add(c.i, c.j, p1, m_range.hi());  // B----A
-        add(c.i, c.j, p2, m_range.lo());  // |  \\|
-        add(c.i, c.j, p5, m_range.lo());  // |\ B\|
-        add(c.i, c.j, p6, m_range.hi());  // |\\  |
-        close();                          // A----B
-        add(c.i, c.j + 1, p3, m_range.lo());
-        add(c.i, c.j + 1, p4, m_range.hi());
-        add(c.i + 1, c.j, p7, m_range.hi());
-        add(c.i + 1, c.j, p8, m_range.lo());
-        close();
-      }
-      else
-      {
-        add(c.i, c.j, p1, m_range.hi());      // B----A
-        add(c.i, c.j, p2, m_range.lo());      // |//  |
-        add(c.i, c.j + 1, p3, m_range.lo());  // |/ A/|
-        add(c.i, c.j + 1, p4, m_range.hi());  // |  //|
-        if (!melt)                            // A----B
-          close();
-        add(c.i + 1, c.j, p7, m_range.hi());
-        add(c.i + 1, c.j, p8, m_range.lo());
-        add(c.i, c.j, p5, m_range.lo());
-        add(c.i, c.j, p6, m_range.hi());
-        close();
-      }
+      build_saddle_ABAB(c);
       break;
-    }
 
     // Cases with exactly one corner missing
     case TRAX_RECT_HASH(Place::Invalid, Place::Above, Place::Above, Place::Above):
@@ -2270,6 +1798,565 @@ void JointBuilder<Logarithmic>::build_linear(const Cell& c)
   }
   finish_cell();
 }
+
+// Saddle point case Above Inside Above Inside
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_AIAI(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+  const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
+  const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
+
+  add(c.i, c.j, p1, m_range.hi());              // I----A   I----A
+  add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
+  add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/|
+  if (cc != Place::Inside && !melt)             // |\***|   |  /*|
+  {                                             // A----I   A----I
+    densify(c, Edge::Top, Edge::Left, m_range.hi());
+    close();
+  }
+  else
+  {
+    densify(c, Edge::Top, Edge::Right, m_range.hi());
+  }
+  add(c.i + 1, c.j, p3, m_range.hi());
+  add(c.i + 1, c.j, VertexType::Corner, c.p4);
+  add(c.i, c.j, p4, m_range.hi());
+  if (cc != Place::Inside && !melt)
+    densify(c, Edge::Bottom, Edge::Right, m_range.hi());
+  else
+    densify(c, Edge::Bottom, Edge::Left, m_range.hi());
+  close();
+}
+
+// Saddle point case Below Inside Below Inside
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_BIBI(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+  const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
+  add(c.i, c.j, p1, m_range.lo());              // I----B   I----B
+  add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
+  add(c.i, c.j + 1, p2, m_range.lo());          // |**I*|   |/ B/|
+  if (cc != Place::Inside)                      // |\***|   |  /*|
+  {                                             // B----I   B----I
+    densify(c, Edge::Top, Edge::Left, m_range.lo()); // ring1 curve p2->p1 via wrap
+    close();
+  }
+  else
+  {
+    densify(c, Edge::Top, Edge::Right, m_range.lo()); // connected hexagon: p2->p3 curve
+  }
+  add(c.i + 1, c.j, p3, m_range.lo());
+  add(c.i + 1, c.j, VertexType::Corner, c.p4);
+  add(c.i, c.j, p4, m_range.lo());
+  if (cc != Place::Inside)
+    densify(c, Edge::Bottom, Edge::Right, m_range.lo()); // ring2 curve p4->p3 via wrap
+  else
+    densify(c, Edge::Bottom, Edge::Left, m_range.lo()); // hexagon curve p4->p1 via wrap
+  close();
+}
+
+// Saddle point case Inside Above Inside Above
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_IAIA(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+  const auto p4 = intersect_bottom(c, VertexType::Horizontal_hi);
+  const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
+  if (cc == Place::Inside || melt)
+  {
+    add(c.i, c.j, VertexType::Corner, c.p1);          // A----I
+    add(c.i, c.j, p1, m_range.hi());                  // |/***|
+    densify(c, Edge::Left, Edge::Top, m_range.hi());
+    add(c.i, c.j + 1, p2, m_range.hi());              // |**I*|
+    add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |***/|
+    add(c.i + 1, c.j, p3, m_range.hi());              // I----A
+    densify(c, Edge::Right, Edge::Bottom, m_range.hi());
+    add(c.i, c.j, p4, m_range.hi());
+    close();
+  }
+  else
+  {
+    add(c.i, c.j, VertexType::Corner, c.p1);  // A----I
+    add(c.i, c.j, p1, m_range.hi());          // |  \*|
+    densify(c, Edge::Left, Edge::Bottom, m_range.hi());
+    add(c.i, c.j, p4, m_range.hi());          // |\ A\|
+    close();                                  // |*\  |
+    add(c.i, c.j + 1, p2, m_range.hi());      // I----A
+    add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
+    add(c.i + 1, c.j, p3, m_range.hi());
+    densify(c, Edge::Right, Edge::Top, m_range.hi()); // wraps back to p2
+    close();
+  }
+}
+
+// Saddle point case Inside Below Inside Below
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_IBIB(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+  const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
+  if (cc == Place::Inside)
+  {
+    add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
+    add(c.i, c.j, p1, m_range.lo());                  // | /**|
+    densify(c, Edge::Left, Edge::Top, m_range.lo());
+    add(c.i, c.j + 1, p2, m_range.lo());              // |/*I/|
+    add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |**/ |
+    add(c.i + 1, c.j, p3, m_range.lo());              // I----B
+    densify(c, Edge::Right, Edge::Bottom, m_range.lo());
+    add(c.i, c.j, p4, m_range.lo());
+    close();
+  }
+  else
+  {
+    add(c.i, c.j, VertexType::Corner, c.p1);          // B----I
+    add(c.i, c.j, p1, m_range.lo());                  // |  \*|
+    densify(c, Edge::Left, Edge::Bottom, m_range.lo());
+    add(c.i, c.j, p4, m_range.lo());                  // |\ B\|
+    close();                                          // |*\  |
+    add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // I----B
+    add(c.i + 1, c.j, p3, m_range.lo());
+    densify(c, Edge::Right, Edge::Top, m_range.lo());
+    add(c.i, c.j + 1, p2, m_range.lo());
+    close();
+  }
+}
+
+// Saddle point case Below Inside Below Above
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_BIBA(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p3 = intersect_right(c, VertexType::Vertical_lo);
+  const auto p4 = intersect_right(c, VertexType::Vertical_hi);
+  const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi);
+  const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
+  add(c.i, c.j, p1, m_range.lo());              // I----B    I----B
+  add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|    |*/  |
+  add(c.i, c.j + 1, p2, m_range.lo());          // |\*I*|    |/ X/|  X = A or B
+  if (cc != Place::Inside)                      // | \*/|    |  //|
+  {                                             // B----A    B----A
+    densify(c, Edge::Top, Edge::Left, m_range.lo());
+    close();
+  }
+  else
+  {
+    densify(c, Edge::Top, Edge::Right, m_range.lo());
+  }
+  add(c.i + 1, c.j, p3, m_range.lo());
+  add(c.i + 1, c.j, p4, m_range.hi());
+  densify(c, Edge::Right, Edge::Bottom, m_range.hi());
+  add(c.i, c.j, p5, m_range.hi());
+  add(c.i, c.j, p6, m_range.lo());
+  if (cc != Place::Inside)
+    densify(c, Edge::Bottom, Edge::Right, m_range.lo());
+  else
+    densify(c, Edge::Bottom, Edge::Left, m_range.lo());
+  close();
+}
+
+// Saddle point case Above Inside Above Below
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_AIAB(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p3 = intersect_right(c, VertexType::Vertical_hi);
+  const auto p4 = intersect_right(c, VertexType::Vertical_lo);
+  const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
+  const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
+  const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
+  add(c.i, c.j, p1, m_range.hi());              // I----A   I----A
+  add(c.i, c.j + 1, VertexType::Corner, c.p2);  // |***\|   |*/  |
+  add(c.i, c.j + 1, p2, m_range.hi());          // |**I*|   |/ X/| X = A or B
+  if (cc != Place::Inside && !melt)             // |\**/|   |  //|
+  {                                             // A----B   A----B
+    densify(c, Edge::Top, Edge::Left, m_range.hi());
+    close();
+  }
+  else
+  {
+    densify(c, Edge::Top, Edge::Right, m_range.hi());
+  }
+  add(c.i + 1, c.j, p3, m_range.hi());
+  add(c.i + 1, c.j, p4, m_range.lo());
+  densify(c, Edge::Right, Edge::Bottom, m_range.lo());
+  add(c.i, c.j, p5, m_range.lo());
+  add(c.i, c.j, p6, m_range.hi());
+  if (cc != Place::Inside && !melt)
+    densify(c, Edge::Bottom, Edge::Right, m_range.hi());
+  else
+    densify(c, Edge::Bottom, Edge::Left, m_range.hi());
+  close();
+}
+
+// Saddle point case Below Above Below Inside
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_BABI(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p4 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p5 = intersect_right(c, VertexType::Vertical_lo);
+  const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
+  add(c.i, c.j, p1, m_range.lo());      // A----B    A----B
+  add(c.i, c.j, p2, m_range.hi());      // |/**\|    |//  |
+  densify(c, Edge::Left, Edge::Top, m_range.hi());
+  add(c.i, c.j + 1, p3, m_range.hi());  // |**I*|    |/ X/| X = A or B
+  add(c.i, c.j + 1, p4, m_range.lo());  // |\***|    |  /*|
+  if (cc != Place::Inside)              // B----I    B----I
+  {
+    densify(c, Edge::Top, Edge::Left, m_range.lo());
+    close();
+  }
+  else
+  {
+    densify(c, Edge::Top, Edge::Right, m_range.lo());
+  }
+  add(c.i + 1, c.j, p5, m_range.lo());
+  add(c.i + 1, c.j, VertexType::Corner, c.p4);
+  add(c.i, c.j, p6, m_range.lo());
+  if (cc != Place::Inside)
+    densify(c, Edge::Bottom, Edge::Right, m_range.lo());
+  else
+    densify(c, Edge::Bottom, Edge::Left, m_range.lo());
+  close();
+}
+
+// Saddle point case Above Below Above Inside
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_ABAI(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p5 = intersect_right(c, VertexType::Vertical_hi);
+  const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
+  const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
+  add(c.i, c.j, p1, m_range.hi());      // B----A    B----A
+  add(c.i, c.j, p2, m_range.lo());      // |/**\|    |//  |
+  densify(c, Edge::Left, Edge::Top, m_range.lo());
+  add(c.i, c.j + 1, p3, m_range.lo());  // |**I*|    |/ X/| X = A or B
+  add(c.i, c.j + 1, p4, m_range.hi());  // |\***|    |  /*|
+  if (cc != Place::Inside && !melt)     // A----I    A----I
+  {
+    densify(c, Edge::Top, Edge::Left, m_range.hi());
+    close();
+  }
+  else
+  {
+    densify(c, Edge::Top, Edge::Right, m_range.hi());
+  }
+  add(c.i + 1, c.j, p5, m_range.hi());
+  add(c.i + 1, c.j, VertexType::Corner, c.p4);
+  add(c.i, c.j, p6, m_range.hi());
+  if (cc != Place::Inside && !melt)
+    densify(c, Edge::Bottom, Edge::Right, m_range.hi());
+  else
+    densify(c, Edge::Bottom, Edge::Left, m_range.hi());
+  close();
+}
+
+// Saddle point case Inside Below Above Below
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_IBAB(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p2 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p4 = intersect_right(c, VertexType::Vertical_hi);
+  const auto p5 = intersect_right(c, VertexType::Vertical_lo);
+  const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
+  if (cc == Place::Inside)
+  {
+    add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
+    add(c.i, c.j, p1, m_range.lo());          // |/*\ |
+    densify(c, Edge::Left, Edge::Top, m_range.lo());
+    add(c.i, c.j + 1, p2, m_range.lo());      // |**I\|
+    add(c.i, c.j + 1, p3, m_range.hi());      // |***/|
+    densify(c, Edge::Top, Edge::Right, m_range.hi());
+    add(c.i + 1, c.j, p4, m_range.hi());      // I----B
+    add(c.i + 1, c.j, p5, m_range.lo());
+    densify(c, Edge::Right, Edge::Bottom, m_range.lo());
+    add(c.i, c.j, p6, m_range.lo());
+    close();
+  }
+  else
+  {
+    add(c.i, c.j, VertexType::Corner, c.p1);  // B----A
+    add(c.i, c.j, p1, m_range.lo());          // |  \\|
+    densify(c, Edge::Left, Edge::Bottom, m_range.lo());
+    add(c.i, c.j, p6, m_range.lo());          // |\ X\| X = A or B
+    close();                                  // |*\  |
+    add(c.i, c.j + 1, p2, m_range.lo());      // I----B
+    add(c.i, c.j + 1, p3, m_range.hi());
+    densify(c, Edge::Top, Edge::Right, m_range.hi());
+    add(c.i + 1, c.j, p4, m_range.hi());
+    add(c.i + 1, c.j, p5, m_range.lo());
+    densify(c, Edge::Right, Edge::Top, m_range.lo());
+    close();
+  }
+}
+
+// Saddle point case Inside Above Below Above
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_IABA(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p2 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p4 = intersect_right(c, VertexType::Vertical_lo);
+  const auto p5 = intersect_right(c, VertexType::Vertical_hi);
+  const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
+  const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
+  if (cc == Place::Inside || melt)
+  {
+    add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
+    add(c.i, c.j, p1, m_range.hi());          // |/**\|
+    densify(c, Edge::Left, Edge::Top, m_range.hi());
+    add(c.i, c.j + 1, p2, m_range.hi());      // |**I*|
+    add(c.i, c.j + 1, p3, m_range.lo());      // |***/|
+    densify(c, Edge::Top, Edge::Right, m_range.lo());
+    add(c.i + 1, c.j, p4, m_range.lo());      // I----A
+    add(c.i + 1, c.j, p5, m_range.hi());
+    densify(c, Edge::Right, Edge::Bottom, m_range.hi());
+    add(c.i, c.j, p6, m_range.hi());
+    close();
+  }
+  else
+  {
+    add(c.i, c.j, VertexType::Corner, c.p1);  // A----B
+    add(c.i, c.j, p1, m_range.hi());          // |  \\|
+    densify(c, Edge::Left, Edge::Bottom, m_range.hi());
+    add(c.i, c.j, p6, m_range.hi());          // |\ X\| X = A or B
+    close();                                  // |*\  |
+    add(c.i, c.j + 1, p2, m_range.hi());      // I----A
+    add(c.i, c.j + 1, p3, m_range.lo());
+    densify(c, Edge::Top, Edge::Right, m_range.lo());
+    add(c.i + 1, c.j, p4, m_range.lo());
+    add(c.i + 1, c.j, p5, m_range.hi());
+    densify(c, Edge::Right, Edge::Top, m_range.hi());
+    close();
+  }
+}
+
+// Saddle point case Above Below Inside Below
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_ABIB(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p4 = intersect_right(c, VertexType::Vertical_lo);
+  const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
+  const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
+  if (cc == Place::Inside)
+  {
+    add(c.i, c.j, p1, m_range.hi());                  // B----I
+    add(c.i, c.j, p2, m_range.lo());                  // |/***|
+    densify(c, Edge::Left, Edge::Top, m_range.lo());
+    add(c.i, c.j + 1, p3, m_range.lo());              // |**I*|
+    add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\**/|
+    add(c.i + 1, c.j, p4, m_range.lo());              // A----B
+    densify(c, Edge::Right, Edge::Bottom, m_range.lo());
+    add(c.i, c.j, p5, m_range.lo());
+    add(c.i, c.j, p6, m_range.hi());
+    densify(c, Edge::Bottom, Edge::Left, m_range.hi());
+    close();
+  }
+  else
+  {
+    add(c.i, c.j, p1, m_range.hi());  // B----I
+    add(c.i, c.j, p2, m_range.lo());  // |  \*|
+    densify(c, Edge::Left, Edge::Bottom, m_range.lo());
+    add(c.i, c.j, p5, m_range.lo());  // |\ X\| X = A or B
+    add(c.i, c.j, p6, m_range.hi());  // |\\  |
+    densify(c, Edge::Bottom, Edge::Left, m_range.hi());
+    close();                          // A----B
+    add(c.i, c.j + 1, p3, m_range.lo());
+    add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
+    add(c.i + 1, c.j, p4, m_range.lo());
+    densify(c, Edge::Right, Edge::Top, m_range.lo());
+    close();
+  }
+}
+
+// Saddle point case Below Above Inside Above
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_BAIA(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p3 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p4 = intersect_right(c, VertexType::Vertical_hi);
+  const auto p5 = intersect_bottom(c, VertexType::Horizontal_hi);
+  const auto p6 = intersect_bottom(c, VertexType::Horizontal_lo);
+  const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
+  if (cc == Place::Inside || melt)
+  {
+    add(c.i, c.j, p1, m_range.lo());                  // A----I
+    add(c.i, c.j, p2, m_range.hi());                  // |/***|
+    densify(c, Edge::Left, Edge::Top, m_range.hi());
+    add(c.i, c.j + 1, p3, m_range.hi());              // |**I*|
+    add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);  // |\**/|
+    add(c.i + 1, c.j, p4, m_range.hi());              // B----A
+    densify(c, Edge::Right, Edge::Bottom, m_range.hi());
+    add(c.i, c.j, p5, m_range.hi());
+    add(c.i, c.j, p6, m_range.lo());
+    densify(c, Edge::Bottom, Edge::Left, m_range.lo());
+    close();
+  }
+  else
+  {
+    add(c.i, c.j, p1, m_range.lo());  // A----I
+    add(c.i, c.j, p2, m_range.hi());  // |  \*|
+    densify(c, Edge::Left, Edge::Bottom, m_range.hi());
+    add(c.i, c.j, p5, m_range.hi());  // |\ X\| X = A or B
+    add(c.i, c.j, p6, m_range.lo());  // |\\  |
+    densify(c, Edge::Bottom, Edge::Left, m_range.lo());
+    close();                          // B----A
+    add(c.i, c.j + 1, p3, m_range.hi());
+    add(c.i + 1, c.j + 1, VertexType::Corner, c.p3);
+    add(c.i + 1, c.j, p4, m_range.hi());
+    densify(c, Edge::Right, Edge::Top, m_range.hi());
+    close();
+  }
+}
+
+// Saddle point case Below Above Below Above
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_BABA(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p2 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p3 = intersect_bottom(c, VertexType::Horizontal_hi);
+  const auto p4 = intersect_bottom(c, VertexType::Horizontal_lo);
+  const auto p5 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p6 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p7 = intersect_right(c, VertexType::Vertical_lo);
+  const auto p8 = intersect_right(c, VertexType::Vertical_hi);
+  const bool melt = (c.p2.z == m_range.hi() && c.p4.z == m_range.hi());
+  if (cc == Place::Inside || melt)
+  {
+    add(c.i, c.j, p1, m_range.lo());      // A----B
+    add(c.i, c.j, p2, m_range.hi());      // |***\|
+    add(c.i, c.j + 1, p5, m_range.hi());  // |\*I\| or A=H
+    add(c.i, c.j + 1, p6, m_range.lo());  // | \**|
+    add(c.i + 1, c.j, p7, m_range.hi());  // B----A
+    add(c.i + 1, c.j, p8, m_range.lo());
+    add(c.i, c.j, p3, m_range.lo());
+    add(c.i, c.j, p4, m_range.hi());
+    close();
+  }
+  else if (cc == Place::Below)
+  {
+    add(c.i, c.j, p1, m_range.lo());      // A----B
+    add(c.i, c.j, p2, m_range.hi());      // |//  |
+    add(c.i, c.j + 1, p5, m_range.hi());  // |/ B/|
+    add(c.i, c.j + 1, p6, m_range.lo());  // |  //|
+    close();                              // B----A
+    add(c.i + 1, c.j, p7, m_range.lo());
+    add(c.i + 1, c.j, p8, m_range.hi());
+    add(c.i, c.j, p3, m_range.hi());
+    add(c.i, c.j, p4, m_range.lo());
+    close();
+  }
+  else
+  {
+    add(c.i, c.j, p1, m_range.lo());  // A----B
+    add(c.i, c.j, p2, m_range.hi());  // |  \\|
+    add(c.i, c.j, p3, m_range.hi());  // |\ A\|
+    add(c.i, c.j, p4, m_range.lo());  // |\\  |
+    close();                          // B----A
+    add(c.i, c.j + 1, p5, m_range.hi());
+    add(c.i, c.j + 1, p6, m_range.lo());
+    add(c.i + 1, c.j, p7, m_range.lo());
+    add(c.i + 1, c.j, p8, m_range.hi());
+    close();
+  }
+}
+
+// Saddle point case Above Below Above Below
+template <bool Logarithmic>
+void JointBuilder<Logarithmic>::build_saddle_ABAB(const Cell& c)
+{
+  const auto cc = center_place(c);
+  const auto p1 = intersect_left(c, VertexType::Vertical_hi);
+  const auto p2 = intersect_left(c, VertexType::Vertical_lo);
+  const auto p3 = intersect_top(c, VertexType::Horizontal_lo);
+  const auto p4 = intersect_top(c, VertexType::Horizontal_hi);
+  const auto p5 = intersect_bottom(c, VertexType::Horizontal_lo);
+  const auto p6 = intersect_bottom(c, VertexType::Horizontal_hi);
+  const auto p7 = intersect_right(c, VertexType::Vertical_hi);
+  const auto p8 = intersect_right(c, VertexType::Vertical_lo);
+  const bool melt = (c.p1.z == m_range.hi() && c.p3.z == m_range.hi());
+  if (cc == Place::Inside)
+  {
+    add(c.i, c.j, p1, m_range.hi());      // B----A
+    add(c.i, c.j, p2, m_range.lo());      // |***\|
+    add(c.i, c.j + 1, p3, m_range.lo());  // |\*I\|
+    add(c.i, c.j + 1, p4, m_range.hi());  // | \**|
+    add(c.i + 1, c.j, p7, m_range.hi());  // A----B
+    add(c.i + 1, c.j, p8, m_range.lo());
+    add(c.i, c.j, p5, m_range.lo());
+    add(c.i, c.j, p6, m_range.hi());
+    close();
+  }
+  else if (cc == Place::Below)
+  {
+    add(c.i, c.j, p1, m_range.hi());  // B----A
+    add(c.i, c.j, p2, m_range.lo());  // |  \\|
+    add(c.i, c.j, p5, m_range.lo());  // |\ B\|
+    add(c.i, c.j, p6, m_range.hi());  // |\\  |
+    close();                          // A----B
+    add(c.i, c.j + 1, p3, m_range.lo());
+    add(c.i, c.j + 1, p4, m_range.hi());
+    add(c.i + 1, c.j, p7, m_range.hi());
+    add(c.i + 1, c.j, p8, m_range.lo());
+    close();
+  }
+  else
+  {
+    add(c.i, c.j, p1, m_range.hi());      // B----A
+    add(c.i, c.j, p2, m_range.lo());      // |//  |
+    add(c.i, c.j + 1, p3, m_range.lo());  // |/ A/|
+    add(c.i, c.j + 1, p4, m_range.hi());  // |  //|
+    if (!melt)                            // A----B
+      close();
+    add(c.i + 1, c.j, p7, m_range.hi());
+    add(c.i + 1, c.j, p8, m_range.lo());
+    add(c.i, c.j, p5, m_range.lo());
+    add(c.i, c.j, p6, m_range.hi());
+    close();
+  }
+}
+
 
 // Grid cells with one corner missing are contoured as triangles. Such cases
 // have no ambiguities about saddle points, and can be processed one edge
