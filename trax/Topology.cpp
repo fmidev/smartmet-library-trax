@@ -462,6 +462,32 @@ Polygons::iterator innermost_polygon(const std::list<Polygons::iterator>& polygo
   return ret;
 }
 
+// Trace a ring starting from the joint turning right, then separate the holes touching the
+// shell by turning left
+void trace_ring(Joint* joint, Polylines& shells, Holes& holes, bool strict, bool verbose)
+{
+  auto polylines = extract_right_turning_sequence(joint, strict, verbose);
+
+  if (!polylines.empty())  // the sequence may have been discarded due to a problem
+    extract_left_turning_sequence(polylines, shells, holes);  // separate holes touching shell
+}
+
+// Add the joints, shells and holes to the exception for debugging
+void add_ring_details(Fmi::Exception& ex,
+                      const std::vector<JointPool*>& pools,
+                      const Polylines& shells,
+                      const Holes& holes)
+{
+  for (auto* pool : pools)
+    ex.addParameter("Joints", "\n" + to_string(*pool, true));
+  auto i = 0UL;
+  for (const auto& shell : shells)
+    ex.addParameter(fmt::format("Shell {}", ++i).c_str(), shell.wkt());
+  i = 0UL;
+  for (const auto& hole : holes)
+    ex.addParameter(fmt::format("Hole {}", ++i).c_str(), hole.wkt());
+}
+
 }  // namespace
 
 /*
@@ -505,23 +531,14 @@ void build_rings(Polylines& shells, Holes& holes, const std::vector<JointPool*>&
         if (has_duplicates(joint->next))
           skipped_joints.push_back(joint);
         else
-        {
-          auto polylines = extract_right_turning_sequence(joint, strict, verbose);
-
-          if (!polylines.empty())  // the sequence may have been discarded due to a problem
-            extract_left_turning_sequence(polylines, shells, holes);  // separate holes touching shell
-        }
+          trace_ring(joint, shells, holes, strict, verbose);
       }
 
     // Make sure skipped joints were processed
     for (auto* joint : skipped_joints)
     {
       if (!joint->used)
-      {
-        auto polylines = extract_right_turning_sequence(joint, strict, verbose);
-        if (!polylines.empty())
-          extract_left_turning_sequence(polylines, shells, holes);
-      }
+        trace_ring(joint, shells, holes, strict, verbose);
     }
   }
   catch (...)
@@ -529,16 +546,7 @@ void build_rings(Polylines& shells, Holes& holes, const std::vector<JointPool*>&
     Fmi::Exception ex(BCP, "Failed to build rings", nullptr);
     ex.addParameter("Number of joints", std::to_string(total));
     if (verbose)
-    {
-      for (auto* pool : pools)
-        ex.addParameter("Joints", "\n" + to_string(*pool, true));
-      auto i = 0UL;
-      for (const auto& shell : shells)
-        ex.addParameter(fmt::format("Shell {}", ++i).c_str(), shell.wkt());
-      i = 0UL;
-      for (const auto& hole : holes)
-        ex.addParameter(fmt::format("Hole {}", ++i).c_str(), hole.wkt());
-    }
+      add_ring_details(ex, pools, shells, holes);
     throw ex;
   }
 }
