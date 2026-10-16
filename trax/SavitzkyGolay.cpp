@@ -285,14 +285,10 @@ double mirror(const std::vector<double>& m, long w, long h, long i, long j)
   return at(i, j);
 }
 
-}  // namespace
-
-std::vector<float> savitzky_golay(const Grid& grid, long w, long h, int size, int degree)
+// Copy the grid values into a buffer, infinities converted to NaN
+std::vector<double> materialize(const Grid& grid, long w, long h)
 {
   const auto n = static_cast<std::size_t>(w) * static_cast<std::size_t>(h);
-
-  // Materialize the values once (NaN preserved); the mirror boundary reads from
-  // this buffer rather than dispatching through the grid for every neighbour.
   std::vector<double> val(n);
   for (long j = 0; j < h; ++j)
     for (long i = 0; i < w; ++i)
@@ -302,6 +298,36 @@ std::vector<float> savitzky_golay(const Grid& grid, long w, long h, int size, in
       val[static_cast<std::size_t>(i) + static_cast<std::size_t>(w) * j] =
           std::isfinite(v) ? static_cast<double>(v) : kNaN;
     }
+  return val;
+}
+
+// The kernel-weighted sum of the (2*size+1)^2 window centred at (ii,jj)
+double window_sum(const std::vector<double>& val,
+                  long w,
+                  long h,
+                  long ii,
+                  long jj,
+                  int size,
+                  const int* factor)
+{
+  const int k = 2 * size + 1;
+  double sum = 0.0;
+  int pos = 0;
+  for (int dj = 0; dj < k; ++dj)
+    for (int di = 0; di < k; ++di)
+      sum += factor[pos++] * mirror(val, w, h, ii + di - size, jj + dj - size);
+  return sum;
+}
+
+}  // namespace
+
+std::vector<float> savitzky_golay(const Grid& grid, long w, long h, int size, int degree)
+{
+  const auto n = static_cast<std::size_t>(w) * static_cast<std::size_t>(h);
+
+  // Materialize the values once (NaN preserved); the mirror boundary reads from
+  // this buffer rather than dispatching through the grid for every neighbour.
+  const std::vector<double> val = materialize(grid, w, h);
 
   // Clamp to the supported kernel ranges, matching the legacy filter.
   size = std::clamp(size, 1, 6);
@@ -320,7 +346,6 @@ std::vector<float> savitzky_golay(const Grid& grid, long w, long h, int size, in
     return out;
   }
 
-  const int k = 2 * size + 1;
   const int denom = denoms[size - 1][degree - 1];
 
   for (long jj = 0; jj < h; ++jj)
@@ -334,11 +359,7 @@ std::vector<float> savitzky_golay(const Grid& grid, long w, long h, int size, in
         continue;
       }
 
-      double sum = 0.0;
-      int pos = 0;
-      for (int dj = 0; dj < k; ++dj)
-        for (int di = 0; di < k; ++di)
-          sum += factor[pos++] * mirror(val, w, h, ii + di - size, jj + dj - size);
+      const double sum = window_sum(val, w, h, ii, jj, size, factor);
 
       // A NaN anywhere in the window propagated into the sum; keep the original
       // value rather than emitting NaN, exactly like the legacy filter.
