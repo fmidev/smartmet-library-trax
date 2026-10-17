@@ -38,6 +38,10 @@ tools.
 - **`Trax::GridPoint`** — single grid sample with cell indices.
 - **`Trax::Grid::shift()` / `Grid::shell()`** — global wrap-around
   control and midpoint-interpolation boundary control.
+- **`Trax::Grid::xperiod()`** — number of distinct columns of a
+  globally periodic grid (0 = not periodic), used by smoothing to wrap
+  in x.
+- **`Trax::Grid::bbox()`** — restrict contouring to a sub-region.
 
 ## 3. Marching-squares core
 
@@ -99,15 +103,37 @@ tools.
 
 ## 8. Multi-threading
 
-- **`Contour::threads(n)`** — `0` = auto, `1` = single-threaded
-  (default), `n > 1` = `n` worker threads.
-- **Per-thread `Impl`** — each thread has its own `Builder`,
-  `JointPool`, and `Topology`.
-- **Level chunking** — sorted isoband / isoline levels are split
-  into chunks; threads run independently via `std::async` and
-  results are mapped back to original positions.
+- **Band-parallel** — the grid's cell rows are split into horizontal
+  row-bands, each contoured into its own sub-`Impl` (one
+  `JointMerger` / `JointPool` per level); adjacent bands are stitched
+  along their shared boundary row and the rings assembled across all
+  band pools. Output is byte-identical to single-threaded.
+- **`Contour::set_worker_threads(n)`** — process-wide worker pool
+  (`Fmi::ThreadPool`, threads `trax-1` … `trax-n`), set once by the
+  host; `n == 0` disables it.
+- **`Contour::threads(k)`** — row-bands per request: `0` = auto,
+  `1` = single-threaded (default), `k > 1` = `k` bands. Band 0 runs
+  on the calling thread, the rest on the shared pool.
+- **Both settings are required** — without the pool, `threads(k)`
+  runs single-threaded.
 
-## 9. Output formats
+## 9. Grid smoothing
+
+- **`Trax::smooth(grid, SmoothOptions)`** (`Smoother.h`) — returns a
+  smoothed copy of a grid for contouring.
+- **Methods** (`SmoothMethod`): `Box` (separable box blur, three
+  passes approximate a Gaussian), `Median`, `Morphology` (grayscale
+  opening / closing) and the legacy `SavitzkyGolay` filter of the
+  contour engine. `Pyramid` is declared but not implemented
+  (`smooth()` throws).
+- **Boundaries** (`SmoothBoundary`): `Normalized` (default),
+  `Replicate`, `Reflect`; periodic grids wrap in x
+  (`Grid::xperiod()`).
+- **NaN-aware** — `preserve_missing` (default true) keeps the
+  missing-data footprint.
+- **`SmoothOptions::hash()`** — for keying external caches.
+
+## 10. Output formats
 
 - **`GeometryCollection::wkt()`** — Well-Known Text.
 - **`GeometryCollection::wkb()`** — Well-Known Binary.
@@ -118,7 +144,7 @@ tools.
 - **`Trax::BBox`** — bounding box of a result.
 - **`Trax::Endian`** — explicit byte-order handling for WKB.
 
-## 10. Performance optimisations
+## 11. Performance optimisations
 
 - **Spatial coherence pruning** — `Impl` tracks `m_min_index` /
   `m_max_index` per cell to narrow which contour levels need
@@ -133,11 +159,15 @@ tools.
   avoid rounding-related contouring errors that AVX2 introduces at
   `-O2` or higher.
 
-## 11. Documentation
+## 12. Documentation
 
 - **`docs/trax.md`** — full API and usage guide.
+- **`docs/developer-guide.md`** — maintainer's guide: cell logic,
+  threads, reproducibility, pitfalls.
+- **`docs/contouring-performance.md`** — measurements and the
+  optimisations tried and rejected.
 
-## 12. Testing
+## 13. Testing
 
 - **Boost.Test** unit tests (header-only via `included/unit_test.hpp`).
 - **Per-test build**:
@@ -148,7 +178,7 @@ tools.
 - **Reference test grid** — `test/TestGrid.h` is a worked example
   of the `Grid` interface.
 
-## 13. Build & integration
+## 14. Build & integration
 
 - **Output**: `libsmartmet-trax.so`.
 - **Build**: `make` (uses `-O3`).

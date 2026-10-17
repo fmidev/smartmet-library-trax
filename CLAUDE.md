@@ -56,7 +56,9 @@ The main entry point is `Contour` (pimpl pattern via `Impl`):
 3. Call `isobands()` or `isolines()` to get `GeometryCollections` (one `GeometryCollection` per requested contour level)
 4. Convert results via `wkt()`, `wkb()`, `to_ogr_geom()` (`OGR.h`), or `to_geos_geom()` (`Geos.h`)
 
-To implement the `Grid` interface, subclass `Trax::Grid` and implement `x()`, `y()`, `operator()`, `set()`, `valid()`, `width()`, `height()`. See `test/TestGrid.h` for a concrete example.
+To implement the `Grid` interface, subclass `Trax::Grid` and implement `x()`, `y()`, `operator()`, `set()`, `valid()`, `width()`, `height()`; `shift()`, `bbox()`, `shell()` and `xperiod()` are optional overrides. See `test/TestGrid.h` for a concrete example.
+
+Optional pre-contouring smoothing: `Trax::smooth(grid, SmoothOptions)` (`Smoother.h`, methods Box, Median, Morphology and the legacy SavitzkyGolay; Pyramid is declared but throws).
 
 ### Contouring Pipeline
 

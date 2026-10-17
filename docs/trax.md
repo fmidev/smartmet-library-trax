@@ -15,6 +15,7 @@ Trax is a high-performance C++ library for generating **isobands** (filled conto
    - [GeometryCollection — reading results](#geometrycollection--reading-results)
    - [Interpolation modes](#interpolation-modes)
    - [Bilinear cell subdivision](#bilinear-cell-subdivision)
+   - [Grid smoothing](#grid-smoothing)
 4. [Handling Missing Values in Data](#handling-missing-values-in-data)
 5. [Using Missing-Value Limits to Contour NaN Areas](#using-missing-value-limits-to-contour-nan-areas)
 6. [How the Algorithm Works](#how-the-algorithm-works)
@@ -141,6 +142,7 @@ public:
     virtual std::size_t shift() const;         // default 0; non-zero enables global wrap-around
     virtual std::array<long,4> bbox() const;   // default {0,0,width-2,height-2}; sub-grid
     virtual double shell() const;              // default NaN; border width for midpoint mode
+    virtual std::size_t xperiod() const;       // default 0; distinct columns of a periodic grid
 };
 ```
 
@@ -151,6 +153,8 @@ public:
 **`bbox()`** restricts contouring to a sub-region of the grid: `{i_min, j_min, i_max, j_max}` in cell coordinates (where `i_max = width - 2` covers all columns). Use this to avoid re-running on unchanged parts of a large grid.
 
 **`shell()`** is used only with `InterpolationType::Midpoint`. A non-NaN value clips a border band of that width around the grid, preventing midpoint contours from reaching the very edges.
+
+**`xperiod()`** is the number of distinct columns before the data repeats in x, for globally periodic (longitude wrap-around) grids; a grid with a duplicated wrap column reports `width() - 1`. It is used by [grid smoothing](#grid-smoothing), which then wraps in x instead of applying its boundary rule. The default 0 means not periodic.
 
 ---
 
@@ -315,6 +319,31 @@ Accepted values are `0..10`:
 The bilinear level curve of a peak-in-zeros cell bends **outward** away from the peak (the hyperbola bulges into the low-value side), so the densified isoband has a **larger area** than the linear diamond, not smaller. For radar-style data where the goal is to suppress a lone-pixel diamond, `subdivide` replaces the sharp shape with a rounded four-lobed blob but does not shrink it. To shrink, use `InterpolationType::Logarithmic` or the Savitzky-Golay smoother at the data-preprocessing stage.
 
 **When the effect is visible on rendered output.** The maximum deviation between the straight segment and the bilinear curve scales with `cell_size × |D| / (hi − lo)` where `D = f₁ + f₃ − f₂ − f₄`. On synthetic grids where one cell fills many screen pixels and corner values contrast strongly, the improvement is dramatic. On smooth real-world data at typical zoom where each cell maps to ~1 screen pixel, the improvement is sub-pixel. Bilinear subdivision is specifically worth it for cells that simultaneously (a) render large relative to pixel and (b) have high corner contrast.
+
+### Grid smoothing
+
+`#include <trax/Smoother.h>`
+
+```cpp
+Trax::SmoothOptions opts;
+opts.method = Trax::SmoothMethod::Box;   // or Trax::to_smooth_method("box")
+opts.radius = 2;                         // half-width of the window in grid cells
+opts.passes = 3;                         // three box passes approximate a Gaussian
+std::shared_ptr<const Trax::Grid> smoothed = Trax::smooth(grid, opts);
+```
+
+`smooth()` returns a smoothed copy of the grid values (the coordinates are those of the source), to be contoured instead of the original. Smoothing works in grid index space, so a physical distance must be converted to cells by the caller.
+
+| `SmoothMethod` | Effect | Options |
+|---|---|---|
+| `None` | no smoothing (default) | |
+| `Box` | separable box blur with running sums; three passes approximate a Gaussian; attenuates peaks but creates no new extrema | `radius`, `passes` |
+| `Median` | per-window median: removes spikes, keeps step edges | `radius`, `passes` |
+| `Morphology` | grayscale opening / closing with a flat box (`MorphologyOp::Open`, `Close`, `OpenClose`) | `radius`, `passes`, `morphology` |
+| `Pyramid` | factor-2 reduce/expand pyramid for very large radii; **declared but not implemented**: `smooth()` throws | `levels` |
+| `SavitzkyGolay` | the contour engine's legacy 2D polynomial filter, kept for compatibility | `radius` (1–6), `degree` (1–5) |
+
+`boundary` (`SmoothBoundary::Normalized`, the default, `Replicate` or `Reflect`) sets how samples outside the grid and NaN samples are treated; on grids with a non-zero `xperiod()` the x direction wraps instead. `preserve_missing` (default `true`) keeps the cells that were NaN in the input NaN in the output. `SavitzkyGolay` ignores `boundary`, `passes` and the wrap-around, and rejects any window touching a NaN. `SmoothOptions::active()` tells whether the options change the data, and `hash()` gives a key to combine with the data hash for caching. The strings accepted by `to_smooth_method()`, `to_smooth_boundary()` and `to_morphology_op()` are `none`, `box`, `median`, `morphology`, `pyramid`, `savitzky-golay`; `normalized`, `replicate`, `reflect`; `open`, `close`, `openclose`.
 
 ---
 
