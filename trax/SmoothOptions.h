@@ -15,12 +15,12 @@
 // ("normalized convolution"): cheap (O(N) per pass, independent of radius
 // via running sums), separable, introduces no spurious extrema, and treats
 // out-of-grid and missing (NaN) samples identically as zero-weight. Three
-// passes approximate a Gaussian. The Pyramid method is offered for very
-// large effective radii where the geometric work reduction matters.
+// passes approximate a Gaussian. The Pyramid method (intended for very large
+// effective radii) is declared but not implemented: Trax::smooth() throws.
 //
-// Box (and Pyramid) are linear low-pass filters: they never create new
-// extrema but they *attenuate* existing ones (a sharp peak is flattened
-// toward its neighbourhood mean). When the magnitude of real peaks and pits
+// Box is a linear low-pass filter: it never creates new extrema but it
+// *attenuates* existing ones (a sharp peak is flattened toward its
+// neighbourhood mean). When the magnitude of real peaks and pits
 // must survive, use one of the rank/morphological methods instead:
 //
 //   Median     - per-window median. Removes spikes/salt-and-pepper of either
@@ -58,7 +58,7 @@ enum class SmoothMethod : std::uint8_t
   Box,           // repeated separable box blur via running sums (Gaussian approx)
   Median,        // per-window median: extremum/edge-preserving spike removal
   Morphology,    // grayscale opening/closing via separable running min/max
-  Pyramid,       // factor-2 reduce/expand pyramid for very large radii
+  Pyramid,       // factor-2 reduce/expand pyramid; not implemented, smooth() throws
   SavitzkyGolay  // legacy 2D Savitzky-Golay polynomial filter (see note above)
 };
 
@@ -73,7 +73,7 @@ enum class MorphologyOp : std::uint8_t
 
 // How out-of-grid (and NaN) samples are treated by the kernel. Periodicity
 // in the x direction is handled automatically when the source grid reports a
-// non-zero shift() (global wrap-around data) and overrides this setting on
+// non-zero xperiod() (global wrap-around data) and overrides this setting on
 // the x axis.
 enum class SmoothBoundary : std::uint8_t
 {
@@ -104,8 +104,9 @@ struct SmoothOptions
   // Morphology method: which operation to apply (see MorphologyOp).
   MorphologyOp morphology = MorphologyOp::OpenClose;
 
-  // Pyramid method: number of reduce/expand levels. Effective smoothing
-  // radius roughly doubles per level, so levels = ceil(log2(radius)).
+  // Pyramid method (not implemented, Trax::smooth() throws): number of
+  // reduce/expand levels. Effective smoothing radius would roughly double per
+  // level, so levels = ceil(log2(radius)).
   int levels = 0;
 
   // SavitzkyGolay method: polynomial degree, clamped to 1..5 (degree 1 reduces

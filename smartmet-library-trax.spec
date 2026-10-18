@@ -90,6 +90,7 @@ Trax isoline/isoband calculation library development files
 
 %changelog
 * Sat Oct 17 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.17-1.fmi
+- SmoothOptions.h: document the Pyramid method as not implemented and x-periodicity as coming from xperiod()
 - Split functions with a cognitive complexity above 25 into smaller helpers, no functional changes
 
 * Fri Oct 16 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.16-1.fmi
