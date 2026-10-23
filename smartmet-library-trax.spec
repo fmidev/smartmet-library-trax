@@ -18,7 +18,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 26.10.17
+Version: 26.10.23
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -89,6 +89,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Fri Oct 23 2026 Andris Pavēnis <andris.pavenis@fmi.fi> 26.10.23-1.fmi
+- Bump version
+
 * Sat Oct 17 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.17-1.fmi
 - SmoothOptions.h: document the Pyramid method as not implemented and x-periodicity as coming from xperiod()
 - Split functions with a cognitive complexity above 25 into smaller helpers, no functional changes
