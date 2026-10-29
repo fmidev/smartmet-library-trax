@@ -2,7 +2,7 @@ PROG = $(patsubst %.cpp,%,$(wildcard *Test.cpp))
 
 REQUIRES = fmt gdal geos
 
-include $(shell echo $${PREFIX-/usr})/share/smartmet/devel/makefile.inc
+include $(or $(PREFIX),$(shell smartbuildcfg --prefix))/share/smartmet/devel/makefile.inc
 
 DEFINES = -DUSE_UNSTABLE_GEOS_CPP_API
 FLAGS = -std=$(CXX_STD) -Wall -W -fdiagnostics-color=$(GCC_DIAG_COLOR) -Wno-unused-parameter

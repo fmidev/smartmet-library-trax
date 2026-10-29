@@ -6,7 +6,9 @@ INCDIR = smartmet/$(SUBNAME)
 REQUIRES = gdal geos fmt
 
 OPTIMIZE = -O3
-include $(shell echo $${PREFIX-/usr})/share/smartmet/devel/makefile.inc
+
+include $(or $(PREFIX),$(shell smartbuildcfg --prefix))/share/smartmet/devel/makefile.inc
+
 CFLAGS += -Wno-maybe-uninitialized
 
 # There are rounding related problems in case of -march=x86-64-v3 used as default
