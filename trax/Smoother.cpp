@@ -479,6 +479,14 @@ std::shared_ptr<const Grid> smooth(std::shared_ptr<const Grid> source, const Smo
   if (!source)
     throw Fmi::Exception(BCP, "Trax::smooth called with a null grid");
 
+  // Bound the kernel: run time and memory grow with radius (median is O(radius^2)
+  // per cell per pass) and with the number of passes. Reject absurd values rather
+  // than let one caller exhaust CPU/memory in a shared process. (DoS hardening.)
+  if (opts.radius < 0 || opts.radius > 100)
+    throw Fmi::Exception(BCP, "Trax::smooth radius out of range (0..100)");
+  if (opts.passes < 0 || opts.passes > 20)
+    throw Fmi::Exception(BCP, "Trax::smooth passes out of range (0..20)");
+
   if (!opts.active())
     return source;
 

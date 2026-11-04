@@ -18,7 +18,7 @@
 
 Summary: Trax library
 Name: %{SPECNAME}
-Version: 26.10.23
+Version: 26.11.5
 Release: 1%{?dist}.fmi
 License: MIT
 Group: Development/Libraries
@@ -89,6 +89,9 @@ Trax isoline/isoband calculation library development files
 %{_includedir}/smartmet/%{DIRNAME}
 
 %changelog
+* Thu Nov 5 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.11.5-1.fmi
+- Trax::smooth clamps the smoothing radius and pass count to sane limits
+
 * Fri Oct 23 2026 Andris Pavēnis <andris.pavenis@fmi.fi> 26.10.23-1.fmi
 - Bump version
 
