@@ -185,7 +185,7 @@ point JointBuilder<Logarithmic>::intersect(
   return {x, y, type, 0, 0};
 }
 
-// Utilities to avoid highly likely typos in repetetive code. As luck would have it,
+// Utilities to avoid highly likely typos in repetitive code. As luck would have it,
 // I managed to mess up all four the first time...
 template <bool Logarithmic>
 point JointBuilder<Logarithmic>::intersect_left(const Cell& c, VertexType type) const
@@ -452,7 +452,7 @@ void JointBuilder<Logarithmic>::densify(const Cell& c, Edge ea, Edge eb, float l
 // and only the corner remains. We assume that the vertices are processed in such an order
 // so that close() will not have to worry about such details.
 // An implementation detail is how consecutive horizontal/vertical and vertical/horizontal
-// coordinates merge. Since we're upgrading to a corner, atleast one of row/column must increase
+// coordinates merge. Since we're upgrading to a corner, at least one of row/column must increase
 // and neither can decrease (both row&column are equal at the bottom left corner). Hence a simple
 // std::max solution is enough to merge the two vertices.
 

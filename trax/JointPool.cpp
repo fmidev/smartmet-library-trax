@@ -12,7 +12,7 @@ namespace
 
 /*
  * If operator[] pos is < start_size, finding indexed joint from m_buffer is immediate.
- * Otherwise substract start_size, double start_size, and try again:
+ * Otherwise subtract start_size, double start_size, and try again:
  *
  *   400 > 256 so...
  *   400 - 256 = 144 < 512 --> second buffer at position 144
