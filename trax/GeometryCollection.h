@@ -2,7 +2,9 @@
 
 #include "Polygon.h"
 #include "Polyline.h"
+#include <sys/types.h>
 #include <sstream>
+#include <string>
 #include <vector>
 
 namespace Trax

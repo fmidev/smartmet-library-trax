@@ -1,5 +1,7 @@
 #include "BufferGrid.h"
 #include <macgyver/Exception.h>
+#include <string>
+#include <utility>
 
 namespace Trax
 {

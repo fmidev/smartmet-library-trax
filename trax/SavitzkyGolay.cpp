@@ -1,7 +1,9 @@
 #include "SavitzkyGolay.h"
+#include "Grid.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <limits>
 
 // Ported verbatim from the contour engine's SavitzkyGolay2D + MirrorGrid. See

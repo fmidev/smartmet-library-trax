@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Grid.h"
-#include "SmoothOptions.h"
 #include <memory>
 
 // Grid -> Grid smoothing transform.
@@ -25,6 +24,8 @@
 
 namespace Trax
 {
+struct SmoothOptions;
+
 // Primary entry point. The source is retained (shared) by the result for its
 // coordinates, so coordinates are never copied. If opts.active() is false the
 // source is returned unchanged (no copy, no work).

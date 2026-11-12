@@ -1,16 +1,13 @@
 #pragma once
 
-#include "CellBuilder.h"
 #include "GeometryCollection.h"
 #include "JointMerger.h"
-#include "Vertex.h"
-#include <list>
+#include <cstddef>
 #include <vector>
 
 namespace Trax
 {
-struct Cell;
-class Range;
+class JointPool;
 
 class Builder
 {

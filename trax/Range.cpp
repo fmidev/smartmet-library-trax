@@ -1,9 +1,8 @@
 #include "Range.h"
 #include <fmt/format.h>
 #include <macgyver/Exception.h>
+#include <algorithm>
 #include <cmath>
-#include <iostream>
-#include <stdexcept>
 
 namespace Trax
 {

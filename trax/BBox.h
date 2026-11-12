@@ -1,10 +1,8 @@
 #pragma once
 
 #include "Point.h"
-#include <deque>
 #include <limits>
 #include <string>
-#include <vector>
 
 namespace Trax
 {

@@ -1,6 +1,5 @@
 #include "InterpolationType.h"
 #include <macgyver/Exception.h>
-#include <stdexcept>
 
 namespace Trax
 {

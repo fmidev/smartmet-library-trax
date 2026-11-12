@@ -1,12 +1,20 @@
 #include "Topology.h"
+#include "BBox.h"
 #include "Joint.h"
 #include "JointPool.h"
 #include "SmallVector.h"
+#include "Vertex.h"
+#include "VertexType.h"
 #include <boost/geometry.hpp>
-#include <boost/geometry/index/rtree.hpp>
-#include <boost/math/constants/constants.hpp>
 #include <fmt/format.h>
 #include <macgyver/Exception.h>
+#include <cmath>
+#include <cstddef>
+#include <iterator>
+#include <list>
+#include <map>
+#include <string>
+#include <utility>
 
 #if 0
 #include <iostream>

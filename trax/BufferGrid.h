@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Grid.h"
+#include <array>
+#include <cstddef>
 #include <memory>
 #include <vector>
 

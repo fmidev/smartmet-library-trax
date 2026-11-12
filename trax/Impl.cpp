@@ -1,22 +1,28 @@
 #include "Impl.h"
+#include "CellBuilder.h"
 #include "Geos.h"
+#include "Grid.h"
 #include "GridPoint.h"
+#include "JointMerger.h"
+#include "Range.h"
+#include <fmt/format.h>
 #include <geos/geom/GeometryFactory.h>
 #include <geos/operation/valid/IsValidOp.h>
 #include <macgyver/Exception.h>
 #include <macgyver/StringConversion.h>
 #include <macgyver/ThreadPool.h>
-#include <algorithm>   // std::minmax
-#include <cmath>       // std::min and std::max
+#include <algorithm>  // std::minmax
+#include <cmath>      // std::min and std::max
+#include <exception>
 #include <functional>  // std::function
 #include <future>      // std::packaged_task / std::future
 #include <limits>      // std::numeric_limits
-#include <memory>      // std::make_shared
-#include <mutex>       // std::mutex guarding the shared pool
-#include <thread>      // std::thread::hardware_concurrency
-#include <utility>     // std::pair and std::make_pair
-
-#include <fmt/format.h>
+#include <list>
+#include <memory>  // std::make_shared
+#include <mutex>   // std::mutex guarding the shared pool
+#include <string>
+#include <thread>   // std::thread::hardware_concurrency
+#include <utility>  // std::pair and std::make_pair
 
 #if 0
 #include <fmt/format.h>
@@ -25,6 +31,8 @@
 
 namespace Trax
 {
+class JointPool;
+
 namespace
 {
 // Process-wide worker pool that band tasks are dispatched to. It is null until

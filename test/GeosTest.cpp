@@ -1,9 +1,13 @@
+#include "GeometryCollection.h"
 #include "Geos.h"
+#include "Polygon.h"
+#include "Polyline.h"
 #include <boost/test/included/unit_test.hpp>
-#include <geos/geom/Geometry.h>
 #include <geos/geom/GeometryFactory.h>
-#include <geos/geom/PrecisionModel.h>
 #include <geos/io/WKTWriter.h>
+#include <cstring>
+#include <memory>
+#include <string>
 
 using namespace boost::unit_test;
 

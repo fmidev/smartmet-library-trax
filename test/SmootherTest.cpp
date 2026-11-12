@@ -1,9 +1,14 @@
+#include "Grid.h"
 #include "SmoothOptions.h"
 #include "Smoother.h"
 #include "TestGrid.h"
 #include <boost/test/included/unit_test.hpp>
 #include <cmath>
+#include <cstring>
+#include <initializer_list>
+#include <limits>
 #include <memory>
+#include <string>
 
 using namespace boost::unit_test;
 

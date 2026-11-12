@@ -2,17 +2,20 @@
 
 #include "BBox.h"
 #include "Point.h"
-#include <deque>
+#include <cstddef>
 #include <initializer_list>
+#include <iterator>
 #include <list>
 #include <sstream>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace Trax
 {
+class Polyline;
 struct Vertex;
 
-class Polyline;
 using Polylines = std::list<Polyline>;
 using Holes = std::list<Polyline>;
 

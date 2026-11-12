@@ -1,6 +1,7 @@
 #include "BBox.h"
 #include <fmt/format.h>
 #include <macgyver/Exception.h>
+#include <cmath>
 
 #if 0
 #include <iostream>

@@ -2,11 +2,10 @@
 #include "Range.h"
 #include <cmath>
 #include <cstdint>
-#include <iostream>
+#include <string>
 
 namespace Trax
 {
-class Range;
 
 enum class Place : std::uint8_t
 {

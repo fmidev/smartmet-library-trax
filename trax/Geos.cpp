@@ -1,11 +1,13 @@
 #include "Geos.h"
-#include <geos/geom/Coordinate.h>
-#include <geos/geom/CoordinateSequence.h>
-#include <geos/geom/Geometry.h>
-#include <geos/geom/LineString.h>
-#include <geos/geom/LinearRing.h>
-#include <geos/geom/Polygon.h>
+#include "GeometryCollection.h"
+#include "Polygon.h"
+#include "Polyline.h"
 #include <macgyver/Exception.h>
+#include <algorithm>
+#include <iterator>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace gg = geos::geom;
 

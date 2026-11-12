@@ -1,30 +1,13 @@
 #include "JointPool.h"
 #include "Joint.h"
 #include "Vertex.h"
+#include "VertexType.h"
 #include <fmt/format.h>
-#include <iostream>
+#include <cstdlib>
+#include <new>
 
 namespace Trax
 {
-namespace
-{
-// MyMutex pool_mutex;
-
-/*
- * If operator[] pos is < start_size, finding indexed joint from m_buffer is immediate.
- * Otherwise subtract start_size, double start_size, and try again:
- *
- *   400 > 256 so...
- *   400 - 256 = 144 < 512 --> second buffer at position 144
- *
- *  4000 > 256 so...
- *  4000 - 256  = 3744 >= 512
- *  3744 - 512  = 3232 >= 1024
- *  3232 - 1024 = 2208 >= 2048
- *  2208 - 2048 = 160 < 4096 --> fifth buffer at position 160
- */
-
-}  // namespace
 
 JointPool::iterator JointPool::begin()
 {

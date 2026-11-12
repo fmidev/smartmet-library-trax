@@ -1,5 +1,7 @@
 #include "Range.h"
 #include <boost/test/included/unit_test.hpp>
+#include <cstring>
+#include <string>
 
 using namespace boost::unit_test;
 

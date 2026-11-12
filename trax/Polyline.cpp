@@ -4,9 +4,10 @@
 #include <boost/math/constants/constants.hpp>
 #include <fmt/format.h>
 #include <macgyver/Exception.h>
+#include <sys/types.h>
 #include <algorithm>
+#include <cmath>
 #include <optional>
-#include <stdexcept>
 
 using boost::math::double_constants::radian;
 

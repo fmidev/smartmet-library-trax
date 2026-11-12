@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Grid.h"
 #include <vector>
 
 // Legacy 2D Savitzky-Golay smoother.
@@ -16,6 +15,8 @@
 
 namespace Trax
 {
+class Grid;
+
 // Return the smoothed values (row-major, w*h) for the grid. `size` and `degree`
 // are clamped to the supported ranges; a combination with no kernel (e.g.
 // size 1 with degree > 2) returns the input values unchanged.

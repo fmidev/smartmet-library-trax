@@ -1,5 +1,9 @@
 #include "Cell.h"
+#include "GridPoint.h"
 #include <boost/test/included/unit_test.hpp>
+#include <cstring>
+#include <string>
+#include <utility>
 
 using namespace boost::unit_test;
 

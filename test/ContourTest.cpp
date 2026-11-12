@@ -1,13 +1,27 @@
 #include "Contour.h"
+#include "GeometryCollection.h"
 #include "Geos.h"
+#include "InterpolationType.h"
 #include "IsobandLimits.h"
 #include "IsolineValues.h"
+#include "Polygon.h"
+#include "Polyline.h"
 #include "TestGrid.h"
 #include <boost/test/included/unit_test.hpp>
+#include <fmt/format.h>
 #include <geos/geom/GeometryFactory.h>
 #include <geos/operation/valid/IsValidOp.h>
+#include <cmath>
+#include <cstring>
+#include <exception>
+#include <fstream>
+#include <initializer_list>
+#include <iostream>
 #include <limits>
+#include <memory>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 const bool WRITE_SCRIPT = false;
 

@@ -1,14 +1,16 @@
 #include "Builder.h"
-#include "Cell.h"
-#include "Place.h"
-#include "Range.h"
+#include "Polygon.h"
+#include "Polyline.h"
 #include "Topology.h"
-#include <fmt/format.h>
 #include <macgyver/Exception.h>
-#include <stdexcept>
+#include <list>
+#include <string>
+#include <utility>
 
 namespace Trax
 {
+class JointPool;
+
 namespace
 {
 void remove_ghosts(Polylines& rings, Polylines& lines)

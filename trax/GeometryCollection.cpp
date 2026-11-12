@@ -1,7 +1,7 @@
 #include "GeometryCollection.h"
 #include "Endian.h"
 #include <algorithm>
-#include <memory.h>
+#include <utility>
 
 namespace Trax
 {

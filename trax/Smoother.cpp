@@ -1,11 +1,15 @@
 #include "Smoother.h"
 #include "BufferGrid.h"
 #include "SavitzkyGolay.h"
+#include "SmoothOptions.h"
 #include <macgyver/Exception.h>
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <deque>
 #include <limits>
+#include <string>
+#include <utility>
 #include <vector>
 
 // Grid smoothers: Box (linear, low-pass) plus the extremum/edge-preserving

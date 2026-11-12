@@ -1,13 +1,19 @@
 #pragma once
 #include "Builder.h"
+#include "Cell.h"
 #include "Contour.h"
+#include "GeometryCollection.h"
+#include "InterpolationType.h"
 #include "IsobandLimits.h"
 #include "IsolineValues.h"
 #include <array>
-#include <limits>
+#include <cstddef>
+#include <vector>
 
 namespace Trax
 {
+class Grid;
+
 class Contour::Impl
 {
  public:

@@ -1,5 +1,12 @@
+#include "GeometryCollection.h"
 #include "OGR.h"
+#include "Polygon.h"
+#include "Polyline.h"
 #include <boost/test/included/unit_test.hpp>
+#include <cstring>
+#include <memory>
+#include <ogr_geometry.h>
+#include <string>
 
 using namespace boost::unit_test;
 

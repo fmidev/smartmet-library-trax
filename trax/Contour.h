@@ -1,15 +1,16 @@
 #pragma once
 
-#include "Cell.h"
 #include "GeometryCollection.h"
-#include "Grid.h"
-#include "InterpolationType.h"
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 
 namespace Trax
 {
+class Grid;
 class IsobandLimits;
 class IsolineValues;
+enum class InterpolationType : std::uint8_t;
 
 class Contour
 {
@@ -58,6 +59,7 @@ class Contour
  private:
   // Implementation details
   class Impl;
+
   std::unique_ptr<Impl> impl;
 };
 

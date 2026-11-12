@@ -2,6 +2,7 @@
 #include <fmt/format.h>
 #include <macgyver/Exception.h>
 #include <algorithm>
+#include <cmath>
 
 namespace Trax
 {

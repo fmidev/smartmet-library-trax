@@ -3,6 +3,9 @@
 
 namespace Trax
 {
+class Grid;
+enum class InterpolationType : std::uint8_t;
+
 // The only available constructor
 Contour::Contour() : impl(new Contour::Impl()) {}
 

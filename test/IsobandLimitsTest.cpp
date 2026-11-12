@@ -1,6 +1,8 @@
 #include "IsobandLimits.h"
 #include <boost/test/included/unit_test.hpp>
+#include <cstring>
 #include <limits>
+#include <string>
 
 using namespace boost::unit_test;
 

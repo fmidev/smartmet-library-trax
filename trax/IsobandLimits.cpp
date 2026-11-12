@@ -2,7 +2,7 @@
 #include <fmt/format.h>
 #include <macgyver/Exception.h>
 #include <algorithm>
-#include <cmath>
+#include <iterator>
 
 namespace Trax
 {

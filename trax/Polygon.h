@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Polyline.h"
+#include <initializer_list>
 #include <list>
 #include <sstream>
 #include <string>

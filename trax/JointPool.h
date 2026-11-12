@@ -1,7 +1,7 @@
 #pragma once
 #include "Joint.h"
 #include <array>
-#include <memory>
+#include <cstddef>
 #include <string>
 
 namespace Trax

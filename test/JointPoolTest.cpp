@@ -1,7 +1,10 @@
 #include "Joint.h"
 #include "JointPool.h"
 #include "Vertex.h"
+#include "VertexType.h"
 #include <boost/test/included/unit_test.hpp>
+#include <cstring>
+#include <string>
 
 using namespace boost::unit_test;
 

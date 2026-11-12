@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Range.h"
+#include <cstddef>
 #include <string>
 #include <vector>
 

@@ -3,6 +3,8 @@
 #include "Grid.h"
 #include <fmt/format.h>
 #include <cmath>
+#include <cstddef>
+#include <string>
 #include <vector>
 
 namespace Trax

@@ -1,17 +1,21 @@
 #include "CellBuilder.h"
 #include "Cell.h"
-#include "Joint.h"
+#include "GridPoint.h"
 #include "JointMerger.h"
 #include "Place.h"
 #include "Range.h"
 #include "Vertex.h"
-#include <fmt/format.h>
-#include <limits>
+#include "VertexType.h"
+#include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 
 #if 0
 #include <fmt/format.h>
 #include <iostream>
+
 bool print_it = true;
 #endif
 

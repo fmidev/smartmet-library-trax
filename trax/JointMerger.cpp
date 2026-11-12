@@ -1,7 +1,7 @@
 #include "JointMerger.h"
-#include "Cell.h"
 #include "Joint.h"
-#include <stdexcept>
+#include "VertexType.h"
+#include <algorithm>
 
 #if 0
 #include <fmt/format.h>

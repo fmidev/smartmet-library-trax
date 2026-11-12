@@ -1,12 +1,15 @@
 #pragma once
 
 #include "JointPool.h"
+#include "Vertex.h"
 #include <cstdint>
+#include <iterator>
 #include <utility>
 
 namespace Trax
 {
 struct Cell;
+struct Joint;
 
 /*
  * JointMerger merges joints either by appending to the end of the topmost row

@@ -1,7 +1,10 @@
 #include "Polygon.h"
+#include "BBox.h"
 #include "Endian.h"
 #include <macgyver/Exception.h>
+#include <sys/types.h>
 #include <algorithm>
+#include <utility>
 
 namespace Trax
 {

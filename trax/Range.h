@@ -1,8 +1,5 @@
 #pragma once
 
-#include <cassert>
-#include <vector>
-
 namespace Trax
 {
 class Range

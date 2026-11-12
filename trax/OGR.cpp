@@ -1,4 +1,8 @@
 #include "OGR.h"
+#include "GeometryCollection.h"
+#include "Polygon.h"
+#include "Polyline.h"
+#include <vector>
 
 namespace Trax
 {
