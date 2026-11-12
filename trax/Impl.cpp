@@ -25,7 +25,6 @@
 #include <utility>  // std::pair and std::make_pair
 
 #if 0
-#include <fmt/format.h>
 #include <iostream>
 #endif
 
