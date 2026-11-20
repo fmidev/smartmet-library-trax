@@ -1,6 +1,8 @@
 #include "Range.h"
 #include <boost/test/included/unit_test.hpp>
+#include <cmath>
 #include <cstring>
+#include <limits>
 #include <string>
 
 using namespace boost::unit_test;
@@ -36,6 +38,27 @@ BOOST_AUTO_TEST_CASE(adjust)
 
   range2.adjust();
   BOOST_CHECK(range2.hi() == hi);
+}
+
+BOOST_AUTO_TEST_CASE(adjust_zero)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Range::adjust with zero or infinite limits]");
+  // A closed range ending at zero must include zero
+  Trax::Range range(-5, 0);
+  range.adjust();
+  BOOST_CHECK(range.adjusted());
+  BOOST_CHECK(range.hi() > 0);
+  BOOST_CHECK(range.hi() < 1e-30);
+
+  Trax::Range negative(-5, -0.5);
+  negative.adjust();
+  BOOST_CHECK(negative.hi() > -0.5);
+
+  // Infinite limits are left alone
+  Trax::Range open(0, std::numeric_limits<float>::infinity());
+  open.adjust();
+  BOOST_CHECK(!open.adjusted());
+  BOOST_CHECK(std::isinf(open.hi()));
 }
 
 BOOST_AUTO_TEST_CASE(lessthan)

@@ -51,7 +51,9 @@ void Range::adjust()
 {
   if (m_adjusted)
     return;
-  if (!std::isnormal(m_hi))
+  // Infinite or NaN limits are not adjusted. std::isnormal() would also skip a limit of zero,
+  // leaving for example the closed range -5..0 open at zero.
+  if (!std::isfinite(m_hi))
     return;
   m_hi = std::nextafter(m_hi, m_hi + 1);
   m_adjusted = true;
