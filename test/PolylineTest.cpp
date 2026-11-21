@@ -79,3 +79,23 @@ BOOST_AUTO_TEST_CASE(normalize)
   Trax::Polyline line4{1, 1, 1, 0, 0, 0, 0, 1, 1, 1};
   BOOST_CHECK_EQUAL(line4.normalize().wkt(), "LINESTRING (0 0,0 1,1 1,1 0,0 0)");
 }
+
+BOOST_AUTO_TEST_CASE(desliver_open)
+{
+  BOOST_TEST_MESSAGE("+ [Trax::Polyline::desliver open polylines]");
+
+  // A spike out to x=1 and back to almost x=0 is removed, the rest of the line remains
+  Trax::Polyline line1{0, 0, 1, 0, 1e-8, 0, -1, 0};
+  BOOST_CHECK(!line1.desliver());
+  BOOST_CHECK_EQUAL(line1.wkt(), "LINESTRING (0 0,-1 0)");
+
+  // A line that is only a spike vanishes instead of leaving a single vertex
+  Trax::Polyline line2{0, 0, 1, 0, 1e-8, 0};
+  BOOST_CHECK(line2.desliver());
+  BOOST_CHECK(line2.empty());
+
+  // A line without slivers is unchanged
+  Trax::Polyline line3{0, 0, 1, 0, 1, 1};
+  BOOST_CHECK(!line3.desliver());
+  BOOST_CHECK_EQUAL(line3.wkt(), "LINESTRING (0 0,1 0,1 1)");
+}
