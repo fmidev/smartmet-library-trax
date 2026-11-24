@@ -8,6 +8,7 @@
 #include <fmt/format.h>
 #include <geos/geom/GeometryFactory.h>
 #include <geos/operation/valid/IsValidOp.h>
+#include <macgyver/Cancellation.h>
 #include <macgyver/Exception.h>
 #include <macgyver/StringConversion.h>
 #include <macgyver/ThreadPool.h>
@@ -66,6 +67,8 @@ bool worker_pool_enabled()
 // Run a set of band tasks. Task 0 always runs on the calling thread; the rest are dispatched
 // to the shared pool when one exists (otherwise they run inline, keeping behaviour identical
 // to single-threaded). Blocks until all bands finish and rethrows the first band's exception.
+// The bands are cancelled along with the request of the calling thread: its cancellation
+// token is made current in the pool threads too.
 void run_bands(std::vector<std::function<void()>>& tasks)
 {
   Fmi::ThreadPool::ThreadPool<>* pool = nullptr;
@@ -77,24 +80,58 @@ void run_bands(std::vector<std::function<void()>>& tasks)
   if (pool == nullptr || tasks.size() <= 1)
   {
     for (auto& task : tasks)
+    {
+      Fmi::check_cancelled();
       task();
+    }
     return;
   }
 
+  // The tasks refer to the data of the caller, hence all dispatched bands must have finished
+  // before an exception may leave this function
+  auto token = Fmi::current_cancellation_token();
   std::vector<std::future<void>> futures;
-  futures.reserve(tasks.size() - 1);
-  for (std::size_t i = 1; i < tasks.size(); i++)
+  std::exception_ptr error;
+  try
   {
-    auto task = std::make_shared<std::packaged_task<void()>>(std::move(tasks[i]));
-    futures.push_back(task->get_future());
-    if (!pool->schedule([task]() { (*task)(); }))
-      (*task)();  // scheduler full: run inline rather than drop the work
+    futures.reserve(tasks.size() - 1);
+    for (std::size_t i = 1; i < tasks.size(); i++)
+    {
+      auto task = std::make_shared<std::packaged_task<void()>>(
+          [token, band = std::move(tasks[i])]()
+          {
+            Fmi::CancellationScope scope(token);
+            Fmi::check_cancelled();
+            band();
+          });
+      futures.push_back(task->get_future());
+      if (!pool->schedule([task]() { (*task)(); }))
+        (*task)();  // scheduler full: run inline rather than drop the work
+    }
+
+    Fmi::check_cancelled();
+    tasks[0]();  // the calling thread contributes one band
+  }
+  catch (...)
+  {
+    error = std::current_exception();
   }
 
-  tasks[0]();  // the calling thread contributes one band
-
   for (auto& future : futures)
-    future.get();  // wait for the dispatched bands and rethrow any exception
+  {
+    try
+    {
+      future.get();  // wait for the dispatched bands
+    }
+    catch (...)
+    {
+      if (!error)
+        error = std::current_exception();
+    }
+  }
+
+  if (error)
+    std::rethrow_exception(error);
 }
 
 std::string validate_geom(const Trax::GeometryCollection& geom)
@@ -496,6 +533,8 @@ void Contour::Impl::contour_rows(const Grid& grid,
 
   for (auto j = jmin; j <= jmax; j++)
   {
+    Fmi::check_cancelled();
+
     fill_buffers(grid, bbox, j + 1, row2);  // update the 2nd row
 
     // Keep Cell i,j coordinates continuous by applying a shift in the second loop
@@ -691,6 +730,7 @@ GeometryCollections Contour::Impl::isobands(const Grid& grid, const IsobandLimit
   }
   catch (...)
   {
+    Fmi::rethrow_if_cancelled();
     // Try to provide some info into the logs
     throw_with_details(grid, imin, imax, jmin, jmax, nx, ny);
   }
@@ -837,6 +877,7 @@ GeometryCollections Contour::Impl::isolines(const Grid& grid, const IsolineValue
   }
   catch (...)
   {
+    Fmi::rethrow_if_cancelled();
     // Try to provide some info into the logs
     throw_with_details(grid, imin, imax, jmin, jmax, nx, ny);
   }
