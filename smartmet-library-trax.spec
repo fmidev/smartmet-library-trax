@@ -46,6 +46,7 @@ Provides: %{LIBNAME}
 #TestRequires: fmt-devel
 #TestRequires: geos313-devel
 #TestRequires: gdal312-devel
+#TestRequires: smartmet-library-macgyver-devel >= 26.11.26
 %description
 Isoline/isoband calculation library.
 
