@@ -525,8 +525,13 @@ bool Polyline::desliver()
   if (found_sliver)
     m_points.resize(out_pos, Point(0, 0, false));
 
+  // An open polyline needs at least two vertices, a single one would be an invalid linestring
   if (!was_closed)
+  {
+    if (m_points.size() < 2)
+      m_points.clear();
     return empty();
+  }
 
   remove_padding(m_points);
 
