@@ -72,6 +72,7 @@ rm -rf $RPM_BUILD_ROOT
 Summary: Isoband/isoline calculation development files
 Provides: %{SPECNAME}-devel
 Requires: %{SPECNAME} = %{version}-%{release}
+Requires: smartmet-library-macgyver-devel >= 26.11.26
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: gcc-c++
 %if %{defined el7}
